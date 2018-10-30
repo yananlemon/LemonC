@@ -1,0 +1,23 @@
+class TestMain{
+	
+	// 程序入口
+	void main(){
+		int month = 12;
+		int num = fib(month);
+		printf("%d个月后有%d对兔子\n",month,num);
+	}
+	
+	// 根据参数n计算斐波那契数并返回
+	int fib(int n){
+		int f1 = 1;
+		int f2 = 1;
+		int i  = 3;
+		int result = 0;
+		while( i <= n ){
+			result = f1 + f2;
+			f1 = f2;
+			f2 = result;
+		}
+		return result;
+	}
+}
