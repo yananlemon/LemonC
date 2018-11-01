@@ -44,8 +44,10 @@ public class Ast {
 		public static abstract class T{	}
 
 		public static class MainClassSingle extends T{
+			public String className;
 			public List<Method.T> methods;	// 方法集合
 			public MainClassSingle(String name, List<Method.T> methods){
+				this.className = name;
 				this.methods = methods;
 			}
 		}
@@ -113,6 +115,13 @@ public class Ast {
 			public Printf(String format, List<Exp.T> exprs,int lineNum){
 				this.format = format;
 				this.exprs = exprs;
+				this.lineNumber = lineNum;
+			}
+		}
+		
+		public static class PrintNewLine extends T{
+
+			public PrintNewLine(int lineNum){
 				this.lineNumber = lineNum;
 			}
 		}
@@ -274,6 +283,16 @@ public class Ast {
 				this.lineNumber = lineNum;
 			}
 		}
+		
+		// 标识符
+		public static class Str extends T{
+			public String value; // 标识符名称
+
+			public Str(String value, int lineNumber){
+				this.value = value;
+				this.lineNumber = lineNumber;
+			}
+		}
 
 		// *
 		public static class Mul extends T{
@@ -354,6 +373,24 @@ public class Ast {
 			@Override
 			public String toString(){
 				return "@double";
+			}
+		}
+		
+		public static class Boolean extends T{
+			public Boolean() {}
+
+			@Override
+			public String toString(){
+				return "@boolean";
+			}
+		}
+		
+		public static class Str extends T{
+			public Str() {}
+
+			@Override
+			public String toString(){
+				return "@void";
 			}
 		}
 	}

@@ -1,0 +1,19 @@
+class TestMain{
+	// 程序入口:打印九九乘法表
+	void main(){
+		int k;
+		int t;
+		k = 1;
+		t = 1;
+		while(k < 10 ){
+			t = 1;
+			while(t < 10 ){				
+				printf("%d*%d=%d\t",k,t,k*t);
+				t = t + 1;
+			}
+			k = k+1;
+			printNewLine();
+		}
+		
+	}
+}

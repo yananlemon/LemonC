@@ -167,6 +167,8 @@ public class Lexer {
 					return new Token(TokenKind.While, "while",line);
 				case "printf":
 					return new Token(TokenKind.Printf, "printf",line);
+				case "printNewLine":
+					return new Token(TokenKind.PrintNewLine, "printNewLine",line);
 				case "return":
 					return new Token(TokenKind.Return, "return",line);
 				default:

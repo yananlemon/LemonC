@@ -49,6 +49,6 @@ public enum TokenKind {
 	Id,
 	Num,
 	Assign,
-	Unknown,
+	Unknown, PrintNewLine,
 	
 }
