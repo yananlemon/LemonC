@@ -1,0 +1,19 @@
+class Cal{
+	void main(){
+		int k;
+		int n;
+		n = 10;
+		k = cal(n);
+		printf("10的阶乘是%d",k);
+	}
+	
+	int cal(int n){
+		int rs;
+		if( n < 1 ){
+			rs = 1;
+		}else{
+			rs = n * cal(n-1);
+		}
+		return rs;
+	}
+}

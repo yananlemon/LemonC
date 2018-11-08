@@ -1,0 +1,40 @@
+class Fib{
+	void main(){
+		int k;
+		int n;
+		n = 12;
+		k = fib(n);
+		k = fibByIterator(n);
+		printf("递归计算斐波那契数列，一年后总共有%d对兔子\n",k);
+		printf("循环计算斐波那契数列，一年后总共有%d对兔子\n",k);
+	}
+	// 递归计算斐波那契数列
+	int fib(int n){
+		int rs;
+		if( n < 3 ){
+			rs = 1;
+		}else{
+			rs = fib(n-1) + fib(n-2);
+		}
+		return rs;
+	}
+	
+	// 循环计算斐波那契数列
+	int fibByIterator(int month){
+		int fm;
+		int sm;
+		int i;
+		int count;
+		fm = 1;
+		sm = 1;
+		i = 2;
+		count = 0;
+		while( i < month ){
+			count = fm + sm;
+			fm = sm;
+			sm = count;
+			i = i + 1;
+		}
+		return count;
+	}
+}

@@ -1,0 +1,12 @@
+class TestMain{
+	// 程序入口
+	void main(){
+		int number;
+		number = test();
+		printf("number的值是%d\n",number);
+	}
+	
+	int test(){
+		return 19;
+	}
+}

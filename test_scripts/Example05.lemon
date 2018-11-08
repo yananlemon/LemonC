@@ -1,0 +1,16 @@
+class MulTable{
+	void main(){
+		int t;
+		t = showMulTable();
+	}	
+	// 打印九九乘法表
+	int showMulTable(){
+		int k;
+		k = 1;
+		while(k < 10 ){
+			printf("%d\n",k);
+			k = k+1;
+		}
+		return 0;
+	}
+}

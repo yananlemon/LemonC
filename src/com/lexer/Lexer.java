@@ -32,7 +32,7 @@ public class Lexer {
 
 	public static void main(String[] args) {
 		try {
-			Lexer lexer=new Lexer(new File("test_scripts/Example02.lemon"));
+			Lexer lexer=new Lexer(new File("test_scripts/Example04.lemon"));
 			lexer.lexicalAnalysis();
 			System.out.println(lexer.tokens);
 		} catch (IOException e) {
@@ -127,7 +127,9 @@ public class Lexer {
 				tempPosition--;
 				c=source.charAt(position);
 			}
+			boolean flag = false;
 			if(letter.toString().equals("//")){
+				flag = true;
 				while( c != '\n' ){
 					c=source.charAt(position++);
 					tempPosition--;
@@ -136,7 +138,10 @@ public class Lexer {
 					}
 				}
 			}
-			return this.nextToken();
+			if( flag )
+				return this.nextToken();
+			else
+				return new Token(TokenKind.Div, "/",line);
 		}
 		
 		//如果是字母则需要判断是否是标识符,关键字

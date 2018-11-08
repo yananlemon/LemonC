@@ -1,0 +1,23 @@
+class MulTable{
+	void main(){
+		int k;
+		k = showMulTable();
+	}
+	
+	int showMulTable(){
+		int k;
+		int t;
+		k = 1;
+		t = 1;
+		while(k < 10 ){
+			t = 1;
+			while(t < 10 ){				
+				printf("%d*%d=%d\t",k,t,k*t);
+				t = t + 1;
+			}
+			k = k+1;
+			printNewLine();
+		}
+		return 0;
+	}
+}

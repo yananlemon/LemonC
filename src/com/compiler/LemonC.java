@@ -17,7 +17,8 @@ public class LemonC {
 		try {
 			//lexer = new Lexer(new File("test_scripts/Example01.lemon"));
 			//lexer = new Lexer(new File("test_scripts/Example02.lemon"));
-			lexer = new Lexer(new File("test_scripts/Example03.lemon"));
+			//lexer = new Lexer(new File("test_scripts/Example03.lemon"));
+			lexer = new Lexer(new File("test_scripts/Example06.lemon"));
 			Parser parser = new Parser(lexer);
 			Ast.Program.ProgramSingle program = parser.parse();
 			Semantic semantic = new Semantic();

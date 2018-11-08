@@ -234,10 +234,8 @@ public class TranslatorVisitor implements com.semantic.Visitor
     @Override
     public void visit(Ast.Stmt.Printf s)
     {
-    	int index = 1;
     	String f = s.format;
     	String[] array = f.split("%d");
-    	
     	for (int i = 0; i < array.length; i++) {
     		this.visit(new Ast.Exp.Str(array[i], s.lineNumber));
     		emit(new Stm.Aload(index1 -1 ) );
