@@ -1,0 +1,15 @@
+// 简单的方法调用
+class SimpleMethodCallTwo{
+	void main(){
+		int x;
+		int y;
+		int z;
+		x = 186;
+		y = 162;
+		z = call(x,y);
+		printf("x=%d,y=%d,z=%d",x,y,z);
+	}
+	int call(int f,int m){
+		return (f+m)/2+7;
+	}
+}

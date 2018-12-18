@@ -1,0 +1,8 @@
+// 简单的方法调用
+class SimpleMethodCallFour{
+	void main(){
+		int x;
+		x = 186;
+		printf("x=%d",x);
+	}
+}
