@@ -42,4 +42,8 @@ public class MethodVarTable{
     public Type get(String id){
         return this.table.get(id);
     }
+    
+    public Type put(String key,Type value){
+        return this.table.put(key, value);
+    }
 }

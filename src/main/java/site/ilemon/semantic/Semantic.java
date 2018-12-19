@@ -2,6 +2,8 @@ package site.ilemon.semantic;
 
 import java.util.HashSet;
 
+import com.sun.xml.internal.bind.v2.model.core.ID;
+
 import site.ilemon.ast.forparse.Float;
 import site.ilemon.ast.forparse.*;
 import site.ilemon.ast.forparse.Void;
@@ -104,6 +106,15 @@ public class Semantic implements ISemanticVisitor {
 			Type t1 = recursionType(((Mul)obj).left);
 			Type t2 = recursionType(((Mul)obj).right);
 			if( !t1.toString().equals(t2.toString())) {
+				// 2018-12-19自动提升类型暂时未完成
+				/*if( (((Mul)obj).right) instanceof Id) {
+					Id id = ((Id)((Mul)obj).right);
+					if( id.type instanceof Int) {
+						if(this.methodVarTable.get(id.name) != null) {
+							this.methodVarTable.put(id.name, new Float());
+						}
+					}
+				}*/
 				error(obj.lineNumber,t1.toString()+"和"+t2.toString()+"类型不一致" );
 				System.exit(1);
 			}
@@ -159,6 +170,9 @@ public class Semantic implements ISemanticVisitor {
 
 	@Override
 	public void visit(Id obj) {
+		if( this.methodVarTable.get(obj.name) == null) {
+			error( obj.lineNumber,obj.name+"未定义");
+		}
 		this.type = obj.type;
 	}
 
@@ -240,6 +254,8 @@ public class Semantic implements ISemanticVisitor {
 	@Override
 	public void visit(Printf obj) {
 		System.out.println(obj);
+		for(Expr expr : obj.exprs)
+			this.visit(expr);
 	}
 
 	@Override
@@ -265,6 +281,8 @@ public class Semantic implements ISemanticVisitor {
 			this.visit( (Return)obj );
 		else if( obj instanceof If)
 			this.visit( (If)obj );
+		else if( obj instanceof Printf)
+			this.visit( (Printf)obj );
 	}
 
 	@Override
