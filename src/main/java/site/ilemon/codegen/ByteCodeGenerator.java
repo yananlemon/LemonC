@@ -218,6 +218,8 @@ public class ByteCodeGenerator implements IGeneratorCodeVistor
 			this.visit((Astore)obj);
 		else if( obj instanceof Ificmplt )
 			this.visit((Ificmplt)obj);
+		else if( obj instanceof Ificmpgt )
+			this.visit((Ificmpgt)obj);
 		else if( obj instanceof LabelJ )
 			this.visit((LabelJ)obj);
 		else if( obj instanceof GoTo )
@@ -264,6 +266,11 @@ public class ByteCodeGenerator implements IGeneratorCodeVistor
 	@Override
 	public void visit(Ificmplt obj) {
 		this.iwriteln("if_icmplt " + obj.l.toString());
+	}
+	
+	@Override
+	public void visit(Ificmpgt obj) {
+		this.iwriteln("if_icmpgt " + obj.l.toString());
 	}
 
 	@Override

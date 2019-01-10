@@ -98,8 +98,12 @@ public class Parser {
 		return methods;
 	}
 
+	private boolean isInMethod = false;
+	private boolean returnFound = false;
+	
 	// <method> -> void | int | double | methodname ( <inputparams> ) {<varDeclares> <stmts> [return <expr>]}
 	private Method parseMethod() throws IOException {
+		isInMethod = true;
 		Type t = parseType();
 		String methodName = look.getLexeme();
 		int lineNumber = look.getLineNumber();
@@ -111,6 +115,7 @@ public class Parser {
 		List<Declare> localParams = parseVarDeclares();
 		List<Stmt> stmts = parseStmts();
 		match("}");
+		isInMethod = false;
 		return new Method(t, methodName, inputParams, localParams, stmts, null,lineNumber);
 	}
 
@@ -320,11 +325,16 @@ public class Parser {
 
 		}
 		else if( look.getKind() == TokenKind.Return ) {
+			// 确保在同一个方法内并且return语句尚未解析
+			if( isInMethod && returnFound){
+				throw new Error("near line : "+look.getLineNumber()+ ",syntx error:multiple return statements found!");
+			}
 			match( "return" );
 			int lineNumber = look.getLineNumber();
 			Expr expr = parseExpr();
 			stmt = new Return(expr, lineNumber);
 			match( ";" );
+			returnFound = true;
 
 		}else if( look.getKind() == TokenKind.If ){
 			match( "if" );

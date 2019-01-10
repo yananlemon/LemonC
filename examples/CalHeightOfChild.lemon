@@ -17,11 +17,10 @@ class CalHeightOfChild{
 		float rs;
 		rs = (f+m+13.0)/2.0+7.5;
 		return rs;
+		return rs;
 	}
 	// 计算女儿身高，公式：(父亲身高+母亲身高-13)/2 + 7.5
 	float calGirl(float f,float m){
-		float rs;
-		rs = (f+m-13.0)/2.0+7.5;
-		return rs;
+		return (f+m-13.0)/2.0+7.5;
 	}
 }

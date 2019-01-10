@@ -16,6 +16,7 @@ import site.ilemon.ast.forcodegen.Fsub;
 import site.ilemon.ast.forcodegen.GoTo;
 import site.ilemon.ast.forcodegen.Iadd;
 import site.ilemon.ast.forcodegen.Idiv;
+import site.ilemon.ast.forcodegen.Ificmpgt;
 import site.ilemon.ast.forcodegen.Ificmplt;
 import site.ilemon.ast.forcodegen.Iload;
 import site.ilemon.ast.forcodegen.Imul;
@@ -58,15 +59,13 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
 	private String className;
 
-	private site.ilemon.ast.forparse.MainClass mainClass;
-
 	private int index;
 	private Hashtable<String, Integer> indexTable;
 
 	private List<site.ilemon.ast.forcodegen.Stmt> stmts = new ArrayList<site.ilemon.ast.forcodegen.Stmt>();
 
 	private site.ilemon.ast.forcodegen.Type type;
-	
+
 	private site.ilemon.ast.forparse.Type t;
 
 	private site.ilemon.ast.forcodegen.Declare declare;
@@ -76,7 +75,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 	List<site.ilemon.ast.forcodegen.Method> ms = new ArrayList<site.ilemon.ast.forcodegen.Method>();
 
 	private int index1;
-	
+
 	private site.ilemon.ast.forparse.Type rtTypeOfMethod;
 	private Semantic semantic;
 	public TranslatorVisitor(Semantic semantic){
@@ -91,7 +90,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 	public void visit(Add obj) {
 		this.visit(obj.left);
 		this.visit(obj.right);
-		
+
 		if( rtTypeOfMethod instanceof Int)
 			emit(new Iadd());
 		else
@@ -106,7 +105,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
 	@Override
 	public void visit(Assign obj) {
 		int index = this.indexTable.get(obj.name);
-		site.ilemon.ast.forparse.Type t = this.semantic.getMethodVarTable().get(obj.name);
 		this.visit(obj.expr);
 		if( obj.type instanceof Int)
 			emit(new Istore(index));
@@ -156,7 +154,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
 	@Override
 	public void visit(Expr obj) {
-		
+
 		if( obj instanceof Add)
 			this.visit((Add)obj);
 		else if( obj instanceof Sub)
@@ -185,8 +183,16 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
 	@Override
 	public void visit(GT obj) {
-		// TODO Auto-generated method stub
-
+		Label t = new Label();
+		Label r = new Label();
+		this.visit(obj.left);
+		this.visit(obj.right);
+		emit(new Ificmpgt(t));
+		emit(new Ldc(0));
+		emit(new GoTo(r));
+		emit(new LabelJ(t));
+		emit(new Ldc(1));
+		emit(new LabelJ(r));
 	}
 
 	@Override
@@ -283,7 +289,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 	public void visit(Mul obj) {
 		this.visit(obj.left);
 		this.visit(obj.right);
-		
+
 		if( rtTypeOfMethod instanceof Int)
 			emit(new Imul());
 		else
@@ -312,6 +318,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
 	public void visit(Printf obj) {
 		String f = obj.format;
 		String[] array = f.split("%d|%f");
+		if( array.length == 0){
+			array = new String[1];
+			array[0] = f;
+		}
 		for (int i = 0; i < array.length; i++) {
 			this.visit(new site.ilemon.ast.forparse.Str1(array[i], obj.lineNumber));
 			emit(new Aload(index1 -1 ) );
@@ -382,7 +392,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 	public void visit(Sub obj) {
 		this.visit(obj.left);
 		this.visit(obj.right);
-		
+
 		if( rtTypeOfMethod instanceof Int)
 			emit(new Isub());
 		else

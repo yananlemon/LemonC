@@ -26,6 +26,7 @@ public interface IGeneratorCodeVistor {
 	void visit(Iload obj);
 	
 	void visit(Ificmplt obj);
+	void visit(Ificmpgt obj);
 	
 	void visit(GoTo obj);
 	

@@ -11,10 +11,14 @@ import site.ilemon.semantic.Semantic;
 public class TestMain {
 
 	public static void main(String[] args) {
-		Lexer lexer;
+		/*Lexer lexer;
 		try {
 			
-			File sourceFile = new File("examples/TestTwo.lemon");
+			//File sourceFile = new File("examples/CalHeightOfChild.lemon");
+			
+			File sourceFile = new File("examples/IterationDemo.lemon"); //not ok
+			
+			//File sourceFile = new File("examples/MulTable.lemon"); ok
 			lexer = new Lexer(sourceFile);
 			
 			Parser parser = new Parser(lexer);
@@ -34,8 +38,8 @@ public class TestMain {
 			
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
-		//jasmin.Main.main(new String[]{"Test.il"});
+		}*/
+		jasmin.Main.main(new String[]{"IterationDemo.il"});
 	}
 
 }
