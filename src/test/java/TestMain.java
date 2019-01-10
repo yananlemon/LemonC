@@ -16,7 +16,7 @@ public class TestMain {
 			
 			//File sourceFile = new File("examples/CalHeightOfChild.lemon");
 			
-			File sourceFile = new File("examples/IterationDemo.lemon"); //not ok
+			File sourceFile = new File("examples/IterationDemo.lemon"); // ok
 			
 			//File sourceFile = new File("examples/MulTable.lemon"); ok
 			lexer = new Lexer(sourceFile);
