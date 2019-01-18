@@ -265,12 +265,14 @@ public class ByteCodeGenerator implements IGeneratorCodeVistor
 
 	@Override
 	public void visit(Ificmplt obj) {
-		this.iwriteln("if_icmplt " + obj.l.toString());
+		//this.iwriteln("if_icmplt " + obj.l.toString());
+		this.iwriteln("if_icmple " + obj.l.toString());
 	}
 	
 	@Override
 	public void visit(Ificmpgt obj) {
-		this.iwriteln("if_icmpgt " + obj.l.toString());
+		//this.iwriteln("if_icmpgt " + obj.l.toString());
+		this.iwriteln("if_icmpge " + obj.l.toString());
 	}
 
 	@Override

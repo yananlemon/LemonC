@@ -2,6 +2,7 @@ package site.ilemon.parser;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -106,6 +107,7 @@ public class Parser {
 		isInMethod = true;
 		Type t = parseType();
 		String methodName = look.getLexeme();
+		//methodMap.put(methodName, false);
 		int lineNumber = look.getLineNumber();
 		move();
 		match("(");
@@ -115,7 +117,7 @@ public class Parser {
 		List<Declare> localParams = parseVarDeclares();
 		List<Stmt> stmts = parseStmts();
 		match("}");
-		isInMethod = false;
+		//isInMethod = false;
 		return new Method(t, methodName, inputParams, localParams, stmts, null,lineNumber);
 	}
 
@@ -229,6 +231,8 @@ public class Parser {
 		return null;
 	}
 	
+	private HashMap<String,Boolean> methodMap = new HashMap<String,Boolean>();
+	
 	private List<Stmt> parseStmts() throws IOException {
 		List<Stmt> rs = new ArrayList<Stmt>();
 		while( look.getKind() == TokenKind.Printf || 
@@ -325,10 +329,10 @@ public class Parser {
 
 		}
 		else if( look.getKind() == TokenKind.Return ) {
-			// 确保在同一个方法内并且return语句尚未解析
-			if( isInMethod && returnFound){
+			/*// 确保在同一个方法内并且return语句尚未解析
+			if( returnFound){
 				throw new Error("near line : "+look.getLineNumber()+ ",syntx error:multiple return statements found!");
-			}
+			}*/
 			match( "return" );
 			int lineNumber = look.getLineNumber();
 			Expr expr = parseExpr();

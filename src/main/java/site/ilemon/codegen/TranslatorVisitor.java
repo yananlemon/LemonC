@@ -89,12 +89,18 @@ public class TranslatorVisitor implements ISemanticVisitor {
 	@Override
 	public void visit(Add obj) {
 		this.visit(obj.left);
+		site.ilemon.ast.forparse.Type leftType = this.t;
 		this.visit(obj.right);
-
-		if( rtTypeOfMethod instanceof Int)
-			emit(new Iadd());
-		else
-			emit(new Fadd());
+		site.ilemon.ast.forparse.Type rightType = this.t;
+		if( leftType.toString().equals(rightType.toString())){
+			if( leftType.toString().equals("@int")){
+				emit(new Iadd());
+			}else{
+				emit(new Fadd());
+			}
+		}else{
+			//er
+		}
 	}
 
 	@Override
@@ -181,19 +187,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 			this.visit((GT)obj);
 	}
 
-	@Override
-	public void visit(GT obj) {
-		Label t = new Label();
-		Label r = new Label();
-		this.visit(obj.left);
-		this.visit(obj.right);
-		emit(new Ificmpgt(t));
-		emit(new Ldc(0));
-		emit(new GoTo(r));
-		emit(new LabelJ(t));
-		emit(new Ldc(1));
-		emit(new LabelJ(r));
-	}
+	
 
 	@Override
 	public void visit(Id obj) {
@@ -210,39 +204,13 @@ public class TranslatorVisitor implements ISemanticVisitor {
 		this.t = obj.type;
 	}
 
-	@Override
-	public void visit(If obj) {
-		Label l = new Label();
-		Label r = new Label();
-		this.visit(obj.condition);
-		emit(new Ldc(1));
-		emit(new Ificmplt(l));
-		this.visit(obj.thenStmt);
-		emit(new GoTo(r));
-		emit(new LabelJ(l));
-		this.visit(obj.elseStmt);
-		emit(new LabelJ(r));
-	}
+	
 
 	@Override
 	public void visit(site.ilemon.ast.forparse.Int obj) {
-		// TODO Auto-generated method stub
 
 	}
 
-	@Override
-	public void visit(LT obj) {
-		Label t = new Label();
-		Label r = new Label();
-		this.visit(obj.left);
-		this.visit(obj.right);
-		emit(new Ificmplt(t));
-		emit(new Ldc(0));
-		emit(new GoTo(r));
-		emit(new LabelJ(t));
-		emit(new Ldc(1));
-		emit(new LabelJ(r));
-	}
 
 	@Override
 	public void visit(site.ilemon.ast.forparse.MainClass obj) {
@@ -414,6 +382,53 @@ public class TranslatorVisitor implements ISemanticVisitor {
 		// TODO Auto-generated method stub
 
 	}
+	
+	@Override
+	public void visit(If obj) {
+		Label l = new Label();
+		Label r = new Label();
+		this.visit(obj.condition);
+		if( obj.condition instanceof LT ){
+			emit(new Ificmpgt(l));
+			
+		}
+		else if( obj.condition instanceof GT ){
+			emit(new Ificmplt(l));
+		}
+		this.visit(obj.thenStmt);
+		emit(new GoTo(r));
+		emit(new LabelJ(l));
+		this.visit(obj.elseStmt);
+		emit(new LabelJ(r));
+	}
+	
+	@Override
+	public void visit(GT obj) {
+		Label t = null;
+		if( tempLabel == null ){
+			t = new Label();
+			tempLabel = t;
+		}
+		this.visit(obj.left);
+		this.visit(obj.right);
+		//emit(new Ificmplt(t));
+		tempLabel = null;
+	}
+	
+
+	@Override
+	public void visit(LT obj) {
+		Label t = null;
+		if( tempLabel == null ){
+			t = new Label();
+			tempLabel = t;
+		}
+		this.visit(obj.left);
+		this.visit(obj.right);
+		//emit(new Ificmpgt(t));
+	}
+	
+	Label tempLabel;
 
 	@Override
 	public void visit(While obj) {
@@ -421,8 +436,13 @@ public class TranslatorVisitor implements ISemanticVisitor {
 		Label end = new Label();
 		emit(new LabelJ(con));
 		this.visit(obj.condition);
-		emit(new Ldc(1));
-		emit(new Ificmplt(end));
+		if( obj.condition instanceof LT ){
+			emit(new Ificmpgt(end));
+			
+		}
+		else if( obj.condition instanceof GT ){
+			emit(new Ificmplt(end));
+		}
 		this.visit(obj.body);
 		emit(new GoTo(con));
 		emit(new LabelJ(end));

@@ -11,14 +11,21 @@ import site.ilemon.semantic.Semantic;
 public class TestMain {
 
 	public static void main(String[] args) {
-		/*Lexer lexer;
+		Lexer lexer;
 		try {
 			
-			//File sourceFile = new File("examples/CalHeightOfChild.lemon");
-			
-			File sourceFile = new File("examples/IterationDemo.lemon"); // ok
-			
-			//File sourceFile = new File("examples/MulTable.lemon"); ok
+			//File sourceFile = new File("examples/Cal.lemon");// ok
+			//File sourceFile = new File("examples/CalHeightOfChild.lemon");// ok
+			//File sourceFile = new File("examples/IterationDemo.lemon"); // ok
+			//File sourceFile = new File("examples/MulTable.lemon");// ok
+			//File sourceFile = new File("examples/IterationDemo.lemon");//ok
+			//File sourceFile = new File("examples/TestIf.lemon");// ok
+			//File sourceFile = new File("examples/Iteration.lemon");// ok
+			//File sourceFile = new File("examples/Return.lemon");// ok
+			//File sourceFile = new File("examples/SimpleMethodCall.lemon");// ok
+			//File sourceFile = new File("examples/SimpleMethodCallThree.lemon");// ok
+			//File sourceFile = new File("examples/SimpleMethodCallTwo.lemon");// ok
+			File sourceFile = new File("examples/Example02.lemon");// ok
 			lexer = new Lexer(sourceFile);
 			
 			Parser parser = new Parser(lexer);
@@ -38,8 +45,8 @@ public class TestMain {
 			
 		} catch (IOException e) {
 			e.printStackTrace();
-		}*/
-		jasmin.Main.main(new String[]{"IterationDemo.il"});
+		}
+		//jasmin.Main.main(new String[]{"TestMain.il"});
 	}
 
 }
