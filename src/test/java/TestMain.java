@@ -25,7 +25,8 @@ public class TestMain {
 			//File sourceFile = new File("examples/SimpleMethodCall.lemon");// ok
 			//File sourceFile = new File("examples/SimpleMethodCallThree.lemon");// ok
 			//File sourceFile = new File("examples/SimpleMethodCallTwo.lemon");// ok
-			File sourceFile = new File("examples/Example02.lemon");// ok
+			//File sourceFile = new File("examples/Example02.lemon");// ok
+			File sourceFile = new File("examples/Fib.lemon");// ok
 			lexer = new Lexer(sourceFile);
 			
 			Parser parser = new Parser(lexer);
