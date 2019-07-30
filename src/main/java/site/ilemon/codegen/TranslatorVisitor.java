@@ -1,59 +1,20 @@
 package site.ilemon.codegen;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.List;
-
-import site.ilemon.ast.forcodegen.Aload;
-import site.ilemon.ast.forcodegen.Astore;
-import site.ilemon.ast.forcodegen.Fadd;
-import site.ilemon.ast.forcodegen.Fdiv;
-import site.ilemon.ast.forcodegen.Fload;
-import site.ilemon.ast.forcodegen.Fmul;
-import site.ilemon.ast.forcodegen.Freturn;
-import site.ilemon.ast.forcodegen.Fstore;
-import site.ilemon.ast.forcodegen.Fsub;
-import site.ilemon.ast.forcodegen.GoTo;
-import site.ilemon.ast.forcodegen.Iadd;
-import site.ilemon.ast.forcodegen.Idiv;
-import site.ilemon.ast.forcodegen.Ificmpgt;
-import site.ilemon.ast.forcodegen.Ificmplt;
-import site.ilemon.ast.forcodegen.Iload;
-import site.ilemon.ast.forcodegen.Imul;
-import site.ilemon.ast.forcodegen.Invokestatic;
-import site.ilemon.ast.forcodegen.Ireturn;
-import site.ilemon.ast.forcodegen.Istore;
-import site.ilemon.ast.forcodegen.Isub;
-import site.ilemon.ast.forcodegen.LabelJ;
-import site.ilemon.ast.forcodegen.Ldc;
+import site.ilemon.ast.forcodegen.*;
 import site.ilemon.ast.forcodegen.Type;
-import site.ilemon.ast.forparse.Add;
-import site.ilemon.ast.forparse.And;
-import site.ilemon.ast.forparse.Assign;
-import site.ilemon.ast.forparse.Block;
-import site.ilemon.ast.forparse.Bool;
-import site.ilemon.ast.forparse.Call;
-import site.ilemon.ast.forparse.Div;
-import site.ilemon.ast.forparse.Expr;
-import site.ilemon.ast.forparse.GT;
-import site.ilemon.ast.forparse.Id;
-import site.ilemon.ast.forparse.If;
+import site.ilemon.ast.forparse.*;
 import site.ilemon.ast.forparse.Int;
-import site.ilemon.ast.forparse.LT;
-import site.ilemon.ast.forparse.Mul;
-import site.ilemon.ast.forparse.Num;
-import site.ilemon.ast.forparse.Or;
 import site.ilemon.ast.forparse.PrintNewLine;
 import site.ilemon.ast.forparse.Printf;
-import site.ilemon.ast.forparse.Return;
 import site.ilemon.ast.forparse.Stmt;
 import site.ilemon.ast.forparse.Str;
-import site.ilemon.ast.forparse.Str1;
-import site.ilemon.ast.forparse.Sub;
-import site.ilemon.ast.forparse.While;
 import site.ilemon.codegen.ast.Label;
 import site.ilemon.semantic.Semantic;
 import site.ilemon.visitor.ISemanticVisitor;
+
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.List;
 
 public class TranslatorVisitor implements ISemanticVisitor {
 
@@ -201,7 +162,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
 			emit(new Iload(index));
 			//rtTypeOfMethod = new Int();
 		}
-		this.t = obj.type;
+		//this.t = obj.type;
+		this.t = obj.type == null ? t :obj.type;
 	}
 
 	

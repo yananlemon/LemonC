@@ -1,4 +1,4 @@
-class TestMain{
+class Example02{
 	// 程序入口:计算斐波那契数
 	void main(){
 		int month;

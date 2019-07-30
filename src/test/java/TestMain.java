@@ -1,12 +1,12 @@
-import java.io.File;
-import java.io.IOException;
-
 import site.ilemon.ast.forparse.MainClass;
 import site.ilemon.codegen.ByteCodeGenerator;
 import site.ilemon.codegen.TranslatorVisitor;
 import site.ilemon.lexer.Lexer;
 import site.ilemon.parser.Parser;
 import site.ilemon.semantic.Semantic;
+
+import java.io.File;
+import java.io.IOException;
 
 public class TestMain {
 
@@ -18,15 +18,17 @@ public class TestMain {
 			//File sourceFile = new File("examples/CalHeightOfChild.lemon");// ok
 			//File sourceFile = new File("examples/IterationDemo.lemon"); // ok
 			//File sourceFile = new File("examples/MulTable.lemon");// ok
-			//File sourceFile = new File("examples/IterationDemo.lemon");//ok
+			File sourceFile = new File("examples/Iteration.lemon");//ok
+
 			//File sourceFile = new File("examples/TestIf.lemon");// ok
-			//File sourceFile = new File("examples/Iteration.lemon");// ok
 			//File sourceFile = new File("examples/Return.lemon");// ok
 			//File sourceFile = new File("examples/SimpleMethodCall.lemon");// ok
 			//File sourceFile = new File("examples/SimpleMethodCallThree.lemon");// ok
 			//File sourceFile = new File("examples/SimpleMethodCallTwo.lemon");// ok
+
 			//File sourceFile = new File("examples/Example02.lemon");// ok
-			File sourceFile = new File("examples/Fib.lemon");// ok
+			//File sourceFile = new File("examples/Fib.lemon");// ok
+			//File sourceFile = new File("examples/Test01.lemon");// ok
 			lexer = new Lexer(sourceFile);
 			
 			Parser parser = new Parser(lexer);

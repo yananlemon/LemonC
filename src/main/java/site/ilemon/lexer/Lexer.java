@@ -35,7 +35,7 @@ public class Lexer {
 
 	public static void main(String[] args) {
 		try {
-			Lexer lexer=new Lexer(new File("test_scripts/CalHeightOfChild.lemon"));
+			Lexer lexer=new Lexer(new File("examples/CalHeightOfChild.lemon"));
 			lexer.lexicalAnalysis();
 			System.out.println(lexer.tokens);
 		} catch (IOException e) {
@@ -151,11 +151,16 @@ public class Lexer {
 		if(Character.isLetter(c)){
 			StringBuffer letter=new StringBuffer();
 			letter.append((char)c);
-			while(Character.isLetter(source.charAt(position))){
+			while(Character.isLetter(source.charAt(position)) || Character.isDigit(source.charAt(position))){
 				letter.append((char)source.charAt(position));
 				position++;
 				tempPosition--;
 			}
+			/*do{
+				letter.append((char)source.charAt(position));
+				position++;
+				tempPosition--;
+			}while(Character.isLetter(source.charAt(position)) || Character.isDigit(source.charAt(position)));*/
 			switch (letter.toString()) {
 				case "class":
 					return new Token(TokenKind.Class, "class",line);
