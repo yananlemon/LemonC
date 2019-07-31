@@ -1,4 +1,5 @@
 import org.junit.Assert;
+import org.junit.Before;
 import site.ilemon.ast.Ast;
 import site.ilemon.lexer.Lexer;
 import site.ilemon.parser.Parser;
@@ -11,16 +12,20 @@ import java.io.IOException;
  */
 public class ParserTest {
 
-    @org.junit.Test
-    public void testParser(){
-        try {
-            Lexer lexer=new Lexer(new File("examples/Cal.lemon"));
-            Parser parser = new Parser(lexer);
-            Ast.MainClass.MainClassSingle mainClassSingle = parser.parse();
-            Assert.assertNotNull(mainClassSingle);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private Lexer lexer;
+    private Parser parser;
 
+    @Before
+    public void init() throws IOException{
+        //File file = new File("examples/Cal.lemon");
+        File file = new File("examples/CalHeightOfChild.lemon");
+        lexer=new Lexer(file);
+        parser = new Parser(lexer);
+    }
+
+    @org.junit.Test
+    public void testParser() throws IOException{
+        Ast.MainClass.MainClassSingle mainClassSingle = parser.parse();
+        Assert.assertNotNull(mainClassSingle);
     }
 }

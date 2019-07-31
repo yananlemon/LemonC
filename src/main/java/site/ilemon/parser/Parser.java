@@ -101,12 +101,9 @@ public class Parser {
 		return methods;
 	}
 
-	private boolean isInMethod = false;
-	private boolean returnFound = false;
 	
 	// <method> -> void | int | double | methodname ( <inputparams> ) {<varDeclares> <stmts> [return <expr>]}
 	private Ast.Method.MethodSingle parseMethod() throws IOException {
-		isInMethod = true;
 		Ast.Type.T t = parseType();
 		String methodName = look.lexeme;
 		int lineNumber = look.lineNumber;
@@ -118,8 +115,6 @@ public class Parser {
 		ArrayList<Ast.Declare.T> localParams = parseVarDeclares();
 		ArrayList<Ast.Stmt.T> stmts = parseStmts();
 		match("}");
-		//isInMethod = false;
-		//return new Ast.Method(t, methodName, inputParams, localParams, stmts, null,lineNumber);
 		return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,null);
 	}
 
@@ -302,22 +297,8 @@ public class Parser {
 				match( new Token(TokenKind.Assign) );
 				Ast.Expr.T expr = parseExpr();
 				match( new Token(TokenKind.Semicolon) );
-				stmt = new Ast.Stmt.Assign(id, expr, lineNum);
-				/*Ast.Expr.T expr = parseExpr();
-				match( new Token(TokenKind.Semicolon) );
-				Ast.Type.T t = varTable.get(id);
-				if( expr instanceof Ast.Expr.Number){
-					stmt = new Ast.Stmt.Assign(id, expr, lineNum);
-				}else{
-					if( t == null){
-						error("未定义的变量"+id);
-					}else{
-						if( expr instanceof Ast.Expr.Call){
-							((Ast.Expr.Call)expr).returnType = t;
-						}
-						stmt = new Ast.Stmt.Assign(id, expr, lineNum);
-					}
-				}*/
+				//stmt = new Ast.Stmt.Assign(id, expr, lineNum);
+				stmt = new Ast.Stmt.Assign(new Ast.Expr.Id(id,this.varTable.get(id),lineNum), expr, lineNum);
 				
 			}
 		}
@@ -338,7 +319,6 @@ public class Parser {
 			Ast.Expr.T expr = parseExpr();
 			stmt = new Ast.Stmt.Return(expr, lineNumber);
 			match( ";" );
-			returnFound = true;
 
 		}else if( look.kind == TokenKind.If ){
 			match( "if" );

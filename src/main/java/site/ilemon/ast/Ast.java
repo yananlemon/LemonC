@@ -51,13 +51,13 @@ public class Ast {
             public int lineNum;
         }
         public static class Assign extends T {
-            public String id;
+            public Ast.Expr.Id id;
             private Expr.T expr;
-            private Type.T type;
-            public Assign(String id, Expr.T exp, int lineNum) {
+            //private Type.T type;
+            public Assign(Ast.Expr.Id id, Expr.T exp, int lineNum) {
                 this.id = id;
                 this.expr = exp;
-                this.type = null;
+                //this.type = type;
                 this.lineNum = lineNum;
             }
         }
