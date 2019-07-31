@@ -1,9 +1,4 @@
-import site.ilemon.ast.forparse.MainClass;
-import site.ilemon.codegen.ByteCodeGenerator;
-import site.ilemon.codegen.TranslatorVisitor;
 import site.ilemon.lexer.Lexer;
-import site.ilemon.parser.Parser;
-import site.ilemon.semantic.Semantic;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +26,7 @@ public class TestMain {
 			//File sourceFile = new File("examples/Test01.lemon");// ok
 			lexer = new Lexer(sourceFile);
 			
-			Parser parser = new Parser(lexer);
+			/*Parser parser = new Parser(lexer);
 			MainClass program = parser.parse();
 			Semantic semantic = new Semantic();
 			semantic.visit(program);
@@ -44,7 +39,7 @@ public class TestMain {
 			translator.visit(program);
 			ByteCodeGenerator generator = new ByteCodeGenerator();
 			generator.visit(translator.prog);
-			jasmin.Main.main(new String[]{translator.prog.name + ".il"});
+			jasmin.Main.main(new String[]{translator.prog.name + ".il"});*/
 			
 		} catch (IOException e) {
 			e.printStackTrace();

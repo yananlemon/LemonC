@@ -1,20 +1,9 @@
 package site.ilemon.compiler;
 
-import java.io.File;
-import java.io.IOException;
-
-import site.ilemon.ast.forparse.MainClass;
-import site.ilemon.codegen.ByteCodeGenerator;
-import site.ilemon.codegen.TranslatorVisitor;
-import site.ilemon.lexer.Lexer;
-import site.ilemon.parser.Parser;
-import site.ilemon.semantic.Semantic;
-
-
 public class LemonC {
 
 	public static void main(String[] args) {
-		Lexer lexer;
+		/*Lexer lexer;
 		try {
 			if( args == null || args.length != 1){
 				System.out.println("使用示例:java LemonC HelloWorld.ilemon");
@@ -44,7 +33,7 @@ public class LemonC {
 			
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
+		}*/
 	}
 
 }

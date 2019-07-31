@@ -1,7 +1,7 @@
 package site.ilemon.visitor;
 
-import site.ilemon.ast.forparse.*;
-import site.ilemon.ast.forparse.Float;
+
+import site.ilemon.ast.Ast;
 
 /**
  * 语义分析访问者接口
@@ -10,34 +10,32 @@ import site.ilemon.ast.forparse.Float;
  */
 public interface ISemanticVisitor {
 	
-	void visit(Add obj);
-	void visit(site.ilemon.ast.forparse.Bool obj);
-	void visit(And obj);
-	void visit(Assign obj);
-	void visit(Block obj);
-	void visit(Call obj);
-	void visit(Declare obj);
-	void visit(Div obj);
+	void visit(Ast.Expr.Add obj);
+	void visit(Ast.Type.Bool obj);
+	void visit(Ast.Expr.And obj);
+	void visit(Ast.Stmt.Assign obj);
+	void visit(Ast.Stmt.Block obj);
+	void visit(Ast.Expr.Call obj);
+	void visit(Ast.Declare obj);
+	void visit(Ast.Expr.Div obj);
 	void visit(Float obj);
-	void visit(Expr obj);
-	void visit(GT obj);
-	void visit(Id obj);
-	void visit(If obj);
-	void visit(Int obj);
-	void visit(LT obj);
-	void visit(MainClass obj);
-	void visit(Method obj);
-	void visit(Mul obj);
-	void visit(Num obj);
-	void visit(Or obj);
-	void visit(Printf obj);
-	void visit(PrintNewLine obj);
-	void visit(Return obj);
-	void visit(Stmt obj);
-	void visit(Str obj);
-	void visit(Str1 obj);
-	void visit(Sub obj);
-	void visit(Type obj);
-	void visit(site.ilemon.ast.forparse.Void obj);
-	void visit(While obj);
+	void visit(Ast.Expr obj);
+	void visit(Ast.Expr.GT obj);
+	void visit(Ast.Expr.Id obj);
+	void visit(Ast.Stmt.If obj);
+	void visit(Ast.Type.Int obj);
+	void visit(Ast.Expr.LT obj);
+	void visit(Ast.MainClass obj);
+	void visit(Ast.Method obj);
+	void visit(Ast.Expr.Mul obj);
+	void visit(Ast.Expr.Number obj);
+	void visit(Ast.Expr.Or obj);
+	void visit(Ast.Stmt.Printf obj);
+	void visit(Ast.Stmt.Return obj);
+	void visit(Ast.Stmt obj);
+	void visit(Ast.Type.Str obj);
+	void visit(Ast.Expr.Sub obj);
+	void visit(Ast.Type obj);
+	void visit(Ast.Type.Void obj);
+	void visit(Ast.Stmt.While obj);
 }

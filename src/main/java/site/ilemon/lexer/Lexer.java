@@ -1,10 +1,6 @@
 package site.ilemon.lexer;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -20,7 +16,7 @@ public class Lexer {
 	private StringBuffer source;
 	public int position=0;
 	public int tempPosition=0;
-	private List<Token> tokens=new ArrayList<Token>();
+	public List<Token> tokens=new ArrayList<Token>();
 	public int line=1;
 	private int index=0;
 	Pattern iNumberPattern = Pattern.compile("^\\d+$|-\\d+$"); // 就是判断是否为整数
@@ -33,22 +29,12 @@ public class Lexer {
 		readFile();
 	}
 
-	public static void main(String[] args) {
-		try {
-			Lexer lexer=new Lexer(new File("examples/CalHeightOfChild.lemon"));
-			lexer.lexicalAnalysis();
-			System.out.println(lexer.tokens);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
 	public void lexicalAnalysis(){
 		Token token=null;
 		try {
 			while((token=this.nextToken()) != null){
 				tokens.add(token);
-				if(token.getKind() == TokenKind.EndOfFile)
+				if(token.kind == TokenKind.EOF)
 					break;
 			}
 		} catch (IOException e) {
@@ -76,7 +62,7 @@ public class Lexer {
 	/**
 	 * 向前看i个token
 	 * @param i 向前看的个数
-	 * @return {@link com.lemon.lexer.Token} 
+	 * @return {@link site.ilemon.lexer.Token}
 	 */
 	public Token lookahead(int i){
 		if(index+i<tokens.size()){
@@ -106,7 +92,7 @@ public class Lexer {
 	private Token nextToken() throws IOException{
 		if(position >= source.length()-1){
 			line++;
-			return new Token("EOF",line,TokenKind.EndOfFile);
+			return new Token("EOF",line,TokenKind.EOF);
 		}
 		tempPosition=position;
 		int c=source.charAt(position++);

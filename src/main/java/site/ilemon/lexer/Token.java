@@ -1,12 +1,14 @@
 package site.ilemon.lexer;
 
 public class Token {
+
+
 	
-	private String lexeme;	// 单词内容
-	
-	private int lineNumber; // 单词所在源文件行数
-	
-	private TokenKind kind; // 单词种类
+	public String lexeme;	// 单词内容
+
+	public int lineNumber; // 单词所在源文件行数
+
+	public TokenKind kind; // 单词种类
 
 	public Token(String lexeme, int lineNumber, TokenKind kind) {
 		super();
@@ -32,30 +34,6 @@ public class Token {
 	
 
 	public Token(TokenKind kind) {
-		this.kind = kind;
-	}
-
-	public String getLexeme() {
-		return lexeme;
-	}
-
-	public void setLexeme(String lexeme) {
-		this.lexeme = lexeme;
-	}
-
-	public int getLineNumber() {
-		return lineNumber;
-	}
-
-	public void setLineNumber(int lineNumber) {
-		this.lineNumber = lineNumber;
-	}
-
-	public TokenKind getKind() {
-		return kind;
-	}
-
-	public void setKind(TokenKind kind) {
 		this.kind = kind;
 	}
 
