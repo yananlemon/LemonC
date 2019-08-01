@@ -1,0 +1,20 @@
+class BoolTest01{
+	void main(){
+        bool b1;
+        bool b2;
+        bool b3;
+        b1 = true;
+        b2 = testBoolCall(false);
+        b3 = !b1 && b2 || !b2;
+		printf("b1=%s,b2=%s,b3=%s",b1,b2,b3);
+	}
+
+	bool testBoolCall(bool b){
+	    bool rs;
+	    if( b )
+	        rs = !b;
+	    else
+	         rs = b;
+	    return rs;
+	}
+}

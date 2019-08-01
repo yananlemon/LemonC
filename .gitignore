@@ -5,5 +5,4 @@
 /target/
 .DS_Store
 *.class
-*.lemon
 *.il
