@@ -1,0 +1,16 @@
+class IterationDemo{
+	void main(){
+		int k;
+		k = iteration();
+	}
+	
+	int iteration(){
+		int k;
+		k = 1;
+		while(k < 10 ){
+			printf("k=%d\n",k);
+			k = k+1;
+		}
+		return 0;
+	}
+}

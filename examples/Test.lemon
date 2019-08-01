@@ -1,0 +1,18 @@
+class Test{
+	
+	void main(){
+		
+		// 圆周率
+		float pi;
+
+		// 直径
+		float diameter;
+
+		// 周长
+		float perimeter;
+		pi = 3.1415;
+		diameter = 10.0;
+		perimeter = pi*diameter;
+		printf("%d\n",perimeter);
+	}
+}

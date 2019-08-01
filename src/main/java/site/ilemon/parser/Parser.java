@@ -124,7 +124,13 @@ public class Parser {
 		ArrayList<Ast.Stmt.T> stmts = parseStmts();
 		match("}");
 		table.put(this.currMethod,this.varTable);
-		return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,null);
+		if( !methodName.equals("main")){
+			Ast.Stmt.T stmt = stmts.get(stmts.size()-1);
+			return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,stmt,lineNumber);
+		}else{
+			return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,null,lineNumber);
+		}
+
 	}
 
 	// <varDeclares> -> <varDeclare>*
@@ -342,10 +348,6 @@ public class Parser {
 
 		}
 		else if( look.kind == TokenKind.Return ) {
-			/*// 确保在同一个方法内并且return语句尚未解析
-			if( returnFound){
-				throw new Error("near line : "+look.lineNumber+ ",syntx error:multiple return statements found!");
-			}*/
 			match( "return" );
 			int lineNumber = look.lineNumber;
 			Ast.Expr.T expr = parseExpr();

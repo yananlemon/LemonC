@@ -35,7 +35,7 @@ public class Ast {
             public ArrayList<Ast.Declare.T> fields;
             public ArrayList<Ast.Method.T> methods;
 
-            public MainClassSingle(String classId, ArrayList<Declare.T> fields, ArrayList<Method.T> methods) {
+            public MainClassSingle(String classId, ArrayList<Declare.T> fields, ArrayList<Ast.Method.T> methods) {
                 this.classId = classId;
                 this.fields = null;
                 this.methods = methods;
@@ -95,7 +95,7 @@ public class Ast {
         }
 
         public static class Return extends T {
-            public Expr.T expr;
+            public Ast.Expr.T expr;
 
             public Return(Expr.T expr, int lineNum) {
                 this.expr = expr;
@@ -353,7 +353,7 @@ public class Ast {
 
     public static class Method {
         public static abstract class T {
-
+            public static int lineNum;
         }
 
         public static class MethodSingle extends T {
@@ -362,19 +362,20 @@ public class Ast {
             public ArrayList<Declare.T> formals;
             public ArrayList<Declare.T> locals;
             public ArrayList<Stmt.T> stms;
-            public Expr.T retExp;
+            public Ast.Stmt.T retExp;
 
             public MethodSingle(Ast.Type.T  retType, String id,
                                 ArrayList<Declare.T> formals,
                                 ArrayList<Declare.T> locals,
                                 ArrayList<Stmt.T> stms,
-                                Expr.T retExp) {
+                                Ast.Stmt.T retExp,int lineNum) {
                 this.retType = retType;
                 this.id = id;
                 this.formals = formals;
                 this.locals = locals;
                 this.stms = stms;
                 this.retExp = retExp;
+                this.lineNum = lineNum;
             }
         }
     }

@@ -1,0 +1,13 @@
+class TestTwo{
+	void main(){
+		float x;
+		float y;
+		y = 19.0;
+		x = call(y);
+		printf("%d\n",x);
+	}
+	
+	float call(float a){
+		return a + 10.0 * 2.0 /19.0;
+	}
+}

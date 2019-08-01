@@ -11,6 +11,7 @@ class BoolTest01{
 
 	bool testBoolCall(bool b){
 	    bool rs;
+	    int a;
 	    if( b )
 	        rs = !b;
 	    else
