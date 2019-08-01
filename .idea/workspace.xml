@@ -2,10 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ab5efad6-87e6-42e6-b9bb-ff2c8c900114" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/LemonC.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/LemonC.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/TokenKind.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/TokenKind.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/LexerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/LexerTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/ParserTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/ParserTest.java" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/target/" />
@@ -18,40 +18,54 @@
   <component name="CreatePatchCommitExecutor">
     <option name="PATCH_PATH" value="" />
   </component>
+  <component name="DefaultGradleProjectSettings">
+    <option name="testRunner" value="GRADLE" />
+    <option name="delegatedBuild" value="true" />
+  </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="299">
-              <caret line="56" column="52" selection-start-line="56" selection-start-column="52" selection-end-line="56" selection-end-column="52" />
-              <folding>
-                <element signature="class#Program#0;class#Ast#0" />
-                <element signature="class#Type#0;class#Ast#0" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="184">
-              <caret line="300" column="91" selection-start-line="300" selection-start-column="91" selection-end-line="300" selection-end-column="91" />
+            <state relative-caret-position="157">
+              <caret line="200" column="12" lean-forward="true" selection-start-line="200" selection-start-column="12" selection-end-line="200" selection-end-column="12" />
               <folding>
-                <element signature="imports" expanded="true" />
+                <element signature="e#683#718#0" expanded="true" />
                 <element signature="e#714#715#0" expanded="true" />
                 <element signature="e#740#741#0" expanded="true" />
+                <element signature="e#2978#2993#0" expanded="true" />
+                <element signature="e#4490#4505#0" expanded="true" />
+                <element signature="e#6138#6150#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java">
+        <entry file="file://$PROJECT_DIR$/src/test/java/LexerTest.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="147">
-              <caret line="46" selection-start-line="46" selection-end-line="46" />
+            <state relative-caret-position="184">
+              <caret line="13" column="68" lean-forward="true" selection-start-line="13" selection-start-column="68" selection-end-line="13" selection-end-column="68" />
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="138">
+              <caret line="314" column="18" selection-start-line="314" selection-start-column="18" selection-end-line="314" selection-end-column="18" />
+              <folding>
+                <element signature="class#Add#0;class#Expr#0;class#Ast#0" />
+                <element signature="class#Sub#0;class#Expr#0;class#Ast#0" />
+                <element signature="e#6560#6561#0" expanded="true" />
+                <element signature="e#6608#6609#0" expanded="true" />
+                <element signature="e#8374#8375#0" expanded="true" />
+                <element signature="e#8427#8428#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -59,7 +73,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Token.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="106">
+            <state relative-caret-position="126">
               <caret line="37" selection-start-line="37" selection-end-line="37" />
               <folding>
                 <element signature="e#603#604#0" expanded="true" />
@@ -69,10 +83,19 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="jar://$MAVEN_REPOSITORY$/junit/junit/4.11/junit-4.11.jar!/org/junit/internal/runners/model/ReflectiveCallable.class">
+        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/TokenKind.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="90">
-              <caret line="17" selection-start-line="17" selection-end-line="17" />
+            <state relative-caret-position="434">
+              <caret line="55" column="8" selection-start-line="55" selection-start-column="8" selection-end-line="55" selection-end-column="8" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="248">
+              <caret line="48" selection-start-line="48" selection-end-line="48" />
             </state>
           </provider>
         </entry>
@@ -80,17 +103,17 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/test/java/ParserTest.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="340">
-              <caret line="27" column="65" selection-start-line="27" selection-start-column="65" selection-end-line="27" selection-end-column="65" />
+            <state relative-caret-position="201">
+              <caret line="29" selection-start-line="29" selection-end-line="29" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/examples/CalHeightOfChild.lemon">
+        <entry file="file://$PROJECT_DIR$/examples/BoolTest01.lemon">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="132">
-              <caret line="6" column="16" lean-forward="true" selection-start-line="6" selection-start-column="16" selection-end-line="6" selection-end-column="16" />
+            <state relative-caret-position="176">
+              <caret line="11" column="30" lean-forward="true" selection-start-line="11" selection-start-column="30" selection-end-line="11" selection-end-column="30" />
             </state>
           </provider>
         </entry>
@@ -119,6 +142,8 @@
       <find>parse</find>
       <find>Print</find>
       <find>Assign</find>
+      <find>varTable.pu</find>
+      <find>Bool</find>
     </findStrings>
     <replaceStrings>
       <replace>kind</replace>
@@ -141,30 +166,27 @@
         <option value="$PROJECT_DIR$/examples/Example02.lemon" />
         <option value="$PROJECT_DIR$/src/test/java/TestMain.java" />
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/compiler/LemonC.java" />
-        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/TokenKind.java" />
-        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java" />
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/visitor/ISemanticVisitor.java" />
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Token.java" />
-        <option value="$PROJECT_DIR$/src/test/java/LexerTest.java" />
-        <option value="$PROJECT_DIR$/src/test/java/ParserTest.java" />
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java" />
+        <option value="$PROJECT_DIR$/src/test/java/ParserTest.java" />
+        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/TokenKind.java" />
+        <option value="$PROJECT_DIR$/src/test/java/LexerTest.java" />
+        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java" />
+        <option value="$PROJECT_DIR$/examples/BoolTest01.lemon" />
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" fullScreen="true">
-    <option name="x" value="263" />
-    <option name="y" value="23" />
-    <option name="width" value="1378" />
-    <option name="height" value="726" />
+  <component name="ProjectFrameBounds">
+    <option name="width" value="1366" />
+    <option name="height" value="768" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="PackagesPane" />
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -220,21 +242,25 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
+      <pane id="PackagesPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="SearchEverywhereHistoryKey" value="Cal.&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Cal.lemon&#10;Pars&#9;FILE&#9;file://C:/Users/andy/git/LemonC/src/main/java/site/ilemon/parser/Parser.java&#10;Test01&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Test01.lemon&#10;Example02&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Example02.lemon&#10;SimpleMethodCallTwo&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/SimpleMethodCallTwo.lemon&#10;SimpleMethodCallThree&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/SimpleMethodCallThree.lemon&#10;SimpleMethodCall&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/SimpleMethodCall.lemon&#10;Return&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Return.lemon&#10;TestIf&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/TestIf.lemon&#10;Iteration&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Iteration.lemon&#10;MulTable&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/MulTable.lemon&#10;IterationDemo&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/IterationDemo.lemon&#10;Itera&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Iteration.lemon&#10;Calc&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/CalHeightOfChild.lemon&#10;Cal&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Cal.lemon" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="com.android.tools.idea.instantapp.provision.ProvisionBeforeRunTaskProvider.myTimeStamp" value="1564576952737" />
     <property name="js.eslint.eslintPackage" value="" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/examples" />
   </component>
   <component name="RecentsManager">
     <key name="CopyClassDialog.RECENTS_KEY">
       <recent name="" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\gitOwn\LemonC\examples" />
       <recent name="C:\Users\andy\git\LemonC\examples" />
     </key>
   </component>
@@ -250,34 +276,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="JUnit.ParserTest">
-    <configuration default="true" type="AndroidTestRunConfigurationType" factoryName="Android Tests">
-      <module name="" />
-      <option name="TESTING_TYPE" value="0" />
-      <option name="INSTRUMENTATION_RUNNER_CLASS" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="PACKAGE_NAME" value="" />
-      <option name="EXTRA_OPTIONS" value="" />
-      <option name="TARGET_SELECTION_MODE" value="SHOW_DIALOG" />
-      <option name="PREFERRED_AVD" value="" />
-      <option name="CLEAR_LOGCAT" value="false" />
-      <option name="SHOW_LOGCAT_AUTOMATICALLY" value="false" />
-      <option name="SKIP_NOOP_APK_INSTALLATIONS" value="true" />
-      <option name="FORCE_STOP_RUNNING_APP" value="true" />
-      <option name="DEBUGGER_TYPE" value="Java" />
-      <option name="USE_LAST_SELECTED_DEVICE" value="false" />
-      <option name="PREFERRED_AVD" value="" />
-      <Java />
-      <Profilers>
-        <option name="ENABLE_ADVANCED_PROFILING" value="true" />
-        <option name="GAPID_ENABLED" value="false" />
-        <option name="GAPID_DISABLE_PCS" value="false" />
-        <option name="SUPPORT_LIB_ENABLED" value="true" />
-        <option name="INSTRUMENTATION_ENABLED" value="true" />
-      </Profilers>
-      <method />
-    </configuration>
+  <component name="RunManager" selected="JUnit.ParserTest.testParser">
     <configuration default="true" type="Applet">
       <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
       <method v="2">
@@ -317,64 +316,11 @@
           <option name="containerStateName" value="" />
         </value>
       </option>
+      <option name="TEST_OBJECT" value="CLASS" />
       <option name="VM_PARAMETERS" />
       <option name="WORKING_DIRECTORY" />
       <properties />
       <listeners />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="FlashRunConfigurationType">
-      <option name="BCName" value="" />
-      <option name="IOSSimulatorSdkPath" value="" />
-      <option name="adlOptions" value="" />
-      <option name="airProgramParameters" value="" />
-      <option name="appDescriptorForEmulator" value="Android" />
-      <option name="clearAppDataOnEachLaunch" value="true" />
-      <option name="debugTransport" value="USB" />
-      <option name="debuggerSdkRaw" value="BC SDK" />
-      <option name="emulator" value="NexusOne" />
-      <option name="emulatorAdlOptions" value="" />
-      <option name="fastPackaging" value="true" />
-      <option name="fullScreenHeight" value="0" />
-      <option name="fullScreenWidth" value="0" />
-      <option name="launchUrl" value="false" />
-      <option name="launcherParameters">
-        <LauncherParameters>
-          <option name="browser" value="a7bb68e0-33c0-4d6f-a81a-aac1fdb870c8" />
-          <option name="launcherType" value="OSDefault" />
-          <option name="newPlayerInstance" value="false" />
-          <option name="playerPath" value="FlashPlayerDebugger.exe" />
-        </LauncherParameters>
-      </option>
-      <option name="mobileRunTarget" value="Emulator" />
-      <option name="moduleName" value="" />
-      <option name="overriddenMainClass" value="" />
-      <option name="overriddenOutputFileName" value="" />
-      <option name="overrideMainClass" value="false" />
-      <option name="runTrusted" value="true" />
-      <option name="screenDpi" value="0" />
-      <option name="screenHeight" value="0" />
-      <option name="screenWidth" value="0" />
-      <option name="url" value="http://" />
-      <option name="usbDebugPort" value="7936" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="FlexUnitRunConfigurationType" appDescriptorForEmulator="Android" class_name="" emulatorAdlOptions="" method_name="" package_name="" scope="Class">
-      <option name="BCName" value="" />
-      <option name="launcherParameters">
-        <LauncherParameters>
-          <option name="browser" value="a7bb68e0-33c0-4d6f-a81a-aac1fdb870c8" />
-          <option name="launcherType" value="OSDefault" />
-          <option name="newPlayerInstance" value="false" />
-          <option name="playerPath" value="FlashPlayerDebugger.exe" />
-        </LauncherParameters>
-      </option>
-      <option name="moduleName" value="" />
-      <option name="trusted" value="true" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -472,6 +418,7 @@
       </method>
     </configuration>
     <configuration default="true" type="TestNG">
+      <option name="TEST_OBJECT" value="CLASS" />
       <option name="WORKING_DIRECTORY" value="$MODULE_DIR$" />
       <properties />
       <listeners />
@@ -506,10 +453,10 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="JUnit.ParserTest" />
         <item itemvalue="JUnit.ParserTest.testParser" />
-        <item itemvalue="JUnit.LexerTest.testCal" />
         <item itemvalue="JUnit.LexerTest" />
+        <item itemvalue="JUnit.LexerTest.testCal" />
+        <item itemvalue="JUnit.ParserTest" />
         <item itemvalue="Application.TestMain" />
       </list>
     </recent_temporary>
@@ -528,46 +475,47 @@
       <workItem from="1564542332067" duration="5020000" />
       <workItem from="1564553260875" duration="11995000" />
       <workItem from="1564575792392" duration="1146000" />
+      <workItem from="1564627757786" duration="9426000" />
     </task>
     <servers />
   </component>
   <component name="TestHistory">
-    <history-entry file="ParserTest_testParser - 2019.07.31 at 17h 49m 33s.xml">
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 21m 43s.xml">
       <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="ParserTest_testParser - 2019.07.31 at 17h 49m 40s.xml">
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 25m 48s.xml">
       <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="ParserTest_testParser - 2019.07.31 at 17h 49m 50s.xml">
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 29m 05s.xml">
       <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="ParserTest_testParser - 2019.07.31 at 17h 52m 13s.xml">
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 43m 20s.xml">
       <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="ParserTest_testParser - 2019.07.31 at 17h 54m 11s.xml">
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 44m 06s.xml">
       <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="ParserTest_testParser - 2019.07.31 at 17h 58m 01s.xml">
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 45m 05s.xml">
       <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="ParserTest - 2019.07.31 at 20h 27m 55s.xml">
-      <configuration name="ParserTest" configurationId="JUnit" />
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 45m 41s.xml">
+      <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="ParserTest - 2019.07.31 at 20h 35m 17s.xml">
-      <configuration name="ParserTest" configurationId="JUnit" />
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 46m 26s.xml">
+      <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="ParserTest - 2019.07.31 at 20h 35m 46s.xml">
-      <configuration name="ParserTest" configurationId="JUnit" />
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 46m 53s.xml">
+      <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="ParserTest - 2019.07.31 at 20h 38m 41s.xml">
-      <configuration name="ParserTest" configurationId="JUnit" />
+    <history-entry file="ParserTest_testParser - 2019.08.01 at 14h 48m 40s.xml">
+      <configuration name="ParserTest.testParser" configurationId="JUnit" />
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="21961000" />
+    <option name="totallyTimeSpent" value="31387000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1680" height="1050" extended-state="0" />
+    <frame x="0" y="0" width="1366" height="768" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Capture Tool" order="0" />
@@ -576,22 +524,21 @@
       <window_info id="Image Layers" order="3" />
       <window_info id="Favorites" order="4" side_tool="true" />
       <window_info id="Nl-Palette" order="5" />
-      <window_info content_ui="combo" id="Project" order="6" weight="0.33458084" />
+      <window_info content_ui="combo" id="Project" order="6" weight="0.33843797" />
       <window_info id="Structure" order="7" weight="0.25" />
-      <window_info anchor="bottom" id="Database Changes" />
-      <window_info anchor="bottom" id="Docker" show_stripe_button="false" />
       <window_info anchor="bottom" id="Event Log" order="0" side_tool="true" />
-      <window_info anchor="bottom" id="Messages" order="1" weight="0.4460177" />
+      <window_info anchor="bottom" id="Messages" order="1" weight="0.44479495" />
       <window_info anchor="bottom" id="Version Control" order="2" />
       <window_info anchor="bottom" id="Terminal" order="3" />
       <window_info anchor="bottom" id="Message" order="4" />
-      <window_info anchor="bottom" id="Find" order="5" weight="0.32920355" />
-      <window_info anchor="bottom" id="Run" order="6" weight="0.29285714" />
-      <window_info active="true" anchor="bottom" id="Debug" order="7" visible="true" weight="0.12857144" />
+      <window_info anchor="bottom" id="Find" order="5" weight="0.32517985" />
+      <window_info anchor="bottom" id="Run" order="6" weight="0.5741325" />
+      <window_info active="true" anchor="bottom" id="Debug" order="7" visible="true" weight="0.15457413" />
       <window_info anchor="bottom" id="Cvs" order="8" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="9" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="10" />
-      <window_info anchor="right" id="Maven" />
+      <window_info anchor="bottom" id="Docker" order="11" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Database Changes" order="12" />
       <window_info anchor="right" id="Maven Projects" order="0" />
       <window_info anchor="right" id="Properties" order="1" />
       <window_info anchor="right" id="Palette&#9;" order="2" />
@@ -602,6 +549,7 @@
       <window_info anchor="right" id="Commander" order="7" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="8" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="9" weight="0.25" />
+      <window_info anchor="right" id="Maven" order="10" />
     </layout>
     <layout-to-restore>
       <window_info id="Capture Tool" order="0" />
@@ -610,32 +558,32 @@
       <window_info id="Image Layers" order="3" />
       <window_info id="Favorites" order="4" side_tool="true" />
       <window_info id="Nl-Palette" order="5" />
-      <window_info content_ui="combo" id="Project" order="6" visible="true" weight="0.33458084" />
+      <window_info content_ui="combo" id="Project" order="6" weight="0.33843797" />
       <window_info id="Structure" order="7" weight="0.25" />
-      <window_info anchor="bottom" id="Docker" order="0" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Database Changes" order="1" />
-      <window_info anchor="bottom" id="Event Log" order="2" side_tool="true" />
-      <window_info anchor="bottom" id="Messages" order="3" weight="0.4460177" />
-      <window_info anchor="bottom" id="Version Control" order="4" />
-      <window_info anchor="bottom" id="Terminal" order="5" />
-      <window_info anchor="bottom" id="Message" order="6" />
-      <window_info anchor="bottom" id="Find" order="7" weight="0.32920355" />
-      <window_info anchor="bottom" id="Run" order="8" weight="0.29285714" />
-      <window_info active="true" anchor="bottom" id="Debug" order="9" visible="true" weight="0.38170347" />
-      <window_info anchor="bottom" id="Cvs" order="10" weight="0.25" />
-      <window_info anchor="bottom" id="Inspection" order="11" weight="0.4" />
-      <window_info anchor="bottom" id="TODO" order="12" />
-      <window_info anchor="right" id="Maven" order="0" />
-      <window_info anchor="right" id="Maven Projects" order="1" />
-      <window_info anchor="right" id="Properties" order="2" />
-      <window_info anchor="right" id="Palette&#9;" order="3" />
-      <window_info anchor="right" id="Database" order="4" />
-      <window_info anchor="right" id="Capture Analysis" order="5" />
-      <window_info anchor="right" id="Theme Preview" order="6" />
-      <window_info anchor="right" id="Palette" order="7" />
-      <window_info anchor="right" id="Commander" order="8" weight="0.4" />
-      <window_info anchor="right" id="Ant Build" order="9" weight="0.25" />
-      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="10" weight="0.25" />
+      <window_info anchor="bottom" id="Event Log" order="0" side_tool="true" />
+      <window_info anchor="bottom" id="Messages" order="1" weight="0.44479495" />
+      <window_info anchor="bottom" id="Version Control" order="2" />
+      <window_info anchor="bottom" id="Terminal" order="3" />
+      <window_info anchor="bottom" id="Message" order="4" />
+      <window_info anchor="bottom" id="Find" order="5" weight="0.32517985" />
+      <window_info active="true" anchor="bottom" id="Run" order="6" visible="true" weight="0.3154574" />
+      <window_info anchor="bottom" id="Debug" order="7" weight="0.28706625" />
+      <window_info anchor="bottom" id="Cvs" order="8" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="9" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="10" />
+      <window_info anchor="bottom" id="Docker" order="11" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Database Changes" order="12" />
+      <window_info anchor="right" id="Maven Projects" order="0" />
+      <window_info anchor="right" id="Properties" order="1" />
+      <window_info anchor="right" id="Palette&#9;" order="2" />
+      <window_info anchor="right" id="Database" order="3" />
+      <window_info anchor="right" id="Capture Analysis" order="4" />
+      <window_info anchor="right" id="Theme Preview" order="5" />
+      <window_info anchor="right" id="Palette" order="6" />
+      <window_info anchor="right" id="Commander" order="7" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="8" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="9" weight="0.25" />
+      <window_info anchor="right" id="Maven" order="10" />
     </layout-to-restore>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -646,15 +594,15 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/src/test/java/ParserTest.java</url>
-          <line>28</line>
+          <line>29</line>
           <properties />
-          <option name="timeStamp" value="22" />
+          <option name="timeStamp" value="36" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java</url>
-          <line>293</line>
+          <line>227</line>
           <properties />
-          <option name="timeStamp" value="23" />
+          <option name="timeStamp" value="42" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -673,13 +621,7 @@
       </provider>
     </entry>
     <entry file="jar://D:/Java/jdk1.8.0_91/src.zip!/java/lang/StringBuffer.java" />
-    <entry file="file://$PROJECT_DIR$/examples/IterationDemo.lemon">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="75">
-          <caret line="3" column="29" lean-forward="true" selection-start-line="3" selection-start-column="29" selection-end-line="3" selection-end-column="29" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/examples/IterationDemo.lemon" />
     <entry file="file://$PROJECT_DIR$/examples/MulTable.lemon">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="50">
@@ -774,13 +716,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/TokenKind.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1000">
-          <caret line="2" column="12" selection-start-line="2" selection-start-column="12" selection-end-line="2" selection-end-column="12" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/examples/Cal.lemon">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="110">
@@ -788,40 +723,54 @@
         </state>
       </provider>
     </entry>
+    <entry file="jar://$MAVEN_REPOSITORY$/junit/junit/4.11/junit-4.11.jar!/org/junit/internal/runners/model/ReflectiveCallable.class">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="350">
+          <caret line="17" selection-start-line="17" selection-end-line="17" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/examples/CalHeightOfChild.lemon">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="132">
-          <caret line="6" column="16" lean-forward="true" selection-start-line="6" selection-start-column="16" selection-end-line="6" selection-end-column="16" />
+        <state relative-caret-position="150">
+          <caret line="6" column="16" selection-start-line="6" selection-start-column="16" selection-end-line="6" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/test/java/Cal.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="50">
+          <caret line="5" column="13" selection-start-line="5" selection-start-column="13" selection-end-line="5" selection-end-column="13" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/test/java/LexerTest.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="242">
-          <caret line="11" column="26" selection-start-line="11" selection-start-column="26" selection-end-line="11" selection-end-column="26" />
+        <state relative-caret-position="184">
+          <caret line="13" column="68" lean-forward="true" selection-start-line="13" selection-start-column="68" selection-end-line="13" selection-end-column="68" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="jar://$MAVEN_REPOSITORY$/junit/junit/4.11/junit-4.11.jar!/org/junit/internal/runners/model/ReflectiveCallable.class">
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/TokenKind.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="90">
-          <caret line="17" selection-start-line="17" selection-end-line="17" />
+        <state relative-caret-position="434">
+          <caret line="55" column="8" selection-start-line="55" selection-start-column="8" selection-end-line="55" selection-end-column="8" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/java/ParserTest.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="340">
-          <caret line="27" column="65" selection-start-line="27" selection-start-column="65" selection-end-line="27" selection-end-column="65" />
+        <state relative-caret-position="248">
+          <caret line="48" selection-start-line="48" selection-end-line="48" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Token.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="106">
+        <state relative-caret-position="126">
           <caret line="37" selection-start-line="37" selection-end-line="37" />
           <folding>
             <element signature="e#603#604#0" expanded="true" />
@@ -829,32 +778,46 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="147">
-          <caret line="46" selection-start-line="46" selection-end-line="46" />
+        <state relative-caret-position="138">
+          <caret line="314" column="18" selection-start-line="314" selection-start-column="18" selection-end-line="314" selection-end-column="18" />
+          <folding>
+            <element signature="class#Add#0;class#Expr#0;class#Ast#0" />
+            <element signature="class#Sub#0;class#Expr#0;class#Ast#0" />
+            <element signature="e#6560#6561#0" expanded="true" />
+            <element signature="e#6608#6609#0" expanded="true" />
+            <element signature="e#8374#8375#0" expanded="true" />
+            <element signature="e#8427#8428#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java">
+    <entry file="file://$PROJECT_DIR$/src/test/java/ParserTest.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="299">
-          <caret line="56" column="52" selection-start-line="56" selection-start-column="52" selection-end-line="56" selection-end-column="52" />
-          <folding>
-            <element signature="class#Program#0;class#Ast#0" />
-            <element signature="class#Type#0;class#Ast#0" />
-          </folding>
+        <state relative-caret-position="201">
+          <caret line="29" selection-start-line="29" selection-end-line="29" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/examples/BoolTest01.lemon">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="176">
+          <caret line="11" column="30" lean-forward="true" selection-start-line="11" selection-start-column="30" selection-end-line="11" selection-end-column="30" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="184">
-          <caret line="300" column="91" selection-start-line="300" selection-start-column="91" selection-end-line="300" selection-end-column="91" />
+        <state relative-caret-position="157">
+          <caret line="200" column="12" lean-forward="true" selection-start-line="200" selection-start-column="12" selection-end-line="200" selection-end-column="12" />
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="e#683#718#0" expanded="true" />
             <element signature="e#714#715#0" expanded="true" />
             <element signature="e#740#741#0" expanded="true" />
+            <element signature="e#2978#2993#0" expanded="true" />
+            <element signature="e#4490#4505#0" expanded="true" />
+            <element signature="e#6138#6150#0" expanded="true" />
           </folding>
         </state>
       </provider>

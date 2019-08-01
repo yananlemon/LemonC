@@ -18,7 +18,8 @@ public class ParserTest {
     @Before
     public void init() throws IOException{
         //File file = new File("examples/Cal.lemon");
-        File file = new File("examples/CalHeightOfChild.lemon");
+        //File file = new File("examples/CalHeightOfChild.lemon");
+        File file = new File("examples/BoolTest01.lemon");
         lexer=new Lexer(file);
         parser = new Parser(lexer);
     }

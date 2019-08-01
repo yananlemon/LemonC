@@ -152,12 +152,18 @@ public class Lexer {
 					return new Token(TokenKind.Class, "class",line);
 				case "main":
 					return new Token(TokenKind.Main, "main",line);
+				case "true":
+					return new Token(TokenKind.True, "true",line);
+				case "false":
+					return new Token(TokenKind.False, "false",line);
 				case "void":
 					return new Token(TokenKind.Void, "void",line);
 				case "String":
 					return new Token(TokenKind.String, "String",line);
 				case "int":
 					return new Token(TokenKind.Int, "int",line);
+				case "bool":
+					return new Token(TokenKind.Bool, "bool",line);
 				case "float":
 					return new Token(TokenKind.Float, "float",line);
 				case "if":
@@ -249,6 +255,24 @@ public class Lexer {
 					c=source.charAt(position++);
 					if(c==61){
 						return new Token(TokenKind.NEQ, "!=",line);
+					}else{
+						position--;
+						tempPosition--;
+						return new Token(TokenKind.Not, "!",line);
+					}
+				case '&':
+					c=source.charAt(position++);
+					if(c==38){
+						return new Token(TokenKind.And, "&&",line);
+					}else{
+						return new Token(TokenKind.Unknown, "Unknown Token"+(char)c+c,line);
+					}
+				case '|':
+					c=source.charAt(position++);
+					if(c==124){
+						return new Token(TokenKind.Or, "||",line);
+					}else{
+						return new Token(TokenKind.Unknown, "Unknown Token"+(char)c+c,line);
 					}
 				case ';':
 					return new Token(TokenKind.Semicolon, ";",line);

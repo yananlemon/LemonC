@@ -8,6 +8,7 @@ import site.ilemon.lexer.TokenKind;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 
 import static site.ilemon.lexer.TokenKind.Num;
@@ -26,7 +27,11 @@ public class Parser {
 
 	private boolean isValDecl;
 	
-	private Hashtable<String,Ast.Type.T> varTable = new Hashtable<String, Ast.Type.T>();
+	private HashMap<String,Ast.Type.T> varTable = new HashMap<String, Ast.Type.T>();
+
+	private String currMethod;
+
+	private  HashMap<String,HashMap<String,Ast.Type.T>> table = new  HashMap<String,HashMap<String,Ast.Type.T>>();
 
 	public Parser(Lexer lexer) throws IOException{
 		this.lexer=lexer;
@@ -95,7 +100,8 @@ public class Parser {
 		ArrayList<Ast.Method.T> methods = new ArrayList<Ast.Method.T>();
 		while( look.kind == TokenKind.Void ||
 				look.kind == TokenKind.Int ||
-				look.kind == TokenKind.Float) {
+				look.kind == TokenKind.Float||
+				look.kind == TokenKind.Bool) {
 			methods.add(parseMethod());
 		}
 		return methods;
@@ -106,6 +112,8 @@ public class Parser {
 	private Ast.Method.MethodSingle parseMethod() throws IOException {
 		Ast.Type.T t = parseType();
 		String methodName = look.lexeme;
+		this.currMethod= methodName;
+		this.varTable.clear();
 		int lineNumber = look.lineNumber;
 		move();
 		match("(");
@@ -115,6 +123,7 @@ public class Parser {
 		ArrayList<Ast.Declare.T> localParams = parseVarDeclares();
 		ArrayList<Ast.Stmt.T> stmts = parseStmts();
 		match("}");
+		table.put(this.currMethod,this.varTable);
 		return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,null);
 	}
 
@@ -122,7 +131,8 @@ public class Parser {
 	private ArrayList<Ast.Declare.T> parseVarDeclares() throws IOException{
 		ArrayList<Ast.Declare.T> rs = new ArrayList<Ast.Declare.T>();
 		while(look.kind == TokenKind.Int || 
-				look.kind == TokenKind.Float){
+				look.kind == TokenKind.Float||
+				look.kind == TokenKind.Bool){
 			String id = look.lexeme;
 			Ast.Declare.T d = parseDeclare();
 			if( d != null ){
@@ -188,6 +198,7 @@ public class Parser {
 			int lineNumber = look.lineNumber;
 			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 			match(new Token(TokenKind.Id));
+			this.varTable.put(id,new Ast.Type.Int());
 			while(look.kind == TokenKind.Commer ){
 				move();
 				t = parseType();
@@ -195,6 +206,7 @@ public class Parser {
 				lineNumber = look.lineNumber;
 				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 				match(new Token(TokenKind.Id));
+				this.varTable.put(id,new Ast.Type.Int());
 			}
 		}else if( look.kind == TokenKind.Float){
 			Ast.Type.T t = parseType();
@@ -202,6 +214,7 @@ public class Parser {
 			int lineNumber = look.lineNumber;
 			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 			match(new Token(TokenKind.Id));
+			this.varTable.put(id,new Ast.Type.Float());
 			while(look.kind == TokenKind.Commer ){
 				move();
 				t = parseType();
@@ -209,6 +222,23 @@ public class Parser {
 				lineNumber = look.lineNumber;
 				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 				match(new Token(TokenKind.Id));
+				this.varTable.put(id,new Ast.Type.Float());
+			}
+		}else if( look.kind == TokenKind.Bool){
+			Ast.Type.T t = parseType();
+			String id = look.lexeme;
+			int lineNumber = look.lineNumber;
+			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
+			match(new Token(TokenKind.Id));
+			this.varTable.put(id,new Ast.Type.Bool());
+			while(look.kind == TokenKind.Commer ){
+				move();
+				t = parseType();
+				id = look.lexeme;
+				lineNumber = look.lineNumber;
+				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
+				match(new Token(TokenKind.Id));
+				this.varTable.put(id,new Ast.Type.Bool());
 			}
 		}
 		return rs;
@@ -216,26 +246,28 @@ public class Parser {
 
 	private Ast.Type.T parseType() {
 		if( look.kind == TokenKind.Int ){
-			varTable.put(look.lexeme, new Ast.Type.Int());
+			//varTable.put(look.lexeme, new Ast.Type.Int());
 			move();
 			return new Ast.Type.Int();
 		}
 		else if(look.kind == TokenKind.Void){
-			varTable.put(look.lexeme, new Ast.Type.Void());
+			//varTable.put(look.lexeme, new Ast.Type.Void());
 			move();
 			return new Ast.Type.Void();
 		}
 		else if(look.kind == TokenKind.Float){
-			varTable.put(look.lexeme, new Ast.Type.Float());
+			//varTable.put(look.lexeme, new Ast.Type.Float());
 			move();
 			return new Ast.Type.Float();
+		}else if(look.kind == TokenKind.Bool){
+			//varTable.put(look.lexeme, new Ast.Type.Bool());
+			move();
+			return new Ast.Type.Bool();
 		}
 		else 
 			error(look.lexeme);
 		return null;
 	}
-	
-	private HashMap<String,Boolean> methodMap = new HashMap<String,Boolean>();
 	
 	private ArrayList<Ast.Stmt.T> parseStmts() throws IOException {
 		ArrayList<Ast.Stmt.T> rs = new ArrayList<Ast.Stmt.T>();
@@ -333,6 +365,13 @@ public class Parser {
 		}
 		return stmt;
 	}
+
+	// bool_expr ->
+	private Ast.Expr.T parseBoolExpr() throws IOException {
+		return null;
+	}
+
+
 
 	// Exp -> AndExp && AndExp
 	//  -> AndExp
@@ -440,13 +479,24 @@ public class Parser {
 				if( ahead.kind == TokenKind.Add || ahead.kind == TokenKind.Sub){
 					args.add(parseAdditiveExpr());
 				}else{
-					while( look.kind == TokenKind.Id || look.kind == TokenKind.Num  || look.kind == TokenKind.DNum ){
+					while( look.kind == TokenKind.Id || look.kind == TokenKind.Num  || look.kind == TokenKind.DNum
+					|| look.kind == TokenKind.True || look.kind == TokenKind.False){
 						if( look.kind == TokenKind.Id)
 							args.add(parseFactor());
 						else if( look.kind == TokenKind.Num )
 							args.add(new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber));
 						else if( look.kind == TokenKind.DNum )
 							args.add(new Ast.Expr.Number(new Ast.Type.Float(),look.lexeme,look.lineNumber));
+						else if( look.kind == TokenKind.True ){
+							args.add(new Ast.Expr.True(look.lineNumber));
+							move();
+						}
+
+						else if( look.kind == TokenKind.False ){
+							args.add(new Ast.Expr.False(look.lineNumber));
+							move();
+						}
+
 						//move();
 						if( look.kind == TokenKind.Commer)
 							move();
@@ -462,6 +512,23 @@ public class Parser {
 		}
 		else if(look.kind==TokenKind.String ){
 			expr = new Ast.Expr.Str(look.lexeme, look.lineNumber);
+			move();
+			return expr;
+		}
+		else if(look.kind==TokenKind.Not ){
+			move();
+			return new Ast.Expr.Not(parseExpr());
+			//expr = parseExpr();
+			//move();
+			//return expr;
+		}
+		else if(look.kind==TokenKind.True ){
+			expr = new Ast.Expr.True(look.lineNumber);
+			move();
+			return expr;
+		}
+		else if(look.kind==TokenKind.False ){
+			expr = new Ast.Expr.False(look.lineNumber);
 			move();
 			return expr;
 		}
