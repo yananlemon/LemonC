@@ -17,7 +17,12 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.Add obj) {
-
+        this.visit(obj.left);
+        Ast.Type.T leftType = this.currType;
+        this.visit(obj.left);
+        if( !isMatch(leftType,this.currType))
+            error(obj.lineNum,String.format("左边表达式的类型%s与右边表达式的类型%s不匹配。",
+                    leftType.toString(),this.currType.toString()));
     }
 
     @Override
@@ -32,6 +37,14 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.Assign obj) {
+        if(obj.expr instanceof Ast.Expr.T){
+            this.visit((Ast.Expr.T)obj.expr);
+            Ast.Type.T exprType = this.currType;
+            this.visit(obj.id);
+            if( !isMatch(this.currType,exprType))
+                error(obj.lineNum,String.format("不能将类型%s的表达式赋值给类型%s的表达式。",
+                        this.currType.toString(),exprType.toString()));
+        }
 
     }
 
@@ -121,6 +134,9 @@ public class SemanticVisitor implements ISemanticVisitor {
             if( !isMatch(typeDeclared,this.currType))
                 error(obj.lineNum, "行"+ lastStmt.lineNum+"返回值与声明的不一致： "+typeDeclared+"!="+this.currType);
         }
+        for(Ast.Stmt.T stmt : obj.stms){
+            this.visit(stmt);
+        }
 
 
     }
@@ -132,7 +148,13 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.Number obj) {
-
+        if(obj.type instanceof Ast.Type.Int){
+            this.currType = new Ast.Type.Int();
+        }else if(obj.type instanceof Ast.Type.Float){
+            this.currType = new Ast.Type.Float();
+        }else{
+            // 不支持数字类型
+        }
     }
 
     @Override
@@ -166,7 +188,10 @@ public class SemanticVisitor implements ISemanticVisitor {
     public void visit(Ast.Stmt.T obj) {
         if(obj instanceof Ast.Stmt.Return){
             this.visit((Ast.Stmt.Return)obj);
+        }else if(obj instanceof Ast.Stmt.Assign){
+            this.visit((Ast.Stmt.Assign)obj);
         }
+
     }
 
     @Override
@@ -179,6 +204,20 @@ public class SemanticVisitor implements ISemanticVisitor {
         if(obj instanceof Ast.Expr.Id){
             this.visit((Ast.Expr.Id)obj);
         }
+        else if(obj instanceof Ast.Expr.And){
+            this.visit((Ast.Expr.And)obj);
+        }
+        else if(obj instanceof Ast.Expr.True){
+            this.visit((Ast.Expr.True)obj);
+        }
+        else if(obj instanceof Ast.Expr.Number){
+            this.visit((Ast.Expr.Number)obj);
+        }
+    }
+
+    @Override
+    public void visit(Ast.Expr.True obj) {
+        this.currType = new Ast.Type.Bool();
     }
 
     @Override

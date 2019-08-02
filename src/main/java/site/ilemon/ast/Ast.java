@@ -52,7 +52,7 @@ public class Ast {
         }
         public static class Assign extends T {
             public Ast.Expr.Id id;
-            private Expr.T expr;
+            public Expr.T expr;
             //private Type.T type;
             public Assign(Ast.Expr.Id id, Expr.T exp, int lineNum) {
                 this.id = id;

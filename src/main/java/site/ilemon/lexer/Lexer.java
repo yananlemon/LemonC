@@ -99,11 +99,12 @@ public class Lexer {
 		tempPosition--;
 		
 		while(c==' ' || c == '\t' || c == '\r' ||c == '\n'){
-			c=source.charAt(position++);
-			tempPosition--;
-			if(c == '\n'){
+			if(c == 13 || c == 10){
 				line++;
 			}
+			c=source.charAt(position++);
+			tempPosition--;
+
 		}
 		
 		// 忽略注释
