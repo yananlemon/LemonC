@@ -335,7 +335,6 @@ public class Parser {
 				match( new Token(TokenKind.Assign) );
 				Ast.Expr.T expr = parseExpr();
 				match( new Token(TokenKind.Semicolon) );
-				//stmt = new Ast.Stmt.Assign(id, expr, lineNum);
 				stmt = new Ast.Stmt.Assign(new Ast.Expr.Id(id,this.varTable.get(id),lineNum), expr, lineNum);
 				
 			}
@@ -359,6 +358,7 @@ public class Parser {
 			match( "(" );
 			int lineNumber = look.lineNumber;
 			Ast.Expr.T condition = parseExpr();
+			//System.out.println(condition.lineNum);
 			match( ")" );
 			Ast.Stmt.T thenStmt = parseStmt();
 			match( "else" );
@@ -520,9 +520,6 @@ public class Parser {
 		else if(look.kind==TokenKind.Not ){
 			move();
 			return new Ast.Expr.Not(parseExpr());
-			//expr = parseExpr();
-			//move();
-			//return expr;
 		}
 		else if(look.kind==TokenKind.True ){
 			expr = new Ast.Expr.True(look.lineNumber);

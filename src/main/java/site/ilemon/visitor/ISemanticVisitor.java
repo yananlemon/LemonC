@@ -24,6 +24,8 @@ public interface ISemanticVisitor {
 	void visit(Ast.Expr.Sub obj);
 	void visit(Ast.Expr.Or obj);
 	void visit(Ast.Expr.True obj);
+	void visit(Ast.Expr.False obj);
+	void visit(Ast.Expr.Not obj);
 
 	void visit(Ast.Type.Bool obj);
 	void visit(Ast.Type.Float obj);
