@@ -2,7 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ab5efad6-87e6-42e6-b9bb-ff2c8c900114" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/examples/BoolTest01.lemon" beforeDir="false" afterPath="$PROJECT_DIR$/examples/BoolTest01.lemon" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/site/ilemon/semantic/SemanticVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/site/ilemon/semantic/SemanticVisitor.java" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/target/" />
@@ -21,19 +24,10 @@
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/visitor/IElement.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="50">
-              <caret line="2" column="17" selection-start-line="2" selection-start-column="17" selection-end-line="2" selection-end-column="17" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/visitor/ISemanticVisitor.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="175">
-              <caret line="10" column="35" selection-start-line="10" selection-start-column="35" selection-end-line="10" selection-end-column="35" />
+            <state relative-caret-position="65">
+              <caret line="5" selection-start-line="5" selection-end-line="9" selection-end-column="3" />
             </state>
           </provider>
         </entry>
@@ -41,27 +35,30 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/semantic/SemanticVisitor.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="192">
-              <caret line="177" selection-start-line="177" selection-end-line="177" />
+            <state relative-caret-position="110">
+              <caret line="9" column="7" selection-start-line="9" selection-start-column="7" selection-end-line="9" selection-end-column="7" />
               <folding>
-                <element signature="imports" expanded="true" />
-                <element signature="e#3067#3075#0" expanded="true" />
-                <element signature="e#7624#7625#0" expanded="true" />
-                <element signature="e#7675#7676#0" expanded="true" />
-                <element signature="e#7734#7735#0" expanded="true" />
-                <element signature="e#7785#7786#0" expanded="true" />
-                <element signature="e#8088#8089#0" expanded="true" />
-                <element signature="e#8124#8125#0" expanded="true" />
+                <element signature="e#521#522#0" expanded="true" />
+                <element signature="e#597#598#0" expanded="true" />
+                <element signature="e#630#631#0" expanded="true" />
+                <element signature="e#657#658#0" expanded="true" />
+                <element signature="e#8903#8904#0" expanded="true" />
+                <element signature="e#8954#8955#0" expanded="true" />
+                <element signature="e#9013#9014#0" expanded="true" />
+                <element signature="e#9064#9065#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/test/java/SemanticTest.java">
+        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/semantic/MethodVarTable.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="139">
-              <caret line="29" selection-start-line="29" selection-end-line="29" />
+            <state relative-caret-position="176">
+              <caret line="11" column="27" selection-start-line="11" selection-start-column="13" selection-end-line="11" selection-end-column="27" />
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -69,32 +66,100 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="125">
-              <caret line="52" column="28" selection-start-line="52" selection-start-column="28" selection-end-line="52" selection-end-column="28" />
+            <state relative-caret-position="-187">
+              <caret line="9" column="7" selection-start-line="9" selection-start-column="7" selection-end-line="9" selection-end-column="7" />
               <folding>
                 <element signature="class#Declare#0;class#Ast#0" />
-                <element signature="class#Expr#0;class#Ast#0" />
-                <element signature="class#Sub#0;class#Expr#0;class#Ast#0" />
-                <element signature="class#Mul#0;class#Expr#0;class#Ast#0" />
-                <element signature="class#Div#0;class#Expr#0;class#Ast#0" />
-                <element signature="class#Or#0;class#Expr#0;class#Ast#0" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java">
+        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/ast/Ast.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="285">
-              <caret line="358" selection-start-line="358" selection-end-line="358" />
+            <state relative-caret-position="526">
+              <caret line="172" column="27" selection-start-line="172" selection-start-column="27" selection-end-line="172" selection-end-column="27" />
+              <folding>
+                <element signature="e#327#328#0" expanded="true" />
+                <element signature="e#385#386#0" expanded="true" />
+                <element signature="e#639#640#0" expanded="true" />
+                <element signature="e#693#694#0" expanded="true" />
+                <element signature="class#Type#0;class#Ast#0" />
+                <element signature="e#727#728#0" expanded="true" />
+                <element signature="e#771#772#0" expanded="true" />
+                <element signature="e#845#846#0" expanded="true" />
+                <element signature="e#891#892#0" expanded="true" />
+                <element signature="e#1023#1024#0" expanded="true" />
+                <element signature="e#1068#1069#0" expanded="true" />
+                <element signature="e#1027#1028#0" expanded="true" />
+                <element signature="e#1072#1073#0" expanded="true" />
+                <element signature="e#1371#1372#0" expanded="true" />
+                <element signature="e#1416#1417#0" expanded="true" />
+                <element signature="e#1990#1991#0" expanded="true" />
+                <element signature="e#2040#2041#0" expanded="true" />
+                <element signature="e#2238#2239#0" expanded="true" />
+                <element signature="e#2288#2289#0" expanded="true" />
+                <element signature="e#2428#2429#0" expanded="true" />
+                <element signature="e#2470#2471#0" expanded="true" />
+                <element signature="e#2966#2967#0" expanded="true" />
+                <element signature="e#3008#3009#0" expanded="true" />
+                <element signature="e#3437#3438#0" expanded="true" />
+                <element signature="e#3479#3480#0" expanded="true" />
+                <element signature="e#3154#3155#0" expanded="true" />
+                <element signature="e#3204#3205#0" expanded="true" />
+                <element signature="e#3623#3624#0" expanded="true" />
+                <element signature="e#3673#3674#0" expanded="true" />
+                <element signature="e#3884#3885#0" expanded="true" />
+                <element signature="e#3934#3935#0" expanded="true" />
+                <element signature="e#4352#4353#0" expanded="true" />
+                <element signature="e#4402#4403#0" expanded="true" />
+                <element signature="e#4133#4134#0" expanded="true" />
+                <element signature="e#4183#4184#0" expanded="true" />
+                <element signature="e#4317#4318#0" expanded="true" />
+                <element signature="e#4359#4360#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/Visitor.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="638">
+              <caret line="29" column="36" selection-start-line="29" selection-start-column="36" selection-end-line="29" selection-end-column="36" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/TranslatorVisitor.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-3526">
+              <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#683#718#0" expanded="true" />
-                <element signature="e#878#879#0" expanded="true" />
-                <element signature="e#904#905#0" expanded="true" />
-                <element signature="e#2200#2214#0" expanded="true" />
+                <element signature="e#219#220#0" expanded="true" />
+                <element signature="e#244#245#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/ast/Label.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="44">
+              <caret line="2" column="19" selection-start-line="2" selection-start-column="19" selection-end-line="2" selection-end-column="19" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/test/java/SemanticTest.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="462">
+              <caret line="29" selection-start-line="29" selection-end-line="29" />
             </state>
           </provider>
         </entry>
@@ -102,17 +167,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/examples/BoolTest01.lemon">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="157">
-              <caret line="7" column="10" selection-start-line="7" selection-start-column="8" selection-end-line="7" selection-end-column="10" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="297">
-              <caret line="25" column="30" lean-forward="true" selection-start-line="25" selection-start-column="30" selection-end-line="25" selection-end-column="30" />
+            <state relative-caret-position="378">
+              <caret line="33" column="23" selection-start-line="33" selection-start-column="23" selection-end-line="33" selection-end-column="23" />
             </state>
           </provider>
         </entry>
@@ -122,16 +178,13 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
+        <option value="Interface" />
         <option value="Class" />
       </list>
     </option>
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>tokens</find>
-      <find>Declare</find>
-      <find>Void</find>
-      <find>Int</find>
       <find>Parser</find>
       <find>iNumberPattern</find>
       <find>getKind()</find>
@@ -158,11 +211,16 @@
       <find>currMethodLocalVar</find>
       <find>Ast.Stmt.If</find>
       <find>Ast.Stmt</find>
+      <find>Whild</find>
+      <find>Stm</find>
+      <find>If</find>
+      <find>LT</find>
     </findStrings>
     <replaceStrings>
       <replace>kind</replace>
       <replace>lineNumber</replace>
       <replace>lexeme</replace>
+      <replace>Stmt</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -175,7 +233,6 @@
         <option value="$PROJECT_DIR$/examples/Cal.lemon" />
         <option value="$PROJECT_DIR$/examples/CalHeightOfChild.lemon" />
         <option value="$PROJECT_DIR$/examples/MulTable.lemon" />
-        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/codegen/TranslatorVisitor.java" />
         <option value="$PROJECT_DIR$/examples/SimpleMethodCall.lemon" />
         <option value="$PROJECT_DIR$/examples/Example02.lemon" />
         <option value="$PROJECT_DIR$/src/test/java/TestMain.java" />
@@ -188,22 +245,29 @@
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/visitor/ISemanticVisitor.java" />
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/semantic/MethodVarTable.java" />
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java" />
-        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java" />
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java" />
+        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java" />
         <option value="$PROJECT_DIR$/examples/BoolTest01.lemon" />
+        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/codegen/ast/Label.java" />
+        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/codegen/ast/Ast.java" />
+        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/codegen/Visitor.java" />
+        <option value="$PROJECT_DIR$/src/main/java/site/ilemon/codegen/TranslatorVisitor.java" />
         <option value="$PROJECT_DIR$/src/main/java/site/ilemon/semantic/SemanticVisitor.java" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="width" value="1366" />
-    <option name="height" value="768" />
+    <option name="x" value="100" />
+    <option name="y" value="23" />
+    <option name="width" value="1680" />
+    <option name="height" value="955" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -220,21 +284,52 @@
               <item name="LemonC" type="b2602c69:ProjectViewProjectNode" />
               <item name="LemonC" type="462c0819:PsiDirectoryNode" />
               <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="test" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="LemonC" type="b2602c69:ProjectViewProjectNode" />
+              <item name="LemonC" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="LemonC" type="b2602c69:ProjectViewProjectNode" />
+              <item name="LemonC" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="ilemon" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="LemonC" type="b2602c69:ProjectViewProjectNode" />
+              <item name="LemonC" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="ilemon" type="462c0819:PsiDirectoryNode" />
+              <item name="ast" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="LemonC" type="b2602c69:ProjectViewProjectNode" />
+              <item name="LemonC" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="ilemon" type="462c0819:PsiDirectoryNode" />
+              <item name="semantic" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="LemonC" type="b2602c69:ProjectViewProjectNode" />
               <item name="LemonC" type="462c0819:PsiDirectoryNode" />
               <item name="src" type="462c0819:PsiDirectoryNode" />
               <item name="test" type="462c0819:PsiDirectoryNode" />
-              <item name="java" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
         </subPane>
       </pane>
       <pane id="PackagesPane" />
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -242,7 +337,7 @@
     <property name="SearchEverywhereHistoryKey" value="Cal.&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Cal.lemon&#10;Pars&#9;FILE&#9;file://C:/Users/andy/git/LemonC/src/main/java/site/ilemon/parser/Parser.java&#10;Test01&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Test01.lemon&#10;Example02&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Example02.lemon&#10;SimpleMethodCallTwo&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/SimpleMethodCallTwo.lemon&#10;SimpleMethodCallThree&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/SimpleMethodCallThree.lemon&#10;SimpleMethodCall&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/SimpleMethodCall.lemon&#10;Return&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Return.lemon&#10;TestIf&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/TestIf.lemon&#10;Iteration&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Iteration.lemon&#10;MulTable&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/MulTable.lemon&#10;IterationDemo&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/IterationDemo.lemon&#10;Itera&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Iteration.lemon&#10;Calc&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/CalHeightOfChild.lemon&#10;Cal&#9;FILE&#9;file://C:/Users/andy/git/LemonC/examples/Cal.lemon" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
-    <property name="com.android.tools.idea.instantapp.provision.ProvisionBeforeRunTaskProvider.myTimeStamp" value="1564848941546" />
+    <property name="com.android.tools.idea.instantapp.provision.ProvisionBeforeRunTaskProvider.myTimeStamp" value="1565016636029" />
     <property name="js.eslint.eslintPackage" value="" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/examples" />
     <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
@@ -300,7 +395,6 @@
           <option name="containerStateName" value="" />
         </value>
       </option>
-      <option name="TEST_OBJECT" value="CLASS" />
       <option name="VM_PARAMETERS" />
       <option name="WORKING_DIRECTORY" />
       <properties />
@@ -412,7 +506,6 @@
       </method>
     </configuration>
     <configuration default="true" type="TestNG">
-      <option name="TEST_OBJECT" value="CLASS" />
       <option name="WORKING_DIRECTORY" value="$MODULE_DIR$" />
       <properties />
       <listeners />
@@ -448,9 +541,9 @@
     <recent_temporary>
       <list>
         <item itemvalue="JUnit.SemanticTest" />
+        <item itemvalue="JUnit.LexerTest" />
         <item itemvalue="JUnit.LexerTest.testCal" />
         <item itemvalue="JUnit.ParserTest.testParser" />
-        <item itemvalue="JUnit.LexerTest" />
         <item itemvalue="JUnit.ParserTest" />
       </list>
     </recent_temporary>
@@ -470,46 +563,48 @@
       <workItem from="1564553260875" duration="11995000" />
       <workItem from="1564575792392" duration="1146000" />
       <workItem from="1564627757786" duration="9426000" />
+      <workItem from="1565009420999" duration="6680000" />
     </task>
     <servers />
   </component>
   <component name="TestHistory">
-    <history-entry file="SemanticTest - 2019.08.05 at 13h 46m 28s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 31m 24s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="SemanticTest - 2019.08.05 at 13h 48m 46s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 32m 36s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="SemanticTest - 2019.08.05 at 13h 52m 08s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 33m 00s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="SemanticTest - 2019.08.05 at 13h 52m 31s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 34m 11s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="SemanticTest - 2019.08.05 at 13h 54m 02s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 34m 20s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="SemanticTest - 2019.08.05 at 13h 58m 09s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 34m 27s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="SemanticTest - 2019.08.05 at 13h 58m 23s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 37m 27s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="SemanticTest - 2019.08.05 at 13h 59m 36s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 37m 41s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="SemanticTest - 2019.08.05 at 14h 01m 05s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 38m 28s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="SemanticTest - 2019.08.05 at 14h 01m 46s.xml">
+    <history-entry file="SemanticTest - 2019.08.05 at 21h 39m 17s.xml">
       <configuration name="SemanticTest" configurationId="JUnit" />
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="52686000" />
+    <option name="totallyTimeSpent" value="59366000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1366" height="768" extended-state="0" />
+    <frame x="100" y="23" width="1680" height="955" extended-state="0" />
+    <editor active="true" />
     <layout>
       <window_info id="Capture Tool" order="0" />
       <window_info id="Designer" order="1" />
@@ -517,7 +612,7 @@
       <window_info id="Image Layers" order="3" />
       <window_info id="Favorites" order="4" side_tool="true" />
       <window_info id="Nl-Palette" order="5" />
-      <window_info content_ui="combo" id="Project" order="6" weight="0.3047473" />
+      <window_info active="true" content_ui="combo" id="Project" order="6" visible="true" weight="0.2045177" />
       <window_info id="Structure" order="7" weight="0.25" />
       <window_info anchor="bottom" id="Event Log" order="0" side_tool="true" />
       <window_info anchor="bottom" id="Messages" order="1" weight="0.44387755" />
@@ -525,8 +620,8 @@
       <window_info anchor="bottom" id="Terminal" order="3" />
       <window_info anchor="bottom" id="Message" order="4" />
       <window_info anchor="bottom" id="Find" order="5" weight="0.32517985" />
-      <window_info anchor="bottom" id="Run" order="6" weight="0.35804418" />
-      <window_info active="true" anchor="bottom" id="Debug" order="7" visible="true" weight="0.30283913" />
+      <window_info anchor="bottom" id="Run" order="6" weight="0.28222996" />
+      <window_info anchor="bottom" id="Debug" order="7" weight="0.19976771" />
       <window_info anchor="bottom" id="Cvs" order="8" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="9" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="10" />
@@ -551,7 +646,7 @@
       <window_info id="Image Layers" order="3" />
       <window_info id="Favorites" order="4" side_tool="true" />
       <window_info id="Nl-Palette" order="5" />
-      <window_info content_ui="combo" id="Project" order="6" weight="0.3047473" />
+      <window_info active="true" content_ui="combo" id="Project" order="6" visible="true" weight="0.30463982" />
       <window_info id="Structure" order="7" weight="0.25" />
       <window_info anchor="bottom" id="Event Log" order="0" side_tool="true" />
       <window_info anchor="bottom" id="Messages" order="1" weight="0.44387755" />
@@ -559,8 +654,8 @@
       <window_info anchor="bottom" id="Terminal" order="3" />
       <window_info anchor="bottom" id="Message" order="4" />
       <window_info anchor="bottom" id="Find" order="5" weight="0.32517985" />
-      <window_info anchor="bottom" id="Run" order="6" weight="0.35804418" />
-      <window_info active="true" anchor="bottom" id="Debug" order="7" visible="true" weight="0.30283913" />
+      <window_info anchor="bottom" id="Run" order="6" weight="0.28222996" />
+      <window_info anchor="bottom" id="Debug" order="7" visible="true" weight="0.19976771" />
       <window_info anchor="bottom" id="Cvs" order="8" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="9" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="10" />
@@ -586,16 +681,10 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/site/ilemon/semantic/SemanticVisitor.java</url>
-          <line>120</line>
+          <url>file://$PROJECT_DIR$/src/test/java/SemanticTest.java</url>
+          <line>29</line>
           <properties />
-          <option name="timeStamp" value="100" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/site/ilemon/semantic/SemanticVisitor.java</url>
-          <line>174</line>
-          <properties />
-          <option name="timeStamp" value="103" />
+          <option name="timeStamp" value="112" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -606,6 +695,21 @@
   </component>
   <component name="debuggerHistoryManager">
     <expressions id="evaluateExpression">
+      <expression>
+        <expression-string>(char)9</expression-string>
+        <language-id>JAVA</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
+      <expression>
+        <expression-string>source.charAt(342)</expression-string>
+        <language-id>JAVA</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
+      <expression>
+        <expression-string>source.charAt(position++)</expression-string>
+        <language-id>JAVA</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
       <expression>
         <expression-string>obj.id</expression-string>
         <language-id>JAVA</language-id>
@@ -636,16 +740,6 @@
         <language-id>JAVA</language-id>
         <evaluation-mode>EXPRESSION</evaluation-mode>
       </expression>
-      <expression>
-        <expression-string>obj.retType</expression-string>
-        <language-id>JAVA</language-id>
-        <evaluation-mode>EXPRESSION</evaluation-mode>
-      </expression>
-      <expression>
-        <expression-string>obj.retType.equals(&quot;@void&quot;)</expression-string>
-        <language-id>JAVA</language-id>
-        <evaluation-mode>EXPRESSION</evaluation-mode>
-      </expression>
     </expressions>
   </component>
   <component name="editorHistoryManager">
@@ -668,13 +762,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/examples/Iteration.lemon" />
     <entry file="file://$PROJECT_DIR$/TestIf.class" />
-    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/ast/Ast.java" />
     <entry file="file://$PROJECT_DIR$/TestIf.il" />
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/forparse/Str1.java" />
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/forcodegen/Str.java" />
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/forcodegen/Printf.java" />
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/semantic/Semantic.java" />
-    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/TranslatorVisitor.java" />
     <entry file="file://$PROJECT_DIR$/examples/TestIf.lemon" />
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/ByteCodeGenerator.java" />
     <entry file="file://$PROJECT_DIR$/examples/Return.lemon">
@@ -803,9 +895,131 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/visitor/IElement.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="44">
+          <caret line="2" column="17" selection-start-line="2" selection-start-column="17" selection-end-line="2" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="273">
+          <caret line="358" selection-start-line="358" selection-end-line="358" />
+          <folding>
+            <element signature="imports" expanded="true" />
+            <element signature="e#878#879#0" expanded="true" />
+            <element signature="e#904#905#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="163">
+          <caret line="35" selection-start-line="35" selection-end-line="35" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/examples/BoolTest01.lemon">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="378">
+          <caret line="33" column="23" selection-start-line="33" selection-start-column="23" selection-end-line="33" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-187">
+          <caret line="9" column="7" selection-start-line="9" selection-start-column="7" selection-end-line="9" selection-end-column="7" />
+          <folding>
+            <element signature="class#Declare#0;class#Ast#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/ast/Label.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="44">
+          <caret line="2" column="19" selection-start-line="2" selection-start-column="19" selection-end-line="2" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/test/java/SemanticTest.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="462">
+          <caret line="29" selection-start-line="29" selection-end-line="29" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/ast/Ast.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="526">
+          <caret line="172" column="27" selection-start-line="172" selection-start-column="27" selection-end-line="172" selection-end-column="27" />
+          <folding>
+            <element signature="e#327#328#0" expanded="true" />
+            <element signature="e#385#386#0" expanded="true" />
+            <element signature="e#639#640#0" expanded="true" />
+            <element signature="e#693#694#0" expanded="true" />
+            <element signature="class#Type#0;class#Ast#0" />
+            <element signature="e#727#728#0" expanded="true" />
+            <element signature="e#771#772#0" expanded="true" />
+            <element signature="e#845#846#0" expanded="true" />
+            <element signature="e#891#892#0" expanded="true" />
+            <element signature="e#1023#1024#0" expanded="true" />
+            <element signature="e#1068#1069#0" expanded="true" />
+            <element signature="e#1027#1028#0" expanded="true" />
+            <element signature="e#1072#1073#0" expanded="true" />
+            <element signature="e#1371#1372#0" expanded="true" />
+            <element signature="e#1416#1417#0" expanded="true" />
+            <element signature="e#1990#1991#0" expanded="true" />
+            <element signature="e#2040#2041#0" expanded="true" />
+            <element signature="e#2238#2239#0" expanded="true" />
+            <element signature="e#2288#2289#0" expanded="true" />
+            <element signature="e#2428#2429#0" expanded="true" />
+            <element signature="e#2470#2471#0" expanded="true" />
+            <element signature="e#2966#2967#0" expanded="true" />
+            <element signature="e#3008#3009#0" expanded="true" />
+            <element signature="e#3437#3438#0" expanded="true" />
+            <element signature="e#3479#3480#0" expanded="true" />
+            <element signature="e#3154#3155#0" expanded="true" />
+            <element signature="e#3204#3205#0" expanded="true" />
+            <element signature="e#3623#3624#0" expanded="true" />
+            <element signature="e#3673#3674#0" expanded="true" />
+            <element signature="e#3884#3885#0" expanded="true" />
+            <element signature="e#3934#3935#0" expanded="true" />
+            <element signature="e#4352#4353#0" expanded="true" />
+            <element signature="e#4402#4403#0" expanded="true" />
+            <element signature="e#4133#4134#0" expanded="true" />
+            <element signature="e#4183#4184#0" expanded="true" />
+            <element signature="e#4317#4318#0" expanded="true" />
+            <element signature="e#4359#4360#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/Visitor.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="638">
+          <caret line="29" column="36" selection-start-line="29" selection-start-column="36" selection-end-line="29" selection-end-column="36" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/codegen/TranslatorVisitor.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-3526">
+          <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
+          <folding>
+            <element signature="imports" expanded="true" />
+            <element signature="e#219#220#0" expanded="true" />
+            <element signature="e#244#245#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/semantic/MethodVarTable.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="184">
+        <state relative-caret-position="176">
           <caret line="11" column="27" selection-start-line="11" selection-start-column="13" selection-end-line="11" selection-end-column="27" />
           <folding>
             <element signature="imports" expanded="true" />
@@ -815,74 +1029,24 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/visitor/ISemanticVisitor.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="175">
-          <caret line="10" column="35" selection-start-line="10" selection-start-column="35" selection-end-line="10" selection-end-column="35" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/lexer/Lexer.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="297">
-          <caret line="25" column="30" lean-forward="true" selection-start-line="25" selection-start-column="30" selection-end-line="25" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/ast/Ast.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="125">
-          <caret line="52" column="28" selection-start-line="52" selection-start-column="28" selection-end-line="52" selection-end-column="28" />
-          <folding>
-            <element signature="class#Declare#0;class#Ast#0" />
-            <element signature="class#Expr#0;class#Ast#0" />
-            <element signature="class#Sub#0;class#Expr#0;class#Ast#0" />
-            <element signature="class#Mul#0;class#Expr#0;class#Ast#0" />
-            <element signature="class#Div#0;class#Expr#0;class#Ast#0" />
-            <element signature="class#Or#0;class#Expr#0;class#Ast#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/parser/Parser.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="285">
-          <caret line="358" selection-start-line="358" selection-end-line="358" />
-          <folding>
-            <element signature="imports" expanded="true" />
-            <element signature="e#683#718#0" expanded="true" />
-            <element signature="e#878#879#0" expanded="true" />
-            <element signature="e#904#905#0" expanded="true" />
-            <element signature="e#2200#2214#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/examples/BoolTest01.lemon">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="157">
-          <caret line="7" column="10" selection-start-line="7" selection-start-column="8" selection-end-line="7" selection-end-column="10" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/java/SemanticTest.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="139">
-          <caret line="29" selection-start-line="29" selection-end-line="29" />
+        <state relative-caret-position="65">
+          <caret line="5" selection-start-line="5" selection-end-line="9" selection-end-column="3" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/site/ilemon/semantic/SemanticVisitor.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="192">
-          <caret line="177" selection-start-line="177" selection-end-line="177" />
+        <state relative-caret-position="110">
+          <caret line="9" column="7" selection-start-line="9" selection-start-column="7" selection-end-line="9" selection-end-column="7" />
           <folding>
-            <element signature="imports" expanded="true" />
-            <element signature="e#3067#3075#0" expanded="true" />
-            <element signature="e#7624#7625#0" expanded="true" />
-            <element signature="e#7675#7676#0" expanded="true" />
-            <element signature="e#7734#7735#0" expanded="true" />
-            <element signature="e#7785#7786#0" expanded="true" />
-            <element signature="e#8088#8089#0" expanded="true" />
-            <element signature="e#8124#8125#0" expanded="true" />
+            <element signature="e#521#522#0" expanded="true" />
+            <element signature="e#597#598#0" expanded="true" />
+            <element signature="e#630#631#0" expanded="true" />
+            <element signature="e#657#658#0" expanded="true" />
+            <element signature="e#8903#8904#0" expanded="true" />
+            <element signature="e#8954#8955#0" expanded="true" />
+            <element signature="e#9013#9014#0" expanded="true" />
+            <element signature="e#9064#9065#0" expanded="true" />
           </folding>
         </state>
       </provider>

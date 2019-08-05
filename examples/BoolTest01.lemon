@@ -22,10 +22,18 @@ class BoolTest01{
 	    //if( n1 ) // 语义错误
 	    //if( a ) // 语义错误
 	    //if( a ) // 语义错误
-	    if( c ) // 语义错误
+	    c = false;
+	    if( c ) {
 	        rs = !b;
-	    else
-	         rs = b;
+	    }else{
+	        rs = b;
+	    }
+	    if( (3+4) > 5 ){
+	        rs = true;
+	    }else{
+	        rs = false;
+	    }
 	    return rs;
 	}
+
 }

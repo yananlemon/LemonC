@@ -100,20 +100,18 @@ public class Lexer {
 		tempPosition--;
 		
 		while(c==' ' || c == '\t' || c == '\r' ||c == '\n'){
-			//System.out.println((char)c);
 			if( lineSeparator.equals("\r\n")){ // for windows
 				if(c == 13 || source.charAt(position+1) == 10){
-					position++;
+					//position++;
 					line++;
 				}
 			}else if(lineSeparator.equals("\n")){ // for mac
 				if( c == '\n' ){
-					position++;
+					//position++;
 					line++;
 				}
 			}
-
-			c=source.charAt(position++);
+			c = source.charAt(position++);
 			tempPosition--;
 
 		}

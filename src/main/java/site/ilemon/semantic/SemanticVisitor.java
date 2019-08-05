@@ -6,6 +6,11 @@ import site.ilemon.visitor.ISemanticVisitor;
 import java.util.HashSet;
 import java.util.Hashtable;
 
+/**
+ * 语义分析
+ * @author andy
+ *
+ */
 public class SemanticVisitor implements ISemanticVisitor {
 
     private boolean pass = true;
@@ -17,6 +22,8 @@ public class SemanticVisitor implements ISemanticVisitor {
     private Hashtable<String,MethodVarTable> methodVarTable;
 
     private HashSet<String> currMethodLocalVar;
+
+    private Ast.Type.T typeOfMethodDeclared;
 
     public SemanticVisitor(){
         this.methodVarTable = new Hashtable<String,MethodVarTable>();
@@ -68,7 +75,9 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.Block obj) {
-
+        for( Ast.Stmt.T stmt : obj.stmts){
+            this.visit(stmt);
+        }
     }
 
     @Override
@@ -172,18 +181,20 @@ public class SemanticVisitor implements ISemanticVisitor {
         else{
             flag = false;
             // 判断方法返回类型和返回的表达式类型是否一致
-            Ast.Type.T typeDeclared = obj.retType;
-            if(!(lastStmt instanceof Ast.Stmt.Return))
+            //Ast.Type.T typeDeclared = obj.retType;
+            this.typeOfMethodDeclared = obj.retType;
+            /*if(!(lastStmt instanceof Ast.Stmt.Return))
                 error(obj.lineNum, "行"+ lastStmt.lineNum+obj.id+"方法的缺少return语句 ");
-            this.visit(lastStmt);
-            if( !isMatch(typeDeclared,this.currType))
-                error(obj.lineNum, "行"+ lastStmt.lineNum+"返回值与声明的不一致： "+typeDeclared+"!="+this.currType);
+            this.visit(lastStmt);*/
+
         }
-        int size = flag == true ? obj.stms.size() : obj.stms.size() - 1;
-        for( int i = 0; i < size; i++){
+        //int size = flag == true ? obj.stms.size() : obj.stms.size() - 1;
+        for( int i = 0; i < obj.stms.size(); i++){
             Ast.Stmt.T stmt = obj.stms.get(i);
             this.visit(stmt);
         }
+
+
 
 
     }
@@ -258,6 +269,8 @@ public class SemanticVisitor implements ISemanticVisitor {
             this.visit((Ast.Stmt.Assign)obj);
         }else if(obj instanceof Ast.Stmt.If){
             this.visit((Ast.Stmt.If)obj);
+        }else if(obj instanceof Ast.Stmt.Block){
+            this.visit((Ast.Stmt.Block)obj);
         }
 
     }
@@ -324,6 +337,8 @@ public class SemanticVisitor implements ISemanticVisitor {
     @Override
     public void visit(Ast.Stmt.Return obj) {
         this.visit(obj.expr);
+        if( !isMatch(typeOfMethodDeclared,this.currType))
+            error(obj.lineNum,String.format("返回值%s与声明的%s不一致。",typeOfMethodDeclared.toString(),this.currType.toString()));
     }
 
     @Override
@@ -333,7 +348,9 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.While obj) {
-
+        this.visit(obj.condition);
+        if( !this.currType.toString().equals("@bool") )
+            error(obj.condition.lineNum, "while语句的条件表达式的类型应该是bool。");
     }
 
     private void error(int lineNum, String msg){
