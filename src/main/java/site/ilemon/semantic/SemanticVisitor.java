@@ -3,7 +3,6 @@ package site.ilemon.semantic;
 import site.ilemon.ast.Ast;
 import site.ilemon.visitor.ISemanticVisitor;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 
@@ -16,6 +15,8 @@ public class SemanticVisitor implements ISemanticVisitor {
     private String currMethodName;
 
     private Hashtable<String,MethodVarTable> methodVarTable;
+
+    private HashSet<String> currMethodLocalVar;
 
     public SemanticVisitor(){
         this.methodVarTable = new Hashtable<String,MethodVarTable>();
@@ -55,6 +56,8 @@ public class SemanticVisitor implements ISemanticVisitor {
         if(obj.expr instanceof Ast.Expr.T){
             this.visit((Ast.Expr.T)obj.expr);
             Ast.Type.T exprType = this.currType;
+            if( this.currMethodLocalVar.contains(obj.id.id))
+                this.currMethodLocalVar.remove(obj.id.id);
             this.visit(obj.id);
             if( !isMatch(this.currType,exprType))
                 error(obj.lineNum,String.format("不能将类型%s的表达式赋值给类型%s的表达式。",
@@ -108,6 +111,8 @@ public class SemanticVisitor implements ISemanticVisitor {
         MethodVarTable mTable = this.methodVarTable.get(currMethodName);
         if( mTable.get(obj.id) == null )
             error( obj.lineNum,obj.id+"未定义");
+        if( currMethodLocalVar.contains(obj.id))
+            error(obj.lineNum,String.format("你应该在使用%s之前先分配一个值",obj.id));
         this.currType = obj.type;
     }
 
@@ -147,6 +152,11 @@ public class SemanticVisitor implements ISemanticVisitor {
     @Override
     public void visit(Ast.Method.MethodSingle obj) {
         MethodVarTable mTable = new MethodVarTable();
+        this.currMethodLocalVar = new HashSet<String>();
+        for( Ast.Declare.T dec : obj.locals){
+            this.currMethodLocalVar.add(((Ast.Declare.DeclareSingle)dec).id);
+        }
+
         mTable.put(obj.formals,obj.locals);
         this.methodVarTable.put(obj.id,mTable);
         this.currMethodName = obj.id;

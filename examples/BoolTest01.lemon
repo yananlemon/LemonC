@@ -21,7 +21,8 @@ class BoolTest01{
 	    //c = b && a; // 语义错误
 	    //if( n1 ) // 语义错误
 	    //if( a ) // 语义错误
-	    if( a )
+	    //if( a ) // 语义错误
+	    if( c ) // 语义错误
 	        rs = !b;
 	    else
 	         rs = b;
