@@ -17,9 +17,11 @@ class BoolTest01{
 	bool testBoolCall(bool b){
 	    bool rs;
 	    int a;
+	    bool c;
+	    //c = b && a; // 语义错误
 	    //if( n1 ) // 语义错误
 	    //if( a ) // 语义错误
-	    if(b)
+	    if( a )
 	        rs = !b;
 	    else
 	         rs = b;

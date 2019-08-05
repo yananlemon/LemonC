@@ -182,7 +182,7 @@ public class Ast {
      */
     public static class Expr {
         public static abstract class T {
-            public static int lineNum;
+            public int lineNum;
         }
 
         /** 四则运算表达式 **/
@@ -229,7 +229,7 @@ public class Ast {
         /** 逻辑运算表达式 **/
         public static class And extends T{
             public Expr.T left,right;
-
+            public int lineNum;
             public And(Expr.T left, Expr.T right,int lineNum) {
                 this.left = left;
                 this.right = right;
@@ -353,7 +353,7 @@ public class Ast {
 
     public static class Method {
         public static abstract class T {
-            public static int lineNum;
+            public int lineNum;
         }
 
         public static class MethodSingle extends T {

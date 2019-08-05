@@ -19,6 +19,7 @@ public class Lexer {
 	public List<Token> tokens=new ArrayList<Token>();
 	public int line=1;
 	private int index=0;
+	private String lineSeparator = System.getProperty("line.separator");
 	Pattern iNumberPattern = Pattern.compile("^\\d+$|-\\d+$"); // 就是判断是否为整数
 	Pattern dNumberPattern = Pattern.compile("\\d+\\.\\d+$|-\\d+\\.\\d+$");//判断是否为小数
 	public Lexer(File f) throws IOException{
@@ -99,9 +100,19 @@ public class Lexer {
 		tempPosition--;
 		
 		while(c==' ' || c == '\t' || c == '\r' ||c == '\n'){
-			if(c == 13 || c == 10){
-				line++;
+			//System.out.println((char)c);
+			if( lineSeparator.equals("\r\n")){ // for windows
+				if(c == 13 || source.charAt(position+1) == 10){
+					position++;
+					line++;
+				}
+			}else if(lineSeparator.equals("\n")){ // for mac
+				if( c == '\n' ){
+					position++;
+					line++;
+				}
 			}
+
 			c=source.charAt(position++);
 			tempPosition--;
 

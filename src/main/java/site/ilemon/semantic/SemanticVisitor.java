@@ -37,7 +37,12 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.And obj) {
-
+        this.visit(obj.left);
+        Ast.Type.T leftType = this.currType;
+        this.visit(obj.right);
+        if( !leftType.toString().equals("@bool") || !this.currType.toString().equals("@bool"))
+            error(obj.lineNum,String.format("&& 运算符要求左右表达式必须是bool",
+                    leftType.toString(),this.currType.toString()));
     }
 
     @Override
@@ -110,7 +115,7 @@ public class SemanticVisitor implements ISemanticVisitor {
     public void visit(Ast.Stmt.If obj) {
         this.visit(obj.condition);
         if (!this.currType.toString().equals(new Ast.Type.Bool().toString()))
-            error(obj.lineNum,
+            error(obj.condition.lineNum,
                     "条件表达式的类型应该是Bool。");
 
         this.visit(obj.thenStmt);
@@ -200,7 +205,12 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.Or obj) {
-
+        this.visit(obj.left);
+        Ast.Type.T leftType = this.currType;
+        this.visit(obj.right);
+        if( !leftType.toString().equals("@bool") && !isMatch(leftType,this.currType))
+            error(obj.lineNum,String.format("|| 运算符要求左右表达式必须是bool",
+                    leftType.toString(),this.currType.toString()));
     }
 
 
