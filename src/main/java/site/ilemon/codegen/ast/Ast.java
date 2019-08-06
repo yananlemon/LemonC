@@ -9,7 +9,12 @@ public class Ast {
 
     // program
     public static class Program {
-        public static class ProgramSingle {
+
+        public static class T{
+
+        }
+
+        public static class ProgramSingle extends T{
             public MainClass.MainClassSingle mainClass;
 
             public ProgramSingle(MainClass.MainClassSingle mainClass) {
@@ -22,8 +27,10 @@ public class Ast {
     public static class MainClass {
         public static class MainClassSingle {
             public List<Method.MethodSingle> methods;
+            public String id;
 
-            public MainClassSingle(List<Method.MethodSingle> methods) {
+            public MainClassSingle(String id,List<Method.MethodSingle> methods) {
+                this.id = id;
                 this.methods = methods;
             }
         }
@@ -65,11 +72,27 @@ public class Ast {
             }
         }
 
+        public static class Float extends T {
+            @Override
+            public String toString()
+            {
+                return "@float";
+            }
+        }
+
         public static class Str extends T {
             @Override
             public String toString()
             {
                 return "@string";
+            }
+        }
+
+        public static class Void extends T {
+            @Override
+            public String toString()
+            {
+                return "@void";
             }
         }
     }
@@ -241,9 +264,9 @@ public class Ast {
         }
 
         public static class Ldc extends T {
-            public int i;
+            public Object i;
 
-            public Ldc(int i)
+            public Ldc(Object i)
             {
                 this.i = i;
             }
@@ -251,8 +274,15 @@ public class Ast {
 
 
 
-        public static class Print extends T {
+        public static class Printf extends T {
+            public Type.T exprType;
 
+            public String v;
+
+            public Printf(Type.T t,String v) {
+                this.exprType = t;
+                this.v = v;
+            }
         }
 
 

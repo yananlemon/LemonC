@@ -26,7 +26,7 @@ public class ParserTest {
 
     @org.junit.Test
     public void testParser() throws IOException{
-        Ast.MainClass.MainClassSingle mainClassSingle = parser.parse();
-        Assert.assertNotNull(mainClassSingle);
+        Ast.Program.T prog = parser.parse();
+        Assert.assertNotNull(prog);
     }
 }

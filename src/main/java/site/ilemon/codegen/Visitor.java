@@ -14,7 +14,7 @@ public interface Visitor {
     void visit(Ast.Declare.DeclareSingle declareSingle);
     
     // Stmt
-    void visit(Ast.Stmt stmt);
+    void visit(Ast.Stmt.T stmt);
     void visit(Ast.Stmt.Aload s);
     void visit(Ast.Stmt.Areturn s);
     void visit(Ast.Stmt.Astore s);
@@ -35,9 +35,15 @@ public interface Visitor {
     void visit(Ast.Stmt.Istore s);
     void visit(Ast.Stmt.LabelJ s);
     void visit(Ast.Stmt.Ldc s);
-    void visit(Ast.Stmt.Print s);
+    void visit(Ast.Stmt.Printf s);
     void visit(Ast.Stmt.Freturn s);
     void visit(Ast.Stmt.Fstore s);
     void visit(Ast.Stmt.Fload s);
+
+    // Type
+    void visit(Ast.Type.T obj);
+    void visit(Ast.Type.Int obj);
+    void visit(Ast.Type.Float obj);
+    void visit(Ast.Type.Str obj);
 
 }

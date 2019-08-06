@@ -76,9 +76,12 @@ public class Parser {
 	 * @return Program
 	 * @throws IOException
 	 */
-	public Ast.MainClass.MainClassSingle parse() throws IOException{
-		return parseMainClass();
+	public Ast.Program.T parse() throws IOException{
+		Ast.MainClass.MainClassSingle mainClass = parseMainClass();
+		Ast.Program.T programSingle = new Ast.Program.ProgramSingle(mainClass);
+		return programSingle;
 	}
+
 
 	// <mainClass> -> class <name> { <methodList>}
 	private Ast.MainClass.MainClassSingle parseMainClass() throws IOException {

@@ -25,9 +25,9 @@ public class SemanticTest {
 
     @org.junit.Test
     public void testParser() throws IOException{
-        Ast.MainClass.MainClassSingle mainClassSingle = parser.parse();
+        Ast.Program.T prog = parser.parse();
         SemanticVisitor visitor = new SemanticVisitor();
-        visitor.visit(mainClassSingle);
+        visitor.visit(prog);
         Assert.assertTrue(visitor.passOrNot());
     }
 }

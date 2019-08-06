@@ -1,0 +1,9 @@
+class Cal01{
+	void main(){
+		int k2;
+		int n;
+		k2 = 10 + 9;
+		n = k2 * 10 * k2;
+		printf("k2=,n=%d",k2,n);
+	}
+}

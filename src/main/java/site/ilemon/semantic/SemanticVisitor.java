@@ -86,7 +86,7 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     @Override
-    public void visit(Ast.Declare obj) {
+    public void visit(Ast.Declare.T obj) {
 
     }
 
@@ -142,15 +142,21 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     @Override
+    public void visit(Ast.Program.T programSingle) {
+        this.visit(((Ast.Program.ProgramSingle)programSingle).mainClass);
+    }
+
+    @Override
     public void visit(Ast.Expr.LT obj) {
 
     }
 
     @Override
-    public void visit(Ast.MainClass.MainClassSingle obj) {
+    public void visit(Ast.MainClass.T obj) {
+        Ast.MainClass.MainClassSingle mainClassSingle = (Ast.MainClass.MainClassSingle) obj;
         HashSet<String> methodSet = new HashSet<String>();
-        for(int i = 0; i < obj.methods.size(); i++){
-            Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) obj.methods.get(i);
+        for(int i = 0; i < mainClassSingle.methods.size(); i++){
+            Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) mainClassSingle.methods.get(i);
             if(methodSet.add(method.id))
                 this.visit(method);
             else
@@ -335,16 +341,22 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     @Override
+    public void visit(Ast.Expr.Str obj) {
+
+    }
+
+    @Override
+    public void visit(Ast.Type.T obj) {
+
+    }
+
+    @Override
     public void visit(Ast.Stmt.Return obj) {
         this.visit(obj.expr);
         if( !isMatch(typeOfMethodDeclared,this.currType))
             error(obj.lineNum,String.format("返回值%s与声明的%s不一致。",typeOfMethodDeclared.toString(),this.currType.toString()));
     }
 
-    @Override
-    public void visit(Ast.Stmt obj) {
-
-    }
 
     @Override
     public void visit(Ast.Stmt.While obj) {

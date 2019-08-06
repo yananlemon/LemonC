@@ -26,7 +26,9 @@ public interface ISemanticVisitor {
 	void visit(Ast.Expr.True obj);
 	void visit(Ast.Expr.False obj);
 	void visit(Ast.Expr.Not obj);
+	void visit(Ast.Expr.Str obj);
 
+	void visit(Ast.Type.T obj);
 	void visit(Ast.Type.Bool obj);
 	void visit(Ast.Type.Float obj);
 	void visit(Ast.Type.Str obj);
@@ -34,8 +36,9 @@ public interface ISemanticVisitor {
 	void visit(Ast.Type.Void obj);
 	void visit(Ast.Type.Int obj);
 
-	void visit(Ast.Declare obj);
-	void visit(Ast.MainClass.MainClassSingle obj);
+	void visit(Ast.Program.T programSingle);
+	void visit(Ast.Declare.T obj);
+	void visit(Ast.MainClass.T obj);
 	void visit(Ast.Method.MethodSingle obj);
 
 	void visit(Ast.Stmt.If obj);
@@ -44,6 +47,5 @@ public interface ISemanticVisitor {
 	void visit(Ast.Stmt.Block obj);
 	void visit(Ast.Stmt.Printf obj);
 	void visit(Ast.Stmt.Return obj);
-	void visit(Ast.Stmt obj);
 	void visit(Ast.Stmt.While obj);
 }
