@@ -5,6 +5,9 @@ import site.ilemon.codegen.ast.Ast;
 import java.io.IOException;
 
 public class ByteCodeGenerator implements Visitor {
+
+    private String currClassId;
+
     private java.io.BufferedWriter writer;
 
     private void writeln(String s)
@@ -37,8 +40,8 @@ public class ByteCodeGenerator implements Visitor {
 
     @Override
     public void visit(Ast.MainClass.MainClassSingle mainClassSingle) {
-        try
-        {
+        this.currClassId = mainClassSingle.id;
+        try {
             this.writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(
                     new java.io.FileOutputStream(mainClassSingle.id + ".il")));
         } catch (Exception e)
@@ -101,8 +104,8 @@ public class ByteCodeGenerator implements Visitor {
             this.writeln("");
             this.writeln(".limit stack 4096");
             this.writeln(".limit locals 1000");// 暂时写成1000
-            for( int i = 0; i < methodSingle.formals.size(); i++ ){
-                this.visit(methodSingle.formals.get(i));
+            for( int i = 0; i < methodSingle.stms.size(); i++ ){
+                this.visit(methodSingle.stms.get(i));
             }
         }
         this.writeln(".end method");
@@ -177,6 +180,9 @@ public class ByteCodeGenerator implements Visitor {
 
         else if( stmt instanceof Ast.Stmt.Printf )
             this.visit((Ast.Stmt.Printf)stmt);
+
+        else if( stmt instanceof Ast.Stmt.Invokevirtual )
+            this.visit((Ast.Stmt.Invokevirtual)stmt);
 
 
     }
@@ -258,7 +264,20 @@ public class ByteCodeGenerator implements Visitor {
 
     @Override
     public void visit(Ast.Stmt.Invokevirtual s) {
+        this.write("    invokestatic " + currClassId + "/" + s.name + "(");
+        for( int i = 0; i< s.at.size(); i++){
+            if( s.at.get(i) instanceof Ast.Type.Int){
+                this.write("I");
+            }else{
+                this.write("F");
+            }
+        }
+        if( s.rt != null && s.rt.toString().equals("@float"))
+            this.write(")F");
+        else
+            this.write(")I");
 
+        this.writeln("");
     }
 
     @Override

@@ -3,6 +3,7 @@ package site.ilemon.semantic;
 import site.ilemon.ast.Ast;
 import site.ilemon.visitor.ISemanticVisitor;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
 
@@ -21,12 +22,19 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     private Hashtable<String,MethodVarTable> methodVarTable;
 
+    private Hashtable<String,Ast.Type.T> methodNameRetTypeMap;
+
     private HashSet<String> currMethodLocalVar;
+
+    private HashSet<String> methodSet;
 
     private Ast.Type.T typeOfMethodDeclared;
 
     public SemanticVisitor(){
+
         this.methodVarTable = new Hashtable<String,MethodVarTable>();
+        this.methodSet = new HashSet<>();
+        this.methodNameRetTypeMap = new Hashtable<>();
     }
 
     public boolean passOrNot(){
@@ -83,6 +91,16 @@ public class SemanticVisitor implements ISemanticVisitor {
     @Override
     public void visit(Ast.Expr.Call obj) {
 
+       if( this.methodSet.contains(obj.name) ){
+           obj.returnType = this.methodNameRetTypeMap.get(obj.name);
+           ArrayList<Ast.Expr.T> inputParams = obj.inputParams;
+           for( int i = 0; i < obj.inputParams.size(); i++){
+               this.visit(obj.inputParams.get(i));
+           }
+
+       }else{
+           error(obj.lineNum,"未定义的方法："+obj.name);
+       }
     }
 
     @Override
@@ -112,7 +130,14 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.GT obj) {
-
+        this.visit(obj.left);
+        Ast.Type.T t = this.currType;
+        this.visit(obj.right);
+        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float");
+        if( !isMatch(t,this.currType) || !numberType){
+            error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 > 。",t.toString(),this.currType.toString()));
+        }
+        this.currType = new Ast.Type.Bool();
     }
 
     @Override
@@ -148,19 +173,35 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.LT obj) {
-
+        this.visit(obj.left);
+        Ast.Type.T t = this.currType;
+        this.visit(obj.right);
+        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float");
+        if( !isMatch(t,this.currType) || !numberType){
+            error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 > 。",t.toString(),this.currType.toString()));
+        }
+        this.currType = new Ast.Type.Bool();
     }
 
     @Override
     public void visit(Ast.MainClass.T obj) {
         Ast.MainClass.MainClassSingle mainClassSingle = (Ast.MainClass.MainClassSingle) obj;
-        HashSet<String> methodSet = new HashSet<String>();
+        //methodSet = new HashSet<String>();
         for(int i = 0; i < mainClassSingle.methods.size(); i++){
             Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) mainClassSingle.methods.get(i);
-            if(methodSet.add(method.id))
+            if( !methodSet.add(method.id)){
+                error(method.lineNum, "重复的方法： " + method.id);
+            }else{
+                methodNameRetTypeMap.put(method.id,method.retType);
+            }
+        }
+        for(int i = 0; i < mainClassSingle.methods.size(); i++){
+            Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) mainClassSingle.methods.get(i);
+            /*if(methodSet.add(method.id))
                 this.visit(method);
             else
-                error(method.lineNum, "重复的方法： " + method.id);
+                error(method.lineNum, "重复的方法： " + method.id);*/
+            this.visit(method);
         }
     }
 
@@ -269,15 +310,14 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.T obj) {
-        if(obj instanceof Ast.Stmt.Return){
+        if(obj instanceof Ast.Stmt.Return)
             this.visit((Ast.Stmt.Return)obj);
-        }else if(obj instanceof Ast.Stmt.Assign){
+        else if(obj instanceof Ast.Stmt.Assign)
             this.visit((Ast.Stmt.Assign)obj);
-        }else if(obj instanceof Ast.Stmt.If){
+        else if(obj instanceof Ast.Stmt.If)
             this.visit((Ast.Stmt.If)obj);
-        }else if(obj instanceof Ast.Stmt.Block){
+        else if(obj instanceof Ast.Stmt.Block)
             this.visit((Ast.Stmt.Block)obj);
-        }
 
     }
 
@@ -288,7 +328,10 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.T obj) {
-        if(obj instanceof Ast.Expr.Id){
+        if(obj instanceof Ast.Expr.Call){
+            this.visit((Ast.Expr.Call)obj);
+        }
+        else if(obj instanceof Ast.Expr.Id){
             this.visit((Ast.Expr.Id)obj);
         }
         else if(obj instanceof Ast.Expr.Add){
@@ -317,6 +360,12 @@ public class SemanticVisitor implements ISemanticVisitor {
         }
         else if(obj instanceof Ast.Expr.Not){
             this.visit((Ast.Expr.Not)obj);
+        }
+        else if(obj instanceof Ast.Expr.LT){
+            this.visit((Ast.Expr.LT)obj);
+        }
+        else if(obj instanceof Ast.Expr.GT){
+            this.visit((Ast.Expr.GT)obj);
         }
 
 

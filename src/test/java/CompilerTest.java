@@ -15,8 +15,10 @@ public class CompilerTest {
 
     @org.junit.Test
     public void testCal(){
-        try {
-            Lexer lexer=new Lexer(new File("examples/Cal01.lemon"));
+         try {
+            //Lexer lexer=new Lexer(new File("examples/Cal01.lemon")); ok
+
+             Lexer lexer=new Lexer(new File("examples/Cal.lemon"));
             Parser parser = new Parser(lexer);
             Ast.Program.T programSingle = parser.parse();
             SemanticVisitor semanticVisitor = new SemanticVisitor();
@@ -34,7 +36,9 @@ public class CompilerTest {
             jasmin.Main.main(new String[]{translatorVisitor.prog.mainClass.id + ".il"});
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }/**/
+
+        //jasmin.Main.main(new String[]{"Cal01.il"});
 
     }
 }

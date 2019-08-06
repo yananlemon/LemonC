@@ -21,7 +21,9 @@ public class TranslatorVisitor implements ISemanticVisitor {
     private Ast.MainClass.MainClassSingle mainClass;
     public Ast.Program.ProgramSingle prog;
     private List<Ast.Stmt.T> stmts;
+
     private int strIndex;
+    private Label tempLabel;
 
     public TranslatorVisitor() {
         this.stmts = new ArrayList<Ast.Stmt.T>();
@@ -56,6 +58,12 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit((Expr.Str) obj);
         else if( obj instanceof Expr.Id)
             this.visit((Expr.Id) obj);
+        else if( obj instanceof Expr.Call)
+            this.visit((Expr.Call) obj);
+        else if( obj instanceof Expr.LT)
+            this.visit((Expr.LT) obj);
+        else if( obj instanceof Expr.GT)
+            this.visit((Expr.GT) obj);
 
     }
 
@@ -80,7 +88,14 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.Call obj) {
-
+        this.visit(obj.returnType);
+        Ast.Type.T returnType = this.type;
+        List<Ast.Type.T> at = new ArrayList<>();
+        for( int i = 0; i < obj.inputParams.size(); i++ ){
+            this.visit(obj.inputParams.get(i));
+            at.add(this.type);
+        }
+        emit(new Ast.Stmt.Invokevirtual(obj.name,at,returnType));
     }
 
     @Override
@@ -90,16 +105,13 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.GT obj) {
-        Label t = new Label();
-        Label r = new Label();
+        Label t = null;
+        if( tempLabel == null ){
+            t = new Label();
+            tempLabel = t;
+        }
         this.visit(obj.left);
         this.visit(obj.right);
-        emit(new Ast.Stmt.Ificmpgt(t));
-        emit(new Ast.Stmt.Ldc(0));
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(t));
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.LabelJ(r));
     }
 
     @Override
@@ -158,16 +170,13 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.LT obj) {
-        Label t = new Label();
-        Label r = new Label();
+        Label t = null;
+        if( tempLabel == null ){
+            t = new Label();
+            tempLabel = t;
+        }
         this.visit(obj.left);
         this.visit(obj.right);
-        emit(new Ast.Stmt.Ificmplt(t));
-        emit(new Ast.Stmt.Ldc(0));
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(t));
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.LabelJ(r));
     }
 
     @Override
@@ -208,7 +217,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
     public void visit(Expr.Str obj) {
         this.type = new Ast.Type.Str();
         emit(new Ast.Stmt.Ldc("\""+obj.value+"\""));
-        emit(new Ast.Stmt.Astore(strIndex++));
+        //emit(new Ast.Stmt.Astore(strIndex++));
+        emit(new Ast.Stmt.Astore(index++));
     }
 
     @Override
@@ -288,7 +298,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Method.MethodSingle obj) {
-        this.index = 1;
+        this.index = 0;
         this.indexTable = new HashMap<>();
         this.visit(obj.retType);
         Ast.Type.T returnType = this.type;
@@ -312,7 +322,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         for(int i = 0; i < obj.stms.size(); i++){
             this.visit(obj.stms.get(i));
         }
-        this.visit(obj.retExp);
+        //this.visit(obj.retExp);
 
         this.method = new Ast.Method.MethodSingle(returnType,obj.id,this.classId,
                 formals,locals,this.stmts,0,this.index);
@@ -381,7 +391,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
         for (int i = 0; i < array.length; i++) {
             this.visit(new Expr.Str(array[i], obj.lineNum));
-            emit(new Ast.Stmt.Aload(strIndex -1 ) );
+            //emit(new Ast.Stmt.Aload(strIndex -1 ) );
+            emit(new Ast.Stmt.Aload(index -1 ) );
             emit(new Ast.Stmt.Printf(new Ast.Type.Str(), array[i]));
             if( i+1 < obj.exprs.size() ){
                 this.visit(obj.exprs.get(i+1));
@@ -408,6 +419,12 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit((Expr.Number)obj.expr);
         else if( obj.expr instanceof Expr.Id)
             this.visit((Expr.Id)obj.expr);
+
+        if( this.type.toString().equals("@int"))
+            emit(new Ast.Stmt.Ireturn());
+        else if( this.type.toString().equals("@float"))
+            emit(new Ast.Stmt.Freturn());
+
 
     }
 

@@ -220,14 +220,12 @@ public class Ast {
 
 
         public static class Invokevirtual extends T {
-            public String f;
-            public String c;
+            public String name;
             public List<Type.T> at;
             public Type.T rt;
 
-            public Invokevirtual(String f, String c, List<Type.T> at, Type.T rt) {
-                this.f = f;
-                this.c = c;
+            public Invokevirtual(String name, List<Type.T> at, Type.T rt) {
+                this.name = name;
                 this.at = at;
                 this.rt = rt;
             }
