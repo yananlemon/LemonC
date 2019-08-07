@@ -85,17 +85,17 @@ public class ByteCodeGenerator implements Visitor {
             if( methodSingle.formals !=null && methodSingle.formals.size() > 0 ){
                 this.write(".method static " + methodSingle.id + "(");
                 for( int i = 0; i< methodSingle.formals.size(); i++){
-                    if( methodSingle.formals.get(i).type instanceof Ast.Type.Int)
+                    if( methodSingle.formals.get(i).type instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
                         this.write("I");
                     else
                         this.write("F");
                 }
-                if(methodSingle.retType instanceof Ast.Type.Int)
+                if(methodSingle.retType instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
                     this.write(")I");
                 else
                     this.write(")F");
             }else{
-                if(methodSingle.retType instanceof Ast.Type.Int)
+                if(methodSingle.retType instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
                     this.write(".method static " + methodSingle.id + "()I");
                 else
                     this.write(".method static " + methodSingle.id + "()F");

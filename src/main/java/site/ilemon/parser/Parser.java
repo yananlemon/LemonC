@@ -8,8 +8,6 @@ import site.ilemon.lexer.TokenKind;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Hashtable;
 
 import static site.ilemon.lexer.TokenKind.Num;
 
@@ -330,7 +328,14 @@ public class Parser {
 			
 			// 方法调用
 			if( ahead.kind == TokenKind.Lparen ){
-				
+				String mthName = look.lexeme;
+				int lineNumber = look.lineNumber;
+				Ast.Expr.T expr =  parseMethodCall();
+				if( expr instanceof Ast.Expr.Call){
+					stmt = new Ast.Stmt.Call(mthName,((Ast.Expr.Call)expr).inputParams,lineNumber);
+					move();
+				}
+
 			}else{
 				String id = look.lexeme;
 				int lineNum = look.lineNumber;
@@ -474,41 +479,7 @@ public class Parser {
 			Token temp = look;
 			Token ahead = lexer.lookahead(1);
 			if( ahead.kind == TokenKind.Lparen){
-				String methodName = look.lexeme;
-				int lineNumber = look.lineNumber;
-				move();
-				match("(");
-				ArrayList<Ast.Expr.T> args = null;
-				args = new ArrayList<Ast.Expr.T>();
-				ahead = lexer.lookahead(1);
-				if( ahead.kind == TokenKind.Add || ahead.kind == TokenKind.Sub){
-					args.add(parseAdditiveExpr());
-				}else{
-					while( look.kind == TokenKind.Id || look.kind == TokenKind.Num  || look.kind == TokenKind.DNum
-					|| look.kind == TokenKind.True || look.kind == TokenKind.False){
-						if( look.kind == TokenKind.Id)
-							args.add(parseFactor());
-						else if( look.kind == TokenKind.Num )
-							args.add(new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber));
-						else if( look.kind == TokenKind.DNum )
-							args.add(new Ast.Expr.Number(new Ast.Type.Float(),look.lexeme,look.lineNumber));
-						else if( look.kind == TokenKind.True ){
-							args.add(new Ast.Expr.True(look.lineNumber));
-							move();
-						}
-
-						else if( look.kind == TokenKind.False ){
-							args.add(new Ast.Expr.False(look.lineNumber));
-							move();
-						}
-
-						//move();
-						if( look.kind == TokenKind.Commer)
-							move();
-					}
-				}
-				match(")");
-				expr = new Ast.Expr.Call(methodName, args, lineNumber);
+				expr = parseMethodCall();
 			}else{
 				expr = new Ast.Expr.Id(look.lexeme,this.varTable.get(look.lexeme),look.lineNumber);
 				move();
@@ -538,6 +509,47 @@ public class Parser {
 			System.out.println("near line : "+look.lineNumber+" syntax error: "+"excepted get identifier or expression or number or String, but got "+look.lexeme);
 			System.exit(1);
 		}
+		return expr;
+	}
+
+	private Ast.Expr.T parseMethodCall() throws IOException {
+		Token ahead;
+		Ast.Expr.T expr;
+		String methodName = look.lexeme;
+		int lineNumber = look.lineNumber;
+		move();
+		match("(");
+		ArrayList<Ast.Expr.T> args = null;
+		args = new ArrayList<Ast.Expr.T>();
+		ahead = lexer.lookahead(1);
+		if( ahead.kind == TokenKind.Add || ahead.kind == TokenKind.Sub){
+            args.add(parseAdditiveExpr());
+        }else{
+            while( look.kind == TokenKind.Id || look.kind == TokenKind.Num  || look.kind == TokenKind.DNum
+            || look.kind == TokenKind.True || look.kind == TokenKind.False){
+                if( look.kind == TokenKind.Id)
+                    args.add(parseFactor());
+                else if( look.kind == TokenKind.Num )
+                    args.add(new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber));
+                else if( look.kind == TokenKind.DNum )
+                    args.add(new Ast.Expr.Number(new Ast.Type.Float(),look.lexeme,look.lineNumber));
+                else if( look.kind == TokenKind.True ){
+                    args.add(new Ast.Expr.True(look.lineNumber));
+                    move();
+                }
+
+                else if( look.kind == TokenKind.False ){
+                    args.add(new Ast.Expr.False(look.lineNumber));
+                    move();
+                }
+
+                //move();
+                if( look.kind == TokenKind.Commer)
+                    move();
+            }
+        }
+		match(")");
+		expr = new Ast.Expr.Call(methodName, args, lineNumber);
 		return expr;
 	}
 }

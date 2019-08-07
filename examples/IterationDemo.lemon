@@ -2,6 +2,7 @@ class IterationDemo{
 	void main(){
 		int k;
 		k = iteration();
+		iteration();
 	}
 	
 	int iteration(){

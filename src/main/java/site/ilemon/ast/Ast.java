@@ -71,6 +71,23 @@ public class Ast {
             }
         }
 
+        public static class Call extends T {
+            /**方法返回类型**/
+            public Ast.Type.T returnType;
+
+            /**方法名称**/
+            public String name;
+
+            /**方法参数**/
+            public ArrayList<Expr.T> inputParams;
+
+            public Call(String name, ArrayList<Expr.T> inputParams,int lineNumber) {
+                this.name = name;
+                this.inputParams = inputParams;
+                this.lineNum = lineNumber;
+            }
+        }
+
         public static class If extends T{
             public Expr.T condition;
             public T thenStmt,elseStmt;

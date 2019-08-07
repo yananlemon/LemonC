@@ -48,4 +48,5 @@ public interface ISemanticVisitor {
 	void visit(Ast.Stmt.Printf obj);
 	void visit(Ast.Stmt.Return obj);
 	void visit(Ast.Stmt.While obj);
+	void visit(Ast.Stmt.Call obj);
 }

@@ -1,0 +1,39 @@
+class BoolTest01{
+	void main(){
+        bool b1;
+        bool b2;
+        bool b3;
+        int n1;
+        float f1;
+        b1 = true;
+        b2 = testBoolCall(false);
+        b3 = !b1 && b2 || !b2;
+        //n1 = b1 + b2;// 语义错误
+        //n1 = 3.1415 * 2.0;// 语义错误
+        n1 = (1+2)*(3-4)/(5+9);
+		printf("b1=%s,b2=%s,b3=%s",b1,b2,b3);
+	}
+
+	bool testBoolCall(bool b){
+	    bool rs;
+	    int a;
+	    bool c;
+	    //c = b && a; // 语义错误
+	    //if( n1 ) // 语义错误
+	    //if( a ) // 语义错误
+	    //if( a ) // 语义错误
+	    c = false;
+	    if( c ) {
+	        rs = !b;
+	    }else{
+	        rs = b;
+	    }
+	    if( (3+4) > 5 ){
+	        rs = true;
+	    }else{
+	        rs = false;
+	    }
+	    return rs;
+	}
+
+}

@@ -241,10 +241,6 @@ public class SemanticVisitor implements ISemanticVisitor {
             Ast.Stmt.T stmt = obj.stms.get(i);
             this.visit(stmt);
         }
-
-
-
-
     }
 
     @Override
@@ -321,6 +317,8 @@ public class SemanticVisitor implements ISemanticVisitor {
             this.visit((Ast.Stmt.Block)obj);
         else if(obj instanceof Ast.Stmt.While)
             this.visit((Ast.Stmt.While)obj);
+        else if(obj instanceof Ast.Stmt.Call)
+            this.visit((Ast.Stmt.Call)obj);
 
     }
 
@@ -415,6 +413,21 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(obj.condition);
         if( !this.currType.toString().equals("@bool") )
             error(obj.condition.lineNum, "while语句的条件表达式的类型应该是bool。");
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Call obj) {
+        if( this.methodSet.contains(obj.name) ){
+            obj.returnType = this.methodNameRetTypeMap.get(obj.name);
+            this.currType = obj.returnType;
+            ArrayList<Ast.Expr.T> inputParams = obj.inputParams;
+            for( int i = 0; i < obj.inputParams.size(); i++){
+                this.visit(obj.inputParams.get(i));
+            }
+
+        }else{
+            error(obj.lineNum,"未定义的方法："+obj.name);
+        }
     }
 
     private void error(int lineNum, String msg){

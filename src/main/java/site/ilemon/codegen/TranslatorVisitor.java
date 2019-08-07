@@ -54,6 +54,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit((Expr.Div) obj);
         else if( obj instanceof Expr.Number)
             this.visit((Expr.Number) obj);
+        else if( obj instanceof Expr.True)
+            this.visit((Expr.True) obj);
+        else if( obj instanceof Expr.False)
+            this.visit((Expr.False) obj);
         else if( obj instanceof Expr.Str)
             this.visit((Expr.Str) obj);
         else if( obj instanceof Expr.Id)
@@ -64,6 +68,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit((Expr.LT) obj);
         else if( obj instanceof Expr.GT)
             this.visit((Expr.GT) obj);
+        else if( obj instanceof Expr.Not)
+            this.visit((Expr.Not) obj);
 
     }
 
@@ -200,17 +206,26 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.True obj) {
-
+        emit(new Ast.Stmt.Ldc(1));
     }
 
     @Override
     public void visit(Expr.False obj) {
-
+        emit(new Ast.Stmt.Ldc(0));
     }
 
     @Override
     public void visit(Expr.Not obj) {
-
+        Label f = new Label();
+        Label r = new Label();
+        this.visit(obj.expr);
+        emit(new Ast.Stmt.Ldc(1));
+        emit(new Ast.Stmt.Ificmplt(f));
+        emit(new Ast.Stmt.Ldc(1));
+        emit(new Ast.Stmt.Goto(r));
+        emit(new Ast.Stmt.LabelJ(f));
+        emit(new Ast.Stmt.Ldc(0));
+        emit(new Ast.Stmt.LabelJ(r));
     }
 
     @Override
@@ -360,6 +375,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit((Stmt.While)obj);
         else if( obj instanceof Stmt.Return)
             this.visit((Stmt.Return)obj);
+        else if( obj instanceof Stmt.Call)
+            this.visit((Stmt.Call)obj);
         // else error
     }
 
@@ -367,7 +384,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
     public void visit(Stmt.Assign obj) {
         int index = this.indexTable.get(obj.id.id);
         this.visit(obj.expr);
-        if( obj.id.type instanceof Type.Int)
+        if( obj.id.type instanceof Type.Int || obj.id.type instanceof Type.Bool)
             emit(new Ast.Stmt.Istore(index));
         else if( obj.id.type instanceof Type.Float)
             emit(new Ast.Stmt.Fstore(index));
@@ -419,7 +436,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit((Expr.Number)obj.expr);
         else if( obj.expr instanceof Expr.Id)
             this.visit((Expr.Id)obj.expr);
-
+        else if( obj.expr instanceof Expr.Not)
+            this.visit((Expr.Not)obj.expr);
         if( this.type.toString().equals("@int"))
             emit(new Ast.Stmt.Ireturn());
         else if( this.type.toString().equals("@float"))
@@ -444,5 +462,17 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.body);
         emit(new Ast.Stmt.Goto(con));
         emit(new Ast.Stmt.LabelJ(end));
+    }
+
+    @Override
+    public void visit(Stmt.Call obj) {
+        this.visit(obj.returnType);
+        Ast.Type.T returnType = this.type;
+        List<Ast.Type.T> at = new ArrayList<>();
+        for( int i = 0; i < obj.inputParams.size(); i++ ){
+            this.visit(obj.inputParams.get(i));
+            at.add(this.type);
+        }
+        emit(new Ast.Stmt.Invokevirtual(obj.name,at,returnType));
     }
 }
