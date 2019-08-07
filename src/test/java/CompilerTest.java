@@ -17,8 +17,8 @@ public class CompilerTest {
     public void testCal(){
          try {
             //Lexer lexer=new Lexer(new File("examples/Cal01.lemon")); ok
-
-             Lexer lexer=new Lexer(new File("examples/Cal.lemon"));
+             // Lexer lexer=new Lexer(new File("examples/Cal.lemon")); ok
+             Lexer lexer=new Lexer(new File("examples/IterationDemo.lemon"));
             Parser parser = new Parser(lexer);
             Ast.Program.T programSingle = parser.parse();
             SemanticVisitor semanticVisitor = new SemanticVisitor();

@@ -93,6 +93,7 @@ public class SemanticVisitor implements ISemanticVisitor {
 
        if( this.methodSet.contains(obj.name) ){
            obj.returnType = this.methodNameRetTypeMap.get(obj.name);
+           this.currType = obj.returnType;
            ArrayList<Ast.Expr.T> inputParams = obj.inputParams;
            for( int i = 0; i < obj.inputParams.size(); i++){
                this.visit(obj.inputParams.get(i));
@@ -318,6 +319,8 @@ public class SemanticVisitor implements ISemanticVisitor {
             this.visit((Ast.Stmt.If)obj);
         else if(obj instanceof Ast.Stmt.Block)
             this.visit((Ast.Stmt.Block)obj);
+        else if(obj instanceof Ast.Stmt.While)
+            this.visit((Ast.Stmt.While)obj);
 
     }
 

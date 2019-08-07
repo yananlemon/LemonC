@@ -430,6 +430,19 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Stmt.While obj) {
+        Label con = new Label();
+        Label end = new Label();
+        emit(new Ast.Stmt.LabelJ(con));
+        this.visit(obj.condition);
+        if( obj.condition instanceof Expr.LT){
+            emit(new Ast.Stmt.Ificmpgt(end));
 
+        }
+        else if( obj.condition instanceof Expr.GT){
+            emit(new Ast.Stmt.Ificmplt(end));
+        }
+        this.visit(obj.body);
+        emit(new Ast.Stmt.Goto(con));
+        emit(new Ast.Stmt.LabelJ(end));
     }
 }
