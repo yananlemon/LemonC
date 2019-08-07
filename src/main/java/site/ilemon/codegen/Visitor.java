@@ -36,6 +36,7 @@ public interface Visitor {
     void visit(Ast.Stmt.LabelJ s);
     void visit(Ast.Stmt.Ldc s);
     void visit(Ast.Stmt.Printf s);
+    void visit(Ast.Stmt.PrintLine s);
     void visit(Ast.Stmt.Freturn s);
     void visit(Ast.Stmt.Fstore s);
     void visit(Ast.Stmt.Fload s);
@@ -45,5 +46,6 @@ public interface Visitor {
     void visit(Ast.Type.Int obj);
     void visit(Ast.Type.Float obj);
     void visit(Ast.Type.Str obj);
+    void visit(Ast.Type.Bool obj);
 
 }

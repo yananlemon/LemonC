@@ -307,7 +307,9 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.T obj) {
-        if(obj instanceof Ast.Stmt.Return)
+        if(obj instanceof Ast.Stmt.Block)
+            this.visit((Ast.Stmt.Block)obj);
+        else if(obj instanceof Ast.Stmt.Return)
             this.visit((Ast.Stmt.Return)obj);
         else if(obj instanceof Ast.Stmt.Assign)
             this.visit((Ast.Stmt.Assign)obj);
@@ -319,11 +321,18 @@ public class SemanticVisitor implements ISemanticVisitor {
             this.visit((Ast.Stmt.While)obj);
         else if(obj instanceof Ast.Stmt.Call)
             this.visit((Ast.Stmt.Call)obj);
+        else if(obj instanceof Ast.Stmt.PrintLine)
+            this.visit((Ast.Stmt.PrintLine)obj);
 
     }
 
     @Override
     public void visit(Ast.Stmt.Printf obj) {
+
+    }
+
+    @Override
+    public void visit(Ast.Stmt.PrintLine obj) {
 
     }
 
@@ -413,11 +422,13 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(obj.condition);
         if( !this.currType.toString().equals("@bool") )
             error(obj.condition.lineNum, "while语句的条件表达式的类型应该是bool。");
+        this.visit(obj.body);
+
     }
 
     @Override
     public void visit(Ast.Stmt.Call obj) {
-        if( this.methodSet.contains(obj.name) ){
+        if( this.methodSet.contains(obj.name)){
             obj.returnType = this.methodNameRetTypeMap.get(obj.name);
             this.currType = obj.returnType;
             ArrayList<Ast.Expr.T> inputParams = obj.inputParams;

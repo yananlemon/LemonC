@@ -1,3 +1,4 @@
+// 打印九九乘法表
 class MulTable{
 	void main(){
 		int k;
@@ -16,7 +17,7 @@ class MulTable{
 				t = t + 1;
 			}
 			k = k+1;
-			printNewLine();
+			printLine();
 		}
 		return 0;
 	}

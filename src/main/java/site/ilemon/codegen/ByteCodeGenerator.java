@@ -180,6 +180,8 @@ public class ByteCodeGenerator implements Visitor {
 
         else if( stmt instanceof Ast.Stmt.Printf )
             this.visit((Ast.Stmt.Printf)stmt);
+        else if( stmt instanceof Ast.Stmt.PrintLine )
+            this.visit((Ast.Stmt.PrintLine)stmt);
 
         else if( stmt instanceof Ast.Stmt.Invokevirtual )
             this.visit((Ast.Stmt.Invokevirtual)stmt);
@@ -320,6 +322,16 @@ public class ByteCodeGenerator implements Visitor {
     }
 
     @Override
+    public void visit(Ast.Stmt.PrintLine obj) {
+        /*this.iwriteln("ldc \"\\n\"");
+        this.iwriteln("astore 100 ");
+        this.iwriteln("aload 100 ");*/
+        this.iwriteln("getstatic java/lang/System/out Ljava/io/PrintStream;");
+        this.iwriteln("swap");
+        this.iwriteln("invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V");
+    }
+
+    @Override
     public void visit(Ast.Stmt.Freturn s) {
         this.iwriteln("freturn");
     }
@@ -340,6 +352,8 @@ public class ByteCodeGenerator implements Visitor {
             this.visit((Ast.Type.Int)obj);
         else if( obj instanceof Ast.Type.Float)
             this.visit((Ast.Type.Int)obj);
+        else if( obj instanceof Ast.Type.Bool)
+            this.visit((Ast.Type.Bool)obj);
     }
 
     @Override
@@ -354,6 +368,11 @@ public class ByteCodeGenerator implements Visitor {
 
     @Override
     public void visit(Ast.Type.Str obj) {
+
+    }
+
+    @Override
+    public void visit(Ast.Type.Bool obj) {
 
     }
 }

@@ -54,6 +54,6 @@ public enum TokenKind {
 		Num,
 		DNum,
 		Assign,
-		Unknown, PrintNewLine,
+		Unknown, PrintLine,
 
 	}

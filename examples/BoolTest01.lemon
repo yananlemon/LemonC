@@ -5,6 +5,7 @@ class BoolTest01{
         b1 = true;
         b2 = setBool(b1);
 		printf("b1=%d,b2=%d",b1,b2);
+		printLine();
 	}
 
 	bool setBool(bool b){

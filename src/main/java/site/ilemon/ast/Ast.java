@@ -131,6 +131,10 @@ public class Ast {
                 this.lineNum = lineNum;
             }
         }
+
+        public static class PrintLine extends T {
+
+        }
     }
 
     /**

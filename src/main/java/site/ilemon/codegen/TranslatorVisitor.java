@@ -22,7 +22,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
     public Ast.Program.ProgramSingle prog;
     private List<Ast.Stmt.T> stmts;
 
-    private int strIndex;
     private Label tempLabel;
 
     public TranslatorVisitor() {
@@ -120,10 +119,13 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.right);
     }
 
+    //private int indexForBool;
+
     @Override
     public void visit(Expr.Id obj) {
         int index = this.indexTable.get(obj.id);
         if( obj.type instanceof Type.Int || obj.type instanceof Type.Bool){
+        //if( obj.type instanceof Type.Int){
             this.type = new Ast.Type.Int();
             emit(new Ast.Stmt.Iload(index));
         }
@@ -135,6 +137,11 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.type = new Ast.Type.Str();
             emit(new Ast.Stmt.Aload(index));
         }
+        /*else if( obj.type instanceof Type.Bool ){
+            this.type = new Ast.Type.Bool();
+            emit(new Ast.Stmt.Aload(index));
+            indexForBool = index;
+        }*/
     }
 
     @Override
@@ -232,7 +239,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
     public void visit(Expr.Str obj) {
         this.type = new Ast.Type.Str();
         emit(new Ast.Stmt.Ldc("\""+obj.value+"\""));
-        //emit(new Ast.Stmt.Astore(strIndex++));
         emit(new Ast.Stmt.Astore(index++));
     }
 
@@ -293,7 +299,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.dec = new Ast.Declare.DeclareSingle(this.type,declareSingle.id);
         if (this.indexTable != null) // if it is field
             this.indexTable.put(declareSingle.id, index++);
-        strIndex = this.indexTable.size();
+        //strIndex = this.indexTable.size();
     }
 
 
@@ -371,6 +377,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit((Stmt.If)obj);
         else if( obj instanceof Stmt.Printf)
             this.visit((Stmt.Printf)obj);
+        else if( obj instanceof Stmt.PrintLine)
+            this.visit((Stmt.PrintLine)obj);
         else if( obj instanceof Stmt.While)
             this.visit((Stmt.While)obj);
         else if( obj instanceof Stmt.Return)
@@ -417,9 +425,23 @@ public class TranslatorVisitor implements ISemanticVisitor {
                     emit(new Ast.Stmt.Printf(new Ast.Type.Int(), null));
                 else if(this.type instanceof Ast.Type.Float)
                     emit(new Ast.Stmt.Printf(new Ast.Type.Float(), null));
+                /*else if(this.type instanceof Ast.Type.Bool){
+                    emit(new Ast.Stmt.Aload(indexForBool));
+                    emit(new Ast.Stmt.Printf(new Ast.Type.Bool(), null));
+                }*/
+
             }
 
         }
+    }
+
+    @Override
+    public void visit(Stmt.PrintLine obj) {
+        emit(new Ast.Stmt.Ldc("\"\\n\""));
+        emit(new Ast.Stmt.Astore(index));
+        emit(new Ast.Stmt.Aload(index));
+        emit(new Ast.Stmt.PrintLine());
+        index++;
     }
 
     @Override

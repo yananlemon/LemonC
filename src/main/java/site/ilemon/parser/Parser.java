@@ -279,7 +279,7 @@ public class Parser {
 	private ArrayList<Ast.Stmt.T> parseStmts() throws IOException {
 		ArrayList<Ast.Stmt.T> rs = new ArrayList<Ast.Stmt.T>();
 		while( look.kind == TokenKind.Printf || 
-				look.kind == TokenKind.PrintNewLine || 
+				look.kind == TokenKind.PrintLine ||
 				look.kind == TokenKind.If ||
 				look.kind == TokenKind.While ||
 				look.kind == TokenKind.Lbrace ||
@@ -313,6 +313,15 @@ public class Parser {
 			}else{
 				match(new Token(TokenKind.Lparen));
 			}
+		}
+		else if( look.kind == TokenKind.PrintLine ){
+			match(new Token(TokenKind.PrintLine));
+			match(new Token(TokenKind.Lparen));
+			match(new Token(TokenKind.Rparen));
+			match( new Token(TokenKind.Semicolon) );
+			String format = look.lexeme;
+			int lineNumber = look.lineNumber;
+			stmt = new Ast.Stmt.PrintLine();
 		}
 		else if( look.kind == TokenKind.While ){
 			match(new Token(TokenKind.While));

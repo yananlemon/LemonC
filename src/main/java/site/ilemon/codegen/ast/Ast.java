@@ -283,6 +283,10 @@ public class Ast {
             }
         }
 
+        public static class PrintLine extends T {
+
+        }
+
 
     }
 
