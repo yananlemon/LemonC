@@ -130,7 +130,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
             emit(new Ast.Stmt.Iload(index));
         }
         else if( obj.type instanceof Type.Float ){
-            this.type = new Ast.Type.Int();
+            this.type = new Ast.Type.Float();
             emit(new Ast.Stmt.Fload(index));
         }
         else if( obj.type instanceof Type.Str ){

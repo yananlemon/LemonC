@@ -20,7 +20,8 @@ public class CompilerTest {
              // Lexer lexer=new Lexer(new File("examples/Cal.lemon")); ok
              // Lexer lexer=new Lexer(new File("examples/IterationDemo.lemon")); // ok
              //Lexer lexer=new Lexer(new File("examples/BoolTest01.lemon")); ok
-             Lexer lexer=new Lexer(new File("examples/MulTable.lemon"));
+             // Lexer lexer=new Lexer(new File("examples/MulTable.lemon"));ok
+             Lexer lexer=new Lexer(new File("examples/FloatTest01.lemon"));
             Parser parser = new Parser(lexer);
             Ast.Program.T programSingle = parser.parse();
             SemanticVisitor semanticVisitor = new SemanticVisitor();
@@ -40,7 +41,7 @@ public class CompilerTest {
             e.printStackTrace();
         }/**/
 
-        //jasmin.Main.main(new String[]{"Cal01.il"});
+        // jasmin.Main.main(new String[]{"FloatTest01.il"});
 
     }
 }

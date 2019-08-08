@@ -4,6 +4,7 @@ import site.ilemon.ast.Ast;
 import site.ilemon.visitor.ISemanticVisitor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 
@@ -26,14 +27,14 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     private HashSet<String> currMethodLocalVar;
 
-    private HashSet<String> methodSet;
+    private HashMap<String,Ast.Method.MethodSingle> methodMap;
 
     private Ast.Type.T typeOfMethodDeclared;
 
     public SemanticVisitor(){
 
         this.methodVarTable = new Hashtable<String,MethodVarTable>();
-        this.methodSet = new HashSet<>();
+        this.methodMap = new HashMap<>();
         this.methodNameRetTypeMap = new Hashtable<>();
     }
 
@@ -46,8 +47,8 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T leftType = this.currType;
         this.visit(obj.right);
-        if( !isMatch(leftType,this.currType))
-            error(obj.lineNum,String.format("左边表达式的类型%s与右边表达式的类型%s不匹配。",
+        if( !isMatch(leftType,this.currType) )
+                error(obj.lineNum,String.format("左边表达式的类型%s与右边表达式的类型%s不匹配。",
                     leftType.toString(),this.currType.toString()));
     }
 
@@ -90,8 +91,18 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.Call obj) {
-
-       if( this.methodSet.contains(obj.name) ){
+        Ast.Method.MethodSingle currMethod = this.methodMap.get(obj.name);
+       if( currMethod != null ){
+           if( obj.inputParams.size() != currMethod.formals.size() )
+               error(obj.lineNum,String.format("方法%s的参数个数不正确",obj.name));
+           for( int i = 0; i < obj.inputParams.size(); i++){
+               this.visit(obj.inputParams.get(i));
+               Ast.Type.T type = this.currType;
+               this.visit(currMethod.formals.get(i));
+               if( !isMatch(type,this.currType))
+                   error(obj.lineNum,String.format("方法%s的参数%s的类型应为%s",
+                           obj.toString(),obj.inputParams.get(i).toString(),this.currType.toString()));
+           }
            obj.returnType = this.methodNameRetTypeMap.get(obj.name);
            this.currType = obj.returnType;
            ArrayList<Ast.Expr.T> inputParams = obj.inputParams;
@@ -190,9 +201,10 @@ public class SemanticVisitor implements ISemanticVisitor {
         //methodSet = new HashSet<String>();
         for(int i = 0; i < mainClassSingle.methods.size(); i++){
             Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) mainClassSingle.methods.get(i);
-            if( !methodSet.add(method.id)){
+            if( methodMap.containsKey(method.id)){
                 error(method.lineNum, "重复的方法： " + method.id);
             }else{
+                methodMap.put(method.id,method);
                 methodNameRetTypeMap.put(method.id,method.retType);
             }
         }
@@ -321,6 +333,8 @@ public class SemanticVisitor implements ISemanticVisitor {
             this.visit((Ast.Stmt.While)obj);
         else if(obj instanceof Ast.Stmt.Call)
             this.visit((Ast.Stmt.Call)obj);
+        else if(obj instanceof Ast.Stmt.Printf)
+            this.visit((Ast.Stmt.Printf)obj);
         else if(obj instanceof Ast.Stmt.PrintLine)
             this.visit((Ast.Stmt.PrintLine)obj);
 
@@ -328,6 +342,18 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.Printf obj) {
+        if( obj.exprs == null || obj.exprs.size() <= 0)
+            error(obj.lineNum,"printf 需要有表达式");
+        String format = obj.format;
+        String[] array = format.split("%d");
+        if( array.length == 0 )
+            error(obj.lineNum,"printf 语句第1个参数必须包含%d");
+        for( int i = 0; i < array.length; i++ ){
+            Ast.Expr.T expr = obj.exprs.get(i+1);
+            this.visit(expr);
+            if(!isMatch(new Ast.Type.Int(),this.currType) && !isMatch(new Ast.Type.Float(),this.currType))
+                error(expr.lineNum,String.format("表达式%s的类型需要是int或float",expr.toString()));
+        }
 
     }
 
@@ -428,7 +454,18 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.Call obj) {
-        if( this.methodSet.contains(obj.name)){
+        Ast.Method.MethodSingle currMethod = this.methodMap.get(obj.name);
+        if( currMethod != null ){
+            if( obj.inputParams.size() != currMethod.formals.size() )
+                error(obj.lineNum,String.format("方法%s的参数个数不正确",obj.name));
+            for( int i = 0; i < obj.inputParams.size(); i++){
+                this.visit(obj.inputParams.get(i));
+                Ast.Type.T type = this.currType;
+                this.visit(currMethod.formals.get(i));
+                if( !isMatch(type,this.currType))
+                    error(obj.lineNum,String.format("方法%s的参数%s的类型应为%s",
+                            obj.toString(),obj.inputParams.get(i).toString(),this.currType.toString()));
+            }
             obj.returnType = this.methodNameRetTypeMap.get(obj.name);
             this.currType = obj.returnType;
             ArrayList<Ast.Expr.T> inputParams = obj.inputParams;
