@@ -19,13 +19,17 @@ public class CompilerTest {
     @Test
     public void testCal() {
         try {
-            Lexer lexer=new Lexer(new File("examples/Cal01.lemon"));
+            //Lexer lexer=new Lexer(new File("examples/Cal01.lemon"));
              //Lexer lexer=new Lexer(new File("examples/Cal.lemon"));
              //Lexer lexer=new Lexer(new File("examples/IterationDemo.lemon"));
 
              //Lexer lexer=new Lexer(new File("examples/MulTable.lemon"));
 
             //Lexer lexer = new Lexer(new File("examples/FloatTest01.lemon"));
+            //Lexer lexer=new Lexer(new File("examples/If01.lemon"));
+            //Lexer lexer=new Lexer(new File("examples/If03.lemon"));
+            Lexer lexer=new Lexer(new File("examples/If01.lemon"));
+            //Lexer lexer=new Lexer(new File("examples/If03.lemon"));
             Parser parser = new Parser(lexer);
             Ast.Program.T programSingle = parser.parse();
             SemanticVisitor semanticVisitor = new SemanticVisitor();
@@ -43,7 +47,7 @@ public class CompilerTest {
             jasmin.Main.main(new String[]{translatorVisitor.prog.mainClass.id + ".il"});
         } catch (IOException e) {
             e.printStackTrace();
-        }
-
+        }/**/
+        //jasmin.Main.main(new String[]{"If02.il"});
     }
 }

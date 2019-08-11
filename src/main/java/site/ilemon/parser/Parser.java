@@ -375,11 +375,15 @@ public class Parser {
 			match( "(" );
 			int lineNumber = look.lineNumber;
 			Ast.Expr.T condition = parseExpr();
-			//System.out.println(condition.lineNum);
 			match( ")" );
 			Ast.Stmt.T thenStmt = parseStmt();
-			match( "else" );
-			Ast.Stmt.T elseStmt = parseStmt();
+			Ast.Stmt.T elseStmt = null;
+			if( look.kind == TokenKind.Else){
+
+				match( "else" );
+				elseStmt = parseStmt();
+			}
+
 			stmt = new Ast.Stmt.If(condition, thenStmt, elseStmt, lineNumber);
 		}
 		return stmt;

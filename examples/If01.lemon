@@ -1,0 +1,12 @@
+class If01{
+	void main(){
+	    int a;
+        if( (1 + 19 > 20) && (1 > 10) && (1 > 0) ){
+           a = 1;
+        }else{
+           a = 0;
+        }
+        printf("a=%d",a);
+
+	}
+}

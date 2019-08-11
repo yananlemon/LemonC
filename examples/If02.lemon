@@ -1,0 +1,14 @@
+class If02{
+	void main(){
+        int a;
+        int b;
+        int c;
+        a = 1;
+        b = 22;
+        c = 3;
+        if( ((a + b > c && 1 > 0) && 10 > 99) ||  100 > 19){
+            printf("c=%d",c);
+        }
+
+	}
+}

@@ -69,6 +69,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit((Expr.GT) obj);
         else if( obj instanceof Expr.Not)
             this.visit((Expr.Not) obj);
+        else if( obj instanceof Expr.And)
+            this.visit((Expr.And) obj);
+        else if( obj instanceof Expr.Or)
+            this.visit((Expr.And) obj);
 
     }
 
@@ -88,7 +92,16 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.And obj) {
-
+        Label f = new Label();
+        Label r = new Label();
+        this.visit(obj.left);
+        //emit(new Ast.Stmt.Ldc(1));
+        emit(new Ast.Stmt.Ificmplt(f));
+        this.visit(obj.right);
+        emit(new Ast.Stmt.Ificmplt(f));
+        emit(new Ast.Stmt.Goto(r));
+        emit(new Ast.Stmt.LabelJ(f));
+        emit(new Ast.Stmt.LabelJ(r));
     }
 
     @Override
@@ -208,7 +221,16 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.Or obj) {
-
+        Label f = new Label();
+        Label r = new Label();
+        this.visit(obj.left);
+        emit(new Ast.Stmt.Ldc(1));
+        emit(new Ast.Stmt.Ificmplt(f));
+        this.visit(obj.right);
+        emit(new Ast.Stmt.Ificmplt(f));
+        emit(new Ast.Stmt.Goto(r));
+        emit(new Ast.Stmt.LabelJ(f));
+        emit(new Ast.Stmt.LabelJ(r));
     }
 
     @Override
@@ -359,6 +381,9 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
         else if( obj.condition instanceof  Expr.GT ){
             emit(new Ast.Stmt.Ificmplt(l));
+        }
+        else if( obj.condition instanceof  Expr.And || obj.condition instanceof  Expr.Or){
+            this.visit(obj.condition);
         }
         this.visit(obj.thenStmt);
         emit(new Ast.Stmt.Goto(r));
