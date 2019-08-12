@@ -6,13 +6,13 @@ class If08{
         }else{
            a = 0;
         }
-        printf("a=%d\n",a);
+        printf("a=%d\n",a);//0
 
         if( 19 < 27 && 1 > 10 ){
            a = 1;
         }else{
            a = 5;
         }
-        printf("a=%d\n",a);
+        printf("a=%d\n",a);//5
 	}
 }

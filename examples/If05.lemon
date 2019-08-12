@@ -7,11 +7,11 @@ class If05{
 	   else{
 	     a = 2;
 	   }
-	   printf("a=%d",a);// error when write printf("a=%d",0);
+	   printf("a=%d",a);//2 error when write printf("a=%d",0);
 	   if( a+2 > 3)
          a = 3;
        else
          a = 4;
-       printf("a=%d",a);// error when write printf("a=%d",0);
+       printf("a=%d",a);//3 error when write printf("a=%d",0);
 	}
 }

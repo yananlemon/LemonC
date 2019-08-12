@@ -7,6 +7,6 @@ class If04{
         else{
           a = 20;
         }
-        printf("a=%d",a);
+        printf("a=%d",a);//20
 	}
 }

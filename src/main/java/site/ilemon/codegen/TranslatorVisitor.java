@@ -208,7 +208,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
         // 如果是Not运算符
         if ( obj.condition instanceof Expr.Not ){
-            obj.condition = recursionExpr(((Expr.Not) obj.condition).expr);
+            //obj.condition = recursionExpr(((Expr.Not) obj.condition).expr);
+            obj = recursionExpr(obj);
             return if2SimpleIf(obj);
         }
         Stmt.If finalIf = new Stmt.If(null,null,null,obj.lineNum);
@@ -227,14 +228,21 @@ public class TranslatorVisitor implements ISemanticVisitor {
             leftIf = if2SimpleIf(leftIf);
             leftIf.elseStmt = rightIf;
             return leftIf;
+            /*Expr.Or orExpr = (Expr.Or) obj.condition;
+            Stmt.If leftIf  = new Stmt.If(orExpr.left,obj.thenStmt,obj.elseStmt,obj.lineNum);
+            leftIf = if2SimpleIf(leftIf);
+            Stmt.If rightIf = new Stmt.If(orExpr.right,obj.thenStmt,obj.elseStmt,obj.lineNum);
+            rightIf = if2SimpleIf(rightIf);
+            leftIf.elseStmt = rightIf;
+            return leftIf;*/
 
         }
 
         return finalIf;
     }
 
-    private Expr.T recursionExpr(Expr.T expr){
-        if( expr instanceof Expr.GT){
+    private Stmt.If recursionExpr(Stmt.If obj){
+        /*if( expr instanceof Expr.GT){
             return new Expr.LET(((Expr.GT) expr).left,((Expr.GT) expr).right,expr.lineNum);
         }
         if( expr instanceof Expr.LT){
@@ -252,7 +260,18 @@ public class TranslatorVisitor implements ISemanticVisitor {
             e.right = recursionExpr(((Expr.Or) expr).right);
             return e;
         }
+        return null;*/
+        if( obj.condition instanceof  Expr.Not ){
+            Stmt.If ifStmt = new Stmt.If(((Expr.Not)obj.condition).expr,obj.elseStmt,obj.thenStmt,
+                    obj.lineNum);
+            return recursionExpr(ifStmt);
+        }
+        if( obj.condition instanceof  Expr.And || obj.condition instanceof  Expr.Or
+                || obj.condition instanceof  Expr.GT || obj.condition instanceof  Expr.LT ){
+           return obj;
+        }
         return null;
+
     }
 
     @Override

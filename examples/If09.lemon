@@ -1,18 +1,18 @@
 class If09{
 	void main(){
         int a;
-        if( !( 19 > 18 ) && !(5 > 10) ){
-           a = 1;
-        }else{
-           a = 0;
-        }
-        printf("a=%d",a);
+        //if( !( 19 > 18 ) && !(5 > 10) ){
+          // a = 1;
+        //}else{
+          // a = 2;
+        //}
+        //printf("a=%d\n",a);//2
 
         if( !( 19 > 18 ) || !(5 > 10) ){
-           a = 1;
+           a = 3;
         }else{
-           a = 0;
+           a = 4;
         }
-        printf("a=%d",a);
+        printf("a=%d\n",a);//3
     }
 }

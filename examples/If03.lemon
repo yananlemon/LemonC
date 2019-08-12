@@ -6,6 +6,6 @@ class If03{
         }else{
             a = 2;
         }
-        printf("a=%d\n",a);
+        printf("a=%d\n",a);//2
 	}
 }
