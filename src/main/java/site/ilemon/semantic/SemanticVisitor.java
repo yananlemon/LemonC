@@ -376,6 +376,9 @@ public class SemanticVisitor implements ISemanticVisitor {
         else if(obj instanceof Ast.Expr.And){
             this.visit((Ast.Expr.And)obj);
         }
+        else if(obj instanceof Ast.Expr.Or){
+            this.visit((Ast.Expr.Or)obj);
+        }
         else if(obj instanceof Ast.Expr.Sub){
             this.visit((Ast.Expr.Sub)obj);
         }

@@ -1,0 +1,12 @@
+class If04{
+	void main(){
+	    int a;
+        if( 19 > 20 && 1 > 10 && 1 > 0 ){
+          a = 100;
+        }
+        else{
+          a = 20;
+        }
+        printf("a=%d",a);
+	}
+}

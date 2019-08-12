@@ -1,11 +1,13 @@
 public class Test {
 
 	public static void main(String[] args) {
-		int k = 0;
-		while(k<10) {
-			System.out.printf("k=%d\n",k);
-			k = k +1 ;
+		int a;
+		if( !( 9 > 18 ) && !( ( 3 > 10) || 5 > 10) ){
+			a = 1;
+		}else{
+			a = 0;
 		}
+		System.out.println(a);
 	}
 
 }

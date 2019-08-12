@@ -401,9 +401,13 @@ public class Parser {
 	private Ast.Expr.T parseExpr() throws IOException {
 		Ast.Expr.T expr = parseAndExpr();
 		while( look.kind == TokenKind.And || look.kind == TokenKind.Or ) {
+			TokenKind kind = look.kind;
 			move();
 			Ast.Expr.T right = parseAndExpr();
-			expr = new Ast.Expr.And(expr, right, expr.lineNum);
+			if( kind == TokenKind.Or)
+				expr = new Ast.Expr.Or(expr, right, expr.lineNum);
+			else
+				expr = new Ast.Expr.And(expr, right, expr.lineNum);
 		}
 		return expr;
 	}
@@ -506,7 +510,10 @@ public class Parser {
 		}
 		else if(look.kind==TokenKind.Not ){
 			move();
-			return new Ast.Expr.Not(parseExpr());
+			match("(");
+			expr = new Ast.Expr.Not(parseExpr());
+			match(")");
+			return expr;
 		}
 		else if(look.kind==TokenKind.True ){
 			expr = new Ast.Expr.True(look.lineNumber);

@@ -12,7 +12,7 @@ public class LexerTest {
     public void testCal(){
         try {
             //Lexer lexer=new Lexer(new File("examples/Cal.lemon"));
-            Lexer lexer=new Lexer(new File("examples/If02.lemon"));
+            Lexer lexer=new Lexer(new File("examples/If07.lemon"));
             lexer.lexicalAnalysis();
             System.out.println(lexer.tokens);
         } catch (IOException e) {

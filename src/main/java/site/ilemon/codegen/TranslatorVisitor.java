@@ -72,7 +72,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         else if( obj instanceof Expr.And)
             this.visit((Expr.And) obj);
         else if( obj instanceof Expr.Or)
-            this.visit((Expr.And) obj);
+            this.visit((Expr.Or) obj);
 
     }
 
@@ -90,19 +90,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
     }
 
-    @Override
-    public void visit(Expr.And obj) {
-        Label f = new Label();
-        Label r = new Label();
-        this.visit(obj.left);
-        //emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.Ificmplt(f));
-        this.visit(obj.right);
-        emit(new Ast.Stmt.Ificmplt(f));
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(f));
-        emit(new Ast.Stmt.LabelJ(r));
-    }
+
 
     @Override
     public void visit(Expr.Call obj) {
@@ -132,7 +120,76 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.right);
     }
 
-    //private int indexForBool;
+    @Override
+    public void visit(Expr.And obj) {
+
+    }
+
+    @Override
+    public void visit(Stmt.If obj) {
+        obj = if2SimpleIf(obj);
+        Label l = new Label();
+        Label r = new Label();
+        this.visit(obj.condition);
+        if( obj.condition instanceof Expr.LT){
+            emit(new Ast.Stmt.Ificmpgt(l));
+        }
+        else if( obj.condition instanceof  Expr.GT ){
+            emit(new Ast.Stmt.Ificmplt(l));
+        }
+        else if( obj.condition instanceof  Expr.And || obj.condition instanceof  Expr.Or){
+            this.visit(obj.condition);
+        }
+        this.visit(obj.thenStmt);
+        emit(new Ast.Stmt.Goto(r));
+        emit(new Ast.Stmt.LabelJ(l));
+        this.visit(obj.elseStmt);
+        emit(new Ast.Stmt.LabelJ(r));
+    }
+
+    private Stmt.If if2SimpleIf(Stmt.If obj) {
+
+        // 如果是GT或LT表达式直接返回
+        if ( obj.condition instanceof Expr.GT ||  obj.condition instanceof Expr.LT){
+            return obj;
+        }
+        // 如果是Not运算符
+        if ( obj.condition instanceof Expr.Not ){
+            return obj;
+        }
+        Stmt.If finalIf = new Stmt.If(null,null,null,obj.lineNum);
+        if( obj.condition instanceof  Expr.And ){
+            Expr.And andExpr = (Expr.And) obj.condition;
+            Stmt.If rightIf = new Stmt.If(andExpr.right,obj.thenStmt,obj.elseStmt,obj.lineNum);
+            rightIf = if2SimpleIf(rightIf);
+            Stmt.If leftIf  = new Stmt.If(andExpr.left,rightIf,obj.elseStmt,obj.lineNum);
+            leftIf = if2SimpleIf(leftIf);
+            return leftIf;
+        }else if( obj.condition instanceof  Expr.Or ){
+            finalIf.condition = ((Expr.Or) obj.condition).left;
+            finalIf.thenStmt = obj.thenStmt;
+            Stmt.If elseIf = new Stmt.If(((Expr.Or) obj.condition).right,obj.thenStmt,obj.elseStmt,obj.lineNum);
+            finalIf.elseStmt = if2SimpleIf(elseIf);
+        }
+        /*else if( obj.condition instanceof  Expr.Not ) {
+            if(  (((Expr.Not) obj.condition).expr) instanceof Expr.And ){
+                finalIf.condition = (((Expr.Not) obj.condition).expr);
+                finalIf.thenStmt = obj.elseStmt;
+                finalIf.elseStmt = obj.thenStmt;
+            }
+            else if(  (((Expr.Not) obj.condition).expr) instanceof Expr.GT ){
+                //finalIf.condition = new Expr.;
+                finalIf.thenStmt = obj.elseStmt;
+                finalIf.elseStmt = obj.thenStmt;
+            }
+
+            finalIf.thenStmt = obj.elseStmt;
+            finalIf.elseStmt = obj.thenStmt;
+            finalIf = if2SimpleIf(finalIf);
+        }*/
+
+        return finalIf;
+    }
 
     @Override
     public void visit(Expr.Id obj) {
@@ -371,26 +428,9 @@ public class TranslatorVisitor implements ISemanticVisitor {
                 formals,locals,this.stmts,0,this.index);
     }
 
-    @Override
-    public void visit(Stmt.If obj) {
-        Label l = new Label();
-        Label r = new Label();
-        this.visit(obj.condition);
-        if( obj.condition instanceof Expr.LT){
-            emit(new Ast.Stmt.Ificmpgt(l));
-        }
-        else if( obj.condition instanceof  Expr.GT ){
-            emit(new Ast.Stmt.Ificmplt(l));
-        }
-        else if( obj.condition instanceof  Expr.And || obj.condition instanceof  Expr.Or){
-            this.visit(obj.condition);
-        }
-        this.visit(obj.thenStmt);
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(l));
-        this.visit(obj.elseStmt);
-        emit(new Ast.Stmt.LabelJ(r));
-    }
+    //private
+
+
 
     @Override
     public void visit(Stmt.T obj) {
