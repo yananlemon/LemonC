@@ -1,7 +1,7 @@
 class If06{
 	void main(){
         int a;
-        if( !( 29 > 18 ) ){
+        if( !( 18 > 18 ) ){
            a = 1;
         }else{
            a = 0;

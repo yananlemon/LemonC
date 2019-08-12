@@ -1,11 +1,11 @@
 class If03{
 	void main(){
 	    int a;
-        if( (1 + 2 > 2 && 1 > 0) && 100 < 199){
+        if( (1 + 2 > 2 && 1 > 0) && 100 < 99){
             a = 1;
         }else{
             a = 2;
         }
-        printf("a=%d",a);
+        printf("a=%d\n",a);
 	}
 }

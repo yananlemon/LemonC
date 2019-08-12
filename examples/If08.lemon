@@ -1,0 +1,18 @@
+class If08{
+	void main(){
+	    int a;
+        if( 27 > 27 ){
+           a = 1;
+        }else{
+           a = 0;
+        }
+        printf("a=%d\n",a);
+
+        if( 19 < 27 && 1 > 10 ){
+           a = 1;
+        }else{
+           a = 5;
+        }
+        printf("a=%d\n",a);
+	}
+}

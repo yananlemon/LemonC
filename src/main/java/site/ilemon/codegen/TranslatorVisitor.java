@@ -67,6 +67,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit((Expr.LT) obj);
         else if( obj instanceof Expr.GT)
             this.visit((Expr.GT) obj);
+        else if( obj instanceof Expr.LET)
+            this.visit((Expr.LET) obj);
+        else if( obj instanceof Expr.GET)
+            this.visit((Expr.GET) obj);
         else if( obj instanceof Expr.Not)
             this.visit((Expr.Not) obj);
         else if( obj instanceof Expr.And)
@@ -121,6 +125,39 @@ public class TranslatorVisitor implements ISemanticVisitor {
     }
 
     @Override
+    public void visit(Expr.LT obj) {
+        Label t = null;
+        if( tempLabel == null ){
+            t = new Label();
+            tempLabel = t;
+        }
+        this.visit(obj.left);
+        this.visit(obj.right);
+    }
+
+    @Override
+    public void visit(Expr.LET obj) {
+        Label t = null;
+        if( tempLabel == null ){
+            t = new Label();
+            tempLabel = t;
+        }
+        this.visit(obj.left);
+        this.visit(obj.right);
+    }
+
+    @Override
+    public void visit(Expr.GET obj) {
+        Label t = null;
+        if( tempLabel == null ){
+            t = new Label();
+            tempLabel = t;
+        }
+        this.visit(obj.left);
+        this.visit(obj.right);
+    }
+
+    @Override
     public void visit(Expr.And obj) {
 
     }
@@ -132,30 +169,47 @@ public class TranslatorVisitor implements ISemanticVisitor {
         Label r = new Label();
         this.visit(obj.condition);
         if( obj.condition instanceof Expr.LT){
-            emit(new Ast.Stmt.Ificmpgt(l));
-        }
-        else if( obj.condition instanceof  Expr.GT ){
             emit(new Ast.Stmt.Ificmplt(l));
         }
-        else if( obj.condition instanceof  Expr.And || obj.condition instanceof  Expr.Or){
-            this.visit(obj.condition);
+        else if( obj.condition instanceof  Expr.GT ){
+            emit(new Ast.Stmt.Ificmpgt(l));
         }
-        this.visit(obj.thenStmt);
+        else if( obj.condition instanceof  Expr.LET){
+            emit(new Ast.Stmt.Ificmplet(l));
+        }
+        else if( obj.condition instanceof  Expr.GET){
+            emit(new Ast.Stmt.Ificmpget(l));
+        }
+        /*this.visit(obj.thenStmt);
         emit(new Ast.Stmt.Goto(r));
         emit(new Ast.Stmt.LabelJ(l));
         this.visit(obj.elseStmt);
+        emit(new Ast.Stmt.LabelJ(r));*/
+
+        this.visit(obj.elseStmt);
+        emit(new Ast.Stmt.Goto(r));
+        emit(new Ast.Stmt.LabelJ(l));
+        this.visit(obj.thenStmt);
         emit(new Ast.Stmt.LabelJ(r));
+
     }
 
+    /**
+     * 将复杂的If语句转换为简单的嵌套的的If语句
+     * @param obj
+     * @return
+     */
     private Stmt.If if2SimpleIf(Stmt.If obj) {
 
         // 如果是GT或LT表达式直接返回
-        if ( obj.condition instanceof Expr.GT ||  obj.condition instanceof Expr.LT){
+        if ( obj.condition instanceof Expr.GT ||  obj.condition instanceof Expr.LT
+        || obj.condition instanceof Expr.GET ||  obj.condition instanceof Expr.LET){
             return obj;
         }
         // 如果是Not运算符
         if ( obj.condition instanceof Expr.Not ){
-            return obj;
+            obj.condition = recursionExpr(((Expr.Not) obj.condition).expr);
+            return if2SimpleIf(obj);
         }
         Stmt.If finalIf = new Stmt.If(null,null,null,obj.lineNum);
         if( obj.condition instanceof  Expr.And ){
@@ -166,29 +220,39 @@ public class TranslatorVisitor implements ISemanticVisitor {
             leftIf = if2SimpleIf(leftIf);
             return leftIf;
         }else if( obj.condition instanceof  Expr.Or ){
-            finalIf.condition = ((Expr.Or) obj.condition).left;
-            finalIf.thenStmt = obj.thenStmt;
-            Stmt.If elseIf = new Stmt.If(((Expr.Or) obj.condition).right,obj.thenStmt,obj.elseStmt,obj.lineNum);
-            finalIf.elseStmt = if2SimpleIf(elseIf);
-        }
-        /*else if( obj.condition instanceof  Expr.Not ) {
-            if(  (((Expr.Not) obj.condition).expr) instanceof Expr.And ){
-                finalIf.condition = (((Expr.Not) obj.condition).expr);
-                finalIf.thenStmt = obj.elseStmt;
-                finalIf.elseStmt = obj.thenStmt;
-            }
-            else if(  (((Expr.Not) obj.condition).expr) instanceof Expr.GT ){
-                //finalIf.condition = new Expr.;
-                finalIf.thenStmt = obj.elseStmt;
-                finalIf.elseStmt = obj.thenStmt;
-            }
+            Expr.Or orExpr = (Expr.Or) obj.condition;
+            Stmt.If rightIf = new Stmt.If(orExpr.right,obj.thenStmt,obj.elseStmt,obj.lineNum);
+            rightIf = if2SimpleIf(rightIf);
+            Stmt.If leftIf  = new Stmt.If(orExpr.left,obj.thenStmt,obj.elseStmt,obj.lineNum);
+            leftIf = if2SimpleIf(leftIf);
+            leftIf.elseStmt = rightIf;
+            return leftIf;
 
-            finalIf.thenStmt = obj.elseStmt;
-            finalIf.elseStmt = obj.thenStmt;
-            finalIf = if2SimpleIf(finalIf);
-        }*/
+        }
 
         return finalIf;
+    }
+
+    private Expr.T recursionExpr(Expr.T expr){
+        if( expr instanceof Expr.GT){
+            return new Expr.LET(((Expr.GT) expr).left,((Expr.GT) expr).right,expr.lineNum);
+        }
+        if( expr instanceof Expr.LT){
+            return new Expr.GET(((Expr.LT) expr).left,((Expr.LT) expr).right,expr.lineNum);
+        }
+        if( expr instanceof Expr.And ){
+            Expr.Or e = new Expr.Or(null,null,((Expr.And) expr).lineNum);
+            e.left = recursionExpr(((Expr.And) expr).left);
+            e.right = recursionExpr(((Expr.And) expr).right);
+            return e;
+        }
+        if( expr instanceof Expr.Or ){
+            Expr.And e = new Expr.And(null,null,((Expr.Or) expr).lineNum);
+            e.left = recursionExpr(((Expr.Or) expr).left);
+            e.right = recursionExpr(((Expr.Or) expr).right);
+            return e;
+        }
+        return null;
     }
 
     @Override
@@ -251,16 +315,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         //else
     }
 
-    @Override
-    public void visit(Expr.LT obj) {
-        Label t = null;
-        if( tempLabel == null ){
-            t = new Label();
-            tempLabel = t;
-        }
-        this.visit(obj.left);
-        this.visit(obj.right);
-    }
+
 
     @Override
     public void visit(Expr.Sub obj) {

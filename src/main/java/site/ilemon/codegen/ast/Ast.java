@@ -184,8 +184,7 @@ public class Ast {
         public static class Ificmplt extends T {
             public Label l;
 
-            public Ificmplt(Label l)
-            {
+            public Ificmplt(Label l) {
                 this.l = l;
             }
         }
@@ -193,8 +192,25 @@ public class Ast {
         public static class Ificmpgt extends T {
             public Label l;
 
-            public Ificmpgt(Label l)
-            {
+            public Ificmpgt(Label l) {
+
+                this.l = l;
+            }
+        }
+
+        public static class Ificmplet extends T {
+            public Label l;
+
+            public Ificmplet(Label l) {
+                this.l = l;
+            }
+        }
+
+        public static class Ificmpget extends T {
+            public Label l;
+
+            public Ificmpget(Label l) {
+
                 this.l = l;
             }
         }

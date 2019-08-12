@@ -1,15 +1,18 @@
 class If01{
 	void main(){
 	    int a;
-        if( 19 > 27 || !(1 > 0 && 1 > 9) ){
+        if( 19 > 27 || !(1 > 0 && 1 > 9 || 2 > 1) ){
            a = 1;
         }else{
            a = 0;
         }
-        printf("a=%d",a);
-	}
+        printf("a=%d\n",a);// 0
 
-	int rNum(){
-	    return 100;
+        if( 19 > 27 || !(1 > 0 && 1 > 9 && 2 > 1) ){
+           a = 1;
+        }else{
+           a = 0;
+        }
+        printf("a=%d\n",a); // 1
 	}
 }

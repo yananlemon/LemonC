@@ -196,6 +196,16 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     @Override
+    public void visit(Ast.Expr.LET obj) {
+
+    }
+
+    @Override
+    public void visit(Ast.Expr.GET obj) {
+
+    }
+
+    @Override
     public void visit(Ast.MainClass.T obj) {
         Ast.MainClass.MainClassSingle mainClassSingle = (Ast.MainClass.MainClassSingle) obj;
         //methodSet = new HashSet<String>();

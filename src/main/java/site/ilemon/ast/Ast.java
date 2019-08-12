@@ -301,6 +301,7 @@ public class Ast {
         }
 
         /** 比较运算表达式 **/
+        // >
         public static class GT extends T{
             public Ast.Expr.T left,right;
 
@@ -311,10 +312,33 @@ public class Ast {
             }
         }
 
+        // <
         public static class LT extends T{
             public Ast.Expr.T left,right;
 
             public LT(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
+                this.left = left;
+                this.right = right;
+                this.lineNum = lineNum;
+            }
+        }
+
+        // >=
+        public static class GET extends T{
+            public Ast.Expr.T left,right;
+
+            public GET(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
+                this.left = left;
+                this.right = right;
+                this.lineNum = lineNum;
+            }
+        }
+
+        // <=
+        public static class LET extends T{
+            public Ast.Expr.T left,right;
+
+            public LET(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
                 this.left = left;
                 this.right = right;
                 this.lineNum = lineNum;

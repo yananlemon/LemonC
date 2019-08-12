@@ -16,11 +16,14 @@ public interface ISemanticVisitor {
 	void visit(Ast.Expr.Call obj);
 	void visit(Ast.Expr obj);
 	void visit(Ast.Expr.GT obj);
+	void visit(Ast.Expr.LT obj);
+	void visit(Ast.Expr.LET obj);
+	void visit(Ast.Expr.GET obj);
 	void visit(Ast.Expr.Id obj);
 	void visit(Ast.Expr.Div obj);
 	void visit(Ast.Expr.Mul obj);
 	void visit(Ast.Expr.Number obj);
-	void visit(Ast.Expr.LT obj);
+
 	void visit(Ast.Expr.Sub obj);
 	void visit(Ast.Expr.Or obj);
 	void visit(Ast.Expr.True obj);

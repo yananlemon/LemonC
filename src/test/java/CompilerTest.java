@@ -15,15 +15,18 @@ import java.io.IOException;
 public class CompilerTest {
 
     @Test
-    public void testIf(){
+    public void testIf() {
         try {
-            // Lexer lexer=new Lexer(new File("examples/If01.lemon")); ok
-            // Lexer lexer=new Lexer(new File("examples/If02.lemon")); ok
-            // Lexer lexer=new Lexer(new File("examples/If03.lemon")); ok
+             Lexer lexer = new Lexer(new File("examples/If01.lemon")); // ok
+            // Lexer lexer=new Lexer(new File("examples/If02.lemon"));  // ok
+            //  Lexer lexer=new Lexer(new File("examples/If03.lemon"));
             // Lexer lexer=new Lexer(new File("examples/If04.lemon")); ok
             // Lexer lexer=new Lexer(new File("examples/If05.lemon")); ok
             // Lexer lexer=new Lexer(new File("examples/If06.lemon")); ok
-             Lexer lexer=new Lexer(new File("examples/If07.lemon"));
+            // Lexer lexer=new Lexer(new File("examples/If07.lemon")); ok
+            // Lexer lexer=new Lexer(new File("examples/If08.lemon")); ok
+            // Lexer lexer=new Lexer(new File("examples/If09.lemon")); ok
+            // Lexer lexer=new Lexer(new File("examples/If10.lemon")); ok
             Parser parser = new Parser(lexer);
             Ast.Program.T programSingle = parser.parse();
             SemanticVisitor semanticVisitor = new SemanticVisitor();
@@ -49,15 +52,15 @@ public class CompilerTest {
     public void testCal() {
         try {
             //Lexer lexer=new Lexer(new File("examples/Cal01.lemon"));
-             //Lexer lexer=new Lexer(new File("examples/Cal.lemon"));
-             //Lexer lexer=new Lexer(new File("examples/IterationDemo.lemon"));
+            //Lexer lexer=new Lexer(new File("examples/Cal.lemon"));
+            //Lexer lexer=new Lexer(new File("examples/IterationDemo.lemon"));
 
-             //Lexer lexer=new Lexer(new File("examples/MulTable.lemon"));
+            //Lexer lexer=new Lexer(new File("examples/MulTable.lemon"));
 
             //Lexer lexer = new Lexer(new File("examples/FloatTest01.lemon"));
             //Lexer lexer=new Lexer(new File("examples/If01.lemon"));
             //Lexer lexer=new Lexer(new File("examples/If03.lemon"));
-            Lexer lexer=new Lexer(new File("examples/If04.lemon"));
+            Lexer lexer = new Lexer(new File("examples/If04.lemon"));
             //Lexer lexer=new Lexer(new File("examples/If03.lemon"));
             Parser parser = new Parser(lexer);
             Ast.Program.T programSingle = parser.parse();
