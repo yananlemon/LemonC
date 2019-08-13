@@ -6,13 +6,13 @@ class If10{
         }else{
            a = 2;
         }
-        printf("a=%d",a);
+        printf("a=%d",a);// 1
 
         if( ( 19 > 18 ) && (5 > 10) ){
            a = 3;
         }else{
            a = 4;
         }
-        printf("a=%d",a);
+        printf("a=%d",a);// 4
     }
 }

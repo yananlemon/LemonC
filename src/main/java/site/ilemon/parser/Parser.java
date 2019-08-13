@@ -395,28 +395,34 @@ public class Parser {
 	}
 
 
-
+	// Exp -> AndExp || AndExp
+	//  -> AndExp
+	private Ast.Expr.T parseExpr() throws IOException {
+		Ast.Expr.T expr = parseAndExpr();
+		while( look.kind == TokenKind.Or ) {
+			move();
+			Ast.Expr.T right = parseAndExpr();
+			expr = new Ast.Expr.Or(expr, right, expr.lineNum);
+		}
+		return expr;
+	}
 
 
 
 	// Exp -> AndExp && AndExp
 	//  -> AndExp
-	private Ast.Expr.T parseExpr() throws IOException {
-		Ast.Expr.T expr = parseAndExpr();
-		while( look.kind == TokenKind.And || look.kind == TokenKind.Or ) {
-			TokenKind kind = look.kind;
+	private Ast.Expr.T parseAndExpr() throws IOException {
+		Ast.Expr.T expr = parseRelationExpr();
+		while( look.kind == TokenKind.And) {
 			move();
-			Ast.Expr.T right = parseAndExpr();
-			if( kind == TokenKind.Or)
-				expr = new Ast.Expr.Or(expr, right, expr.lineNum);
-			else
-				expr = new Ast.Expr.And(expr, right, expr.lineNum);
+			Ast.Expr.T right = parseRelationExpr();
+			expr = new Ast.Expr.And(expr, right, expr.lineNum);
 		}
 		return expr;
 	}
 
-	// AndExp -> additive_expr |<additive_expr>(>|<|>=|<=|==|!=)<additive_expr>
-	private Ast.Expr.T parseAndExpr() throws IOException {
+	// <relation_expr> -> additive_expr |<additive_expr>(>|<|>=|<=|==|!=)<additive_expr>
+	private Ast.Expr.T parseRelationExpr() throws IOException {
 		Ast.Expr.T expr = parseAdditiveExpr();
 		while( look.kind == TokenKind.LT ||
 				look.kind == TokenKind.GT ||
