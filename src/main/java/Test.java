@@ -2,12 +2,12 @@ public class Test {
 
 	public static void main(String[] args) {
 		int a;
-		if( !( 19 > 18 ) && !(5 > 10) ){
-			a = 1;
+		if( 1 + 2 < 2 && 1 < 0 || 100 < 199){
+			a = 5;
 		}else{
-			a = 2;
+			a = 6;
 		}
-		System.out.println(a);//2
+		System.out.println(a);//5
 	}
 
 }

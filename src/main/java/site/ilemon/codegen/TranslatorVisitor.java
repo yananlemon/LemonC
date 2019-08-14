@@ -115,191 +115,77 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.GT obj) {
-        Label t = null;
-        if( tempLabel == null ){
-            t = new Label();
-            tempLabel = t;
-        }
-        this.visit(obj.left);
-        this.visit(obj.right);
+
     }
+
+    private Label t,r;
+
+    private Label trueLabel;
+
+    private Label falseLabel;
+
+    // 标识处于and表达式
+    private boolean atAndOperator = false;
 
     @Override
     public void visit(Expr.LT obj) {
-        Label t = new Label();
-        Label r = new Label();
-        this.visit(obj.left);
-        this.visit(obj.right);
-        emit(new Ast.Stmt.Ificmplt(t));
-        emit(new Ast.Stmt.Ldc(0));
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(t));
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.LabelJ(r));
-    }
 
-    @Override
-    public void visit(Expr.LET obj) {
-        Label t = null;
-        if( tempLabel == null ){
-            t = new Label();
-            tempLabel = t;
-        }
-        this.visit(obj.left);
-        this.visit(obj.right);
-    }
-
-    @Override
-    public void visit(Expr.GET obj) {
-        Label t = null;
-        if( tempLabel == null ){
-            t = new Label();
-            tempLabel = t;
-        }
-        this.visit(obj.left);
-        this.visit(obj.right);
+        t = trueLabel == null ? new Label() : trueLabel;        // label_0
+        r = falseLabel == null ? new Label() : falseLabel;      // label_1
+        this.visit(obj.left);                                   // ldc 19
+        this.visit(obj.right);                                  // ldc 18
+        if( atAndOperator )
+            emit(new Ast.Stmt.Ificmpget(t));
+        else // 当不在and表达式的时候
+            emit(new Ast.Stmt.Ificmplt(t));
+        trueLabel  = t;// label_0
+        falseLabel = r;// label_1
     }
 
     @Override
     public void visit(Expr.And obj) {
-        Label f = new Label();
-        Label r = new Label();
+        atAndOperator = true;
         this.visit(obj.left);
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.Ificmplt(f));
         this.visit(obj.right);
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.Ificmplt(f));
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(f));
-        emit(new Ast.Stmt.Ldc(0));
-        emit(new Ast.Stmt.LabelJ(r));
+        atAndOperator = false;
+    }
+
+    @Override
+    public void visit(Expr.Or obj) {
+        this.visit(obj.left);
+        this.visit(obj.right);
     }
 
     @Override
     public void visit(Stmt.If obj) {
-        Label l = new Label();
-        Label r = new Label();
         this.visit(obj.condition);
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.Ificmplt(l));
-        this.visit(obj.thenStmt);
+        if( atAndOperator )
+            this.visit(obj.thenStmt);
+        else
+            this.visit(obj.elseStmt);
         emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(l));
-        this.visit(obj.elseStmt);
+        emit(new Ast.Stmt.LabelJ(t));
+        if( atAndOperator )
+            this.visit(obj.elseStmt);
+        else
+            this.visit(obj.thenStmt);
         emit(new Ast.Stmt.LabelJ(r));
+        t = null;
+        r = null;
+        trueLabel  = null;
+        falseLabel = null;
     }
 
-    /*@Override
-    public void visit(Stmt.If obj) {
-        obj = if2SimpleIf(obj);
-        Label l = new Label();
-        Label r = new Label();
-        this.visit(obj.condition);
-        if( obj.condition instanceof Expr.LT){
-            emit(new Ast.Stmt.Ificmplt(l));
-        }
-        else if( obj.condition instanceof  Expr.GT ){
-            emit(new Ast.Stmt.Ificmpgt(l));
-        }
-        else if( obj.condition instanceof  Expr.LET){
-            emit(new Ast.Stmt.Ificmplet(l));
-        }
-        else if( obj.condition instanceof  Expr.GET){
-            emit(new Ast.Stmt.Ificmpget(l));
-        }
-        /*this.visit(obj.thenStmt);
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(l));
-        this.visit(obj.elseStmt);
-        emit(new Ast.Stmt.LabelJ(r));*/
-
-        /*this.visit(obj.elseStmt);
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(l));
-        this.visit(obj.thenStmt);
-        emit(new Ast.Stmt.LabelJ(r));
-
-    }*/
-
-    /**
-     * 将复杂的If语句转换为简单的嵌套的的If语句
-     * @param obj
-     * @return
-     */
-    private Stmt.If if2SimpleIf(Stmt.If obj) {
-
-        // 如果是GT或LT表达式直接返回
-        if ( obj.condition instanceof Expr.GT ||  obj.condition instanceof Expr.LT
-        || obj.condition instanceof Expr.GET ||  obj.condition instanceof Expr.LET){
-            return obj;
-        }
-        // 如果是Not运算符
-        if ( obj.condition instanceof Expr.Not ){
-            obj.condition = recursionExpr(obj.condition);
-            return if2SimpleIf(obj);
-        }
-        Stmt.If finalIf = new Stmt.If(null,null,null,obj.lineNum);
-        if( obj.condition instanceof  Expr.And ){
-            Expr.And andExpr = (Expr.And) obj.condition;
-            Stmt.If rightIf = new Stmt.If(andExpr.right,obj.thenStmt,obj.elseStmt,obj.lineNum);
-            rightIf = if2SimpleIf(rightIf);
-            Stmt.If leftIf  = new Stmt.If(andExpr.left,rightIf,obj.elseStmt,obj.lineNum);
-            leftIf = if2SimpleIf(leftIf);
-            return leftIf;
-        }else if( obj.condition instanceof  Expr.Or ){
-            Expr.Or orExpr = (Expr.Or) obj.condition;
-            Stmt.If leftIf  = new Stmt.If(orExpr.left,obj.thenStmt,obj.elseStmt,obj.lineNum);
-            leftIf = if2SimpleIf(leftIf);
-            Stmt.If rightIf = new Stmt.If(orExpr.right,obj.thenStmt,obj.elseStmt,obj.lineNum);
-            rightIf = if2SimpleIf(rightIf);
-            leftIf.elseStmt = rightIf;
-            return leftIf;
-        }
-
-        return finalIf;
-    }
-
-    private Expr.T recursionExpr(Expr.T expr){
-        if( expr instanceof Expr.GT){
-            return new Expr.LET(((Expr.GT) expr).left,((Expr.GT) expr).right,expr.lineNum);
-        }
-        if( expr instanceof Expr.LT){
-            return new Expr.GET(((Expr.LT) expr).left,((Expr.LT) expr).right,expr.lineNum);
-        }
-        if( expr instanceof Expr.And ){
-            Expr.Or e = new Expr.Or(null,null,((Expr.And) expr).lineNum);
-            e.left = recursionExpr(((Expr.And) expr).left);
-            e.right = recursionExpr(((Expr.And) expr).right);
-            return e;
-        }
-        if( expr instanceof Expr.Or ){
-            Expr.And e = new Expr.And(null,null,((Expr.Or) expr).lineNum);
-            e.left = recursionExpr(((Expr.Or) expr).left);
-            e.right = recursionExpr(((Expr.Or) expr).right);
-            return e;
-        }
-
-        if( expr instanceof Expr.Not ){
-            return recursionExpr(((Expr.Not)expr).expr);
-        }
-
-
-        return null;
-        /*if( obj.condition instanceof  Expr.Not ){
-            Stmt.If ifStmt = new Stmt.If(((Expr.Not)obj.condition).expr,obj.elseStmt,obj.thenStmt,
-                    obj.lineNum);
-
-            return recursionExpr(ifStmt);
-        }
-        if( obj.condition instanceof  Expr.And || obj.condition instanceof  Expr.Or
-                || obj.condition instanceof  Expr.GT || obj.condition instanceof  Expr.LT ){
-           return obj;
-        }
-        return null;*/
+    @Override
+    public void visit(Expr.LET obj) {
 
     }
+
+    @Override
+    public void visit(Expr.GET obj) {
+
+    }
+
 
     @Override
     public void visit(Expr.Id obj) {
@@ -377,22 +263,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
     }
 
-    @Override
-    public void visit(Expr.Or obj) {
-        Label f = new Label();
-        Label r = new Label();
-        this.visit(obj.left);
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.Ificmplt(f));
-        this.visit(obj.right);
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.Ificmplt(f));
-        emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(f));
-        emit(new Ast.Stmt.Ldc(0));
-        emit(new Ast.Stmt.LabelJ(r));
-    }
+
 
     @Override
     public void visit(Expr.True obj) {
