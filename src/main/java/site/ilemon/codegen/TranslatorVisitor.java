@@ -127,7 +127,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
     // 标识处于and表达式
     private boolean atAndOperator = false;
 
-    @Override
+    /*@Override
     public void visit(Expr.LT obj) {
 
         t = trueLabel == null ? new Label() : trueLabel;        // label_0
@@ -140,9 +140,9 @@ public class TranslatorVisitor implements ISemanticVisitor {
             emit(new Ast.Stmt.Ificmplt(t));
         trueLabel  = t;// label_0
         falseLabel = r;// label_1
-    }
+    }*/
 
-    @Override
+    /*@Override
     public void visit(Expr.And obj) {
         atAndOperator = true;
         this.visit(obj.left);
@@ -154,9 +154,9 @@ public class TranslatorVisitor implements ISemanticVisitor {
     public void visit(Expr.Or obj) {
         this.visit(obj.left);
         this.visit(obj.right);
-    }
+    }*/
 
-    @Override
+    /*@Override
     public void visit(Stmt.If obj) {
         this.visit(obj.condition);
         if( atAndOperator )
@@ -174,6 +174,38 @@ public class TranslatorVisitor implements ISemanticVisitor {
         r = null;
         trueLabel  = null;
         falseLabel = null;
+    }*/
+
+    @Override
+    public void visit(Expr.LT obj) {
+
+
+    }
+
+    @Override
+    public void visit(Expr.And obj) {
+
+    }
+
+    @Override
+    public void visit(Expr.Or obj) {
+        this.visit(obj.left);
+        // 遍历左子表达式的真链，将其添加到父节点的真链中
+        for( int i = 0; i < obj.left.trueList.size(); i++){
+            obj.trueList.addToTail(obj.left.trueList.get(i));
+        }
+        this.visit(obj.right);
+
+        // 遍历右子表达式的真链，将其添加到父节点的真链中
+        for( int i = 0; i < obj.left.trueList.size(); i++){
+            obj.trueList.addToTail(obj.left.trueList.get(i));
+        }
+    }
+
+    @Override
+    public void visit(Stmt.If obj) {
+       this.visit(obj.condition);
+       //obj.condition.trueList;
     }
 
     @Override
