@@ -114,66 +114,17 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.GT obj) {
-
-    }
-
-    /*private Label t,r;
-
-    private Label trueLabel;
-
-    private Label falseLabel;
-
-    // 标识处于and表达式
-    private boolean atAndOperator = false;*/
-
-    /*@Override
-    public void visit(Expr.LT obj) {
-
-        t = trueLabel == null ? new Label() : trueLabel;        // label_0
-        r = falseLabel == null ? new Label() : falseLabel;      // label_1
-        this.visit(obj.left);                                   // ldc 19
-        this.visit(obj.right);                                  // ldc 18
-        if( atAndOperator )
-            emit(new Ast.Stmt.Ificmpget(t));
-        else // 当不在and表达式的时候
-            emit(new Ast.Stmt.Ificmplt(t));
-        trueLabel  = t;// label_0
-        falseLabel = r;// label_1
-    }*/
-
-    /*@Override
-    public void visit(Expr.And obj) {
-        atAndOperator = true;
         this.visit(obj.left);
         this.visit(obj.right);
-        atAndOperator = false;
+        Label trueLabel = new Label();
+        Label falseLabel = new Label();
+        obj.trueList.addToTail(trueLabel);
+        obj.falseList.addToTail(falseLabel);
+        emit(new Ast.Stmt.Ificmplt(trueLabel));
+        emit(new Ast.Stmt.Goto(falseLabel));
     }
 
-    @Override
-    public void visit(Expr.Or obj) {
-        this.visit(obj.left);
-        this.visit(obj.right);
-    }*/
 
-    /*@Override
-    public void visit(Stmt.If obj) {
-        this.visit(obj.condition);
-        if( atAndOperator )
-            this.visit(obj.thenStmt);
-        else
-            this.visit(obj.elseStmt);
-        emit(new Ast.Stmt.Goto(r));
-        emit(new Ast.Stmt.LabelJ(t));
-        if( atAndOperator )
-            this.visit(obj.elseStmt);
-        else
-            this.visit(obj.thenStmt);
-        emit(new Ast.Stmt.LabelJ(r));
-        t = null;
-        r = null;
-        trueLabel  = null;
-        falseLabel = null;
-    }*/
 
     @Override
     public void visit(Expr.LT obj) {
@@ -185,7 +136,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
         obj.falseList.addToTail(falseLabel);
         emit(new Ast.Stmt.Ificmplt(trueLabel));
         emit(new Ast.Stmt.Goto(falseLabel));
-        //emit(new Ast.Stmt.LabelJ(falseLabel));
     }
 
     @Override
@@ -238,7 +188,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.visit(obj.right);
 
         }
-
 
         // 遍历右子表达式的真链，将其添加到父节点的真链中
         for (int i = 0; i < obj.right.trueList.size(); i++) {
