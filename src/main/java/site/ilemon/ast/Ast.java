@@ -1,5 +1,6 @@
 package site.ilemon.ast;
 
+import site.ilemon.codegen.ast.Label;
 import site.ilemon.list.DoublyLinkedList;
 
 import java.util.ArrayList;
@@ -207,8 +208,8 @@ public class Ast {
         public static abstract class T {
 
             // 维护关系运算的真链,假链
-            public DoublyLinkedList<String> trueList = new DoublyLinkedList<>();
-            public DoublyLinkedList<String> falseList = new DoublyLinkedList<>();
+            public DoublyLinkedList<Label> trueList = new DoublyLinkedList<>();
+            public DoublyLinkedList<Label> falseList = new DoublyLinkedList<>();
             public int lineNum;
         }
 
