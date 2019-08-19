@@ -1,0 +1,13 @@
+class Iteration02{
+	void main(){
+		int start;
+		int sum;
+        start = 1;
+        sum = 0;
+        while(!(start < 101) && sum < 4950 ){
+            sum = sum + start;
+            start = start + 1;
+        }
+        printf("1到100之和是：%d\n",sum);
+	}
+}

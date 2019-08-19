@@ -24,13 +24,13 @@ public class CompilerTest {
              // Lexer lexer=new Lexer(new File("examples/If04.lemon")); ok 2019/8/19
 
              //Lexer lexer=new Lexer(new File("examples/If05.lemon")); ok
-             Lexer lexer=new Lexer(new File("examples/If06.lemon")); //ok at 2019/8/19
+             //Lexer lexer=new Lexer(new File("examples/If06.lemon")); //ok at 2019/8/19
 
-             //Lexer lexer=new Lexer(new File("examples/If07.lemon")); ok
-             //Lexer lexer=new Lexer(new File("examples/If08.lemon")); ok
+             //Lexer lexer=new Lexer(new File("examples/If07.lemon")); ok at 2019/8/19
+             //Lexer lexer=new Lexer(new File("examples/If08.lemon")); ok at 2019/8/19
 
-             //Lexer lexer=new Lexer(new File("examples/If09.lemon")); ok
-            // Lexer lexer=new Lexer(new File("examples/If10.lemon")); ok
+             //Lexer lexer=new Lexer(new File("examples/If09.lemon")); // ok at 2019/8/19
+             Lexer lexer=new Lexer(new File("examples/If10.lemon")); //ok
             Parser parser = new Parser(lexer);
             Ast.Program.T programSingle = parser.parse();
             SemanticVisitor semanticVisitor = new SemanticVisitor();
@@ -66,6 +66,32 @@ public class CompilerTest {
             //Lexer lexer=new Lexer(new File("examples/If03.lemon"));
             Lexer lexer = new Lexer(new File("examples/If04.lemon"));
             //Lexer lexer=new Lexer(new File("examples/If03.lemon"));
+            Parser parser = new Parser(lexer);
+            Ast.Program.T programSingle = parser.parse();
+            SemanticVisitor semanticVisitor = new SemanticVisitor();
+            semanticVisitor.visit(programSingle);
+            if (!semanticVisitor.passOrNot()) {
+                System.out.println("语义分析有错");
+                System.exit(1);
+            }
+            TranslatorVisitor translatorVisitor = new TranslatorVisitor();
+            translatorVisitor.visit(programSingle);
+
+            ByteCodeGenerator generator = new ByteCodeGenerator();
+            generator.visit(translatorVisitor.prog);
+
+            jasmin.Main.main(new String[]{translatorVisitor.prog.mainClass.id + ".il"});
+        } catch (IOException e) {
+            e.printStackTrace();
+        }/**/
+        //jasmin.Main.main(new String[]{"If01.il"});
+    }
+
+    @Test
+    public void testWhile() {
+        try {
+            // Lexer lexer = new Lexer(new File("examples/Iteration01.lemon")); ok
+            Lexer lexer = new Lexer(new File("examples/Iteration02.lemon"));
             Parser parser = new Parser(lexer);
             Ast.Program.T programSingle = parser.parse();
             SemanticVisitor semanticVisitor = new SemanticVisitor();

@@ -132,7 +132,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
             falseLabel = obj.falseList.get(0);
             obj.falseList.clear();
         }
-
         obj.trueList.addToTail(trueLabel);
         obj.falseList.addToTail(falseLabel);
         emit(new Ast.Stmt.Ificmpgt(trueLabel));
@@ -145,8 +144,22 @@ public class TranslatorVisitor implements ISemanticVisitor {
     public void visit(Expr.LT obj) {
         this.visit(obj.left);
         this.visit(obj.right);
-        Label trueLabel = new Label();
-        Label falseLabel = new Label();
+        Label trueLabel = null;
+        Label falseLabel = null;
+        if( obj.trueList.isEmpty() ){
+            trueLabel = new Label();
+        }
+        else{
+            trueLabel = obj.trueList.get(0);
+            obj.trueList.clear();
+        }
+        if( obj.falseList.isEmpty() ){
+            falseLabel = new Label();
+        }
+        else{
+            falseLabel = obj.falseList.get(0);
+            obj.falseList.clear();
+        }
         obj.trueList.addToTail(trueLabel);
         obj.falseList.addToTail(falseLabel);
         emit(new Ast.Stmt.Ificmplt(trueLabel));
@@ -552,21 +565,28 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     }
 
+    //S.begin := newlabel
+    //E.true  := newlabel
+    //E.false := S.next
+    //S1.next := S.begin
+    //S.code  := gen(S.begin':') || E.code || gen(E.true':')|| S1.code || gen('goto' S.begin)
     @Override
     public void visit(Stmt.While obj) {
-        Label con = new Label();
-        Label end = new Label();
-        emit(new Ast.Stmt.LabelJ(con));
+        Label whileBegin = new Label();
+        emit(new Ast.Stmt.LabelJ(whileBegin));
         this.visit(obj.condition);
-        if (obj.condition instanceof Expr.LT) {
-            emit(new Ast.Stmt.Ificmpgt(end));
 
-        } else if (obj.condition instanceof Expr.GT) {
-            emit(new Ast.Stmt.Ificmplt(end));
+        for (int i = 0; i < obj.condition.trueList.size(); i++) {
+            Label trueLabel = obj.condition.trueList.get(i);
+            emit(new Ast.Stmt.LabelJ(trueLabel));
+            this.visit(obj.body);
+            emit(new Ast.Stmt.Goto(whileBegin));
         }
-        this.visit(obj.body);
-        emit(new Ast.Stmt.Goto(con));
-        emit(new Ast.Stmt.LabelJ(end));
+
+        for (int i = 0; i < obj.condition.falseList.size(); i++) {
+            Label falseLabel = obj.condition.falseList.get(i);
+            emit(new Ast.Stmt.LabelJ(falseLabel));
+        }
     }
 
     @Override
