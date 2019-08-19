@@ -17,14 +17,14 @@ public class CompilerTest {
     @Test
     public void testIf() {
         try {
-              //Lexer lexer = new Lexer(new File("examples/If01.lemon")); // ok
-             //Lexer lexer=new Lexer(new File("examples/If02.lemon"));  // ok
+              // Lexer lexer = new Lexer(new File("examples/If01.lemon")); // ok
+             // Lexer lexer=new Lexer(new File("examples/If02.lemon"));  // ok
 
-             //Lexer lexer=new Lexer(new File("examples/If03.lemon")); ok
-             Lexer lexer=new Lexer(new File("examples/If04.lemon"));
+             // Lexer lexer=new Lexer(new File("examples/If03.lemon"));
+             // Lexer lexer=new Lexer(new File("examples/If04.lemon")); ok 2019/8/19
 
              //Lexer lexer=new Lexer(new File("examples/If05.lemon")); ok
-             //Lexer lexer=new Lexer(new File("examples/If06.lemon")); ok
+             Lexer lexer=new Lexer(new File("examples/If06.lemon")); //ok at 2019/8/19
 
              //Lexer lexer=new Lexer(new File("examples/If07.lemon")); ok
              //Lexer lexer=new Lexer(new File("examples/If08.lemon")); ok
