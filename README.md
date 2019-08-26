@@ -18,3 +18,4 @@
 ```
 	java CalHeightOfChild
 ```
+更多内容请参考[说明](https://github.com/yananlemon/LemonC/blob/master/document/LemonC%20%E7%BC%96%E8%AF%91%E5%99%A8%E8%AF%B4%E6%98%8E.md)
