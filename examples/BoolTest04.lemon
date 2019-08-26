@@ -1,0 +1,13 @@
+class BoolTest04{
+	void main(){
+	    bool a;
+	    int b;
+	    a = true;
+        if( a ){
+            b = 0;
+        }else{
+            b = 1;
+        }
+        printf("b=%d\n",b);// 0
+	}
+}

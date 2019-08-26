@@ -1,15 +1,54 @@
 class BoolTest01{
 	void main(){
-        bool b1;
-        bool b2;
-        b1 = true;
-        b2 = setBool(b1);
-		printf("b1=%d,b2=%d",b1,b2);
-		printLine();
-	}
+        int a;
+		if( true ){
+		    a = 0;
+		}else{
+		    a = 1;
+		}
+		printf("a=%d\n",a);// 0
 
-	bool setBool(bool b){
-	    return !b;
-	}
+		if( false ){
+            a = 2;
+        }else{
+            a = 3;
+        }
+        printf("a=%d\n",a);// 3
 
+        if( false || true ){
+            a = 4;
+        }else{
+            a = 5;
+        }
+        printf("a=%d\n",a);// 4
+
+        if( false && true ){
+            a = 6;
+        }else{
+            a = 7;
+        }
+        printf("a=%d\n",a);// 7
+
+        if( !(false) && true ){
+            a = 8;
+        }else{
+            a = 9;
+        }
+        printf("a=%d\n",a);// 8
+
+
+        if( !(false) && !(true)  ){
+            a = 10;
+        }else{
+            a = 11;
+        }
+        printf("a=%d\n",a);// 11
+
+         if( true || !(false) && !(true)  ){
+            a = 12;
+         }else{
+            a = 13;
+         }
+        printf("a=%d\n",a);// 12
+	}
 }

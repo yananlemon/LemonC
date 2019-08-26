@@ -486,6 +486,7 @@ public class Parser {
 	// <factor> -> (<expression>)
 	//  		| Integer Literal
 	//  		| id
+	//          | not(<expression>)
 	private Ast.Expr.T parseFactor() throws IOException{
 		Ast.Expr.T expr = null;
 		if(look.kind==TokenKind.Lparen){

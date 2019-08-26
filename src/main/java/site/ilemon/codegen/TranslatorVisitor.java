@@ -118,17 +118,15 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.right);
         Label trueLabel = null;
         Label falseLabel = null;
-        if( obj.trueList.isEmpty() ){
+        if (obj.trueList.isEmpty()) {
             trueLabel = new Label();
-        }
-        else{
+        } else {
             trueLabel = obj.trueList.get(0);
             obj.trueList.clear();
         }
-        if( obj.falseList.isEmpty() ){
+        if (obj.falseList.isEmpty()) {
             falseLabel = new Label();
-        }
-        else{
+        } else {
             falseLabel = obj.falseList.get(0);
             obj.falseList.clear();
         }
@@ -139,24 +137,21 @@ public class TranslatorVisitor implements ISemanticVisitor {
     }
 
 
-
     @Override
     public void visit(Expr.LT obj) {
         this.visit(obj.left);
         this.visit(obj.right);
         Label trueLabel = null;
         Label falseLabel = null;
-        if( obj.trueList.isEmpty() ){
+        if (obj.trueList.isEmpty()) {
             trueLabel = new Label();
-        }
-        else{
+        } else {
             trueLabel = obj.trueList.get(0);
             obj.trueList.clear();
         }
-        if( obj.falseList.isEmpty() ){
+        if (obj.falseList.isEmpty()) {
             falseLabel = new Label();
-        }
-        else{
+        } else {
             falseLabel = obj.falseList.get(0);
             obj.falseList.clear();
         }
@@ -218,7 +213,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
 
         // 遍历右子表达式的假链，将其添加到父节点的假链中
-        for( int i = 0; i < obj.right.falseList.size(); i++){
+        for (int i = 0; i < obj.right.falseList.size(); i++) {
             obj.falseList.addToTail(obj.right.falseList.get(i));
         }
     }
@@ -239,6 +234,34 @@ public class TranslatorVisitor implements ISemanticVisitor {
     }
 
     @Override
+    public void visit(Expr.True obj) {
+
+        Label trueLabel = new Label();
+        Label falseLabel = new Label();
+        obj.trueList.addToTail(trueLabel);
+        obj.falseList.addToTail(falseLabel);
+        emit(new Ast.Stmt.Ldc(1));
+        emit(new Ast.Stmt.Ldc(0));
+        emit(new Ast.Stmt.Ificmpgt(trueLabel));
+        emit(new Ast.Stmt.Goto(falseLabel));
+
+
+    }
+
+    @Override
+    public void visit(Expr.False obj) {
+        Label trueLabel = new Label();
+        Label falseLabel = new Label();
+        obj.trueList.addToTail(trueLabel);
+        obj.falseList.addToTail(falseLabel);
+        emit(new Ast.Stmt.Ldc(0));
+        emit(new Ast.Stmt.Ldc(0));
+        emit(new Ast.Stmt.Ificmpgt(trueLabel));
+        emit(new Ast.Stmt.Goto(falseLabel));
+    }
+
+
+    @Override
     public void visit(Stmt.If obj) {
         // 遍历条件表达式
         this.visit(obj.condition);
@@ -254,7 +277,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
             emit(new Ast.Stmt.Goto(nextStmtLabel));
         }
         emit(new Ast.Stmt.LabelJ(nextStmtLabel));
-
     }
 
     @Override
@@ -272,7 +294,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
     public void visit(Expr.Id obj) {
         int index = this.indexTable.get(obj.id);
         if (obj.type instanceof Type.Int || obj.type instanceof Type.Bool) {
-            //if( obj.type instanceof Type.Int){
             this.type = new Ast.Type.Int();
             emit(new Ast.Stmt.Iload(index));
         } else if (obj.type instanceof Type.Float) {
@@ -336,16 +357,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
     }
 
-
-    @Override
-    public void visit(Expr.True obj) {
-        emit(new Ast.Stmt.Ldc(1));
-    }
-
-    @Override
-    public void visit(Expr.False obj) {
-        emit(new Ast.Stmt.Ldc(0));
-    }
 
     @Override
     public void visit(Expr.Str obj) {

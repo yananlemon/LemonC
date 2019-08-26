@@ -1,0 +1,25 @@
+class BoolTest03{
+	void main(){
+	    int a;
+        if( !( 1 < 0 ) && !( 10 > 9 )  ){
+            a = 10;
+        }else{
+            a = 11;
+        }
+        printf("a=%d\n",a);// 11
+
+        if( !( 1 < 0 ) || !(10 > 9)   ){
+            a = 12;
+        }else{
+            a = 13;
+        }
+        printf("a=%d\n",a);// 12
+
+        if( !( 1 > 0 ) || !(10 > 9) && (5 < 4)   ){
+            a = 12;
+        }else{
+            a = 13;
+        }
+        printf("a=%d\n",a);// 13
+	}
+}
