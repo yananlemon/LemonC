@@ -80,6 +80,7 @@ ldc | ldc 1 | 将1加载到操作数栈栈顶
 ldc | ldc "hello" | 将字符串hello加载到操作数栈栈顶
 istore | istore index | 将栈顶int类型的数字存储到局部变量表索引为index处
 iload | iload index | 加载局部变量表中索引为index的int变量到操作数栈
+
 与上述加载和存储指令类似，float类型的操作的指令是：fstore和fload。
 
 
