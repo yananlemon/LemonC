@@ -16,9 +16,9 @@ public class CompilerTest {
     @Test
     public void testBool() {
         try {
-            Lexer lexer=new Lexer(new File("examples/BoolTest01.lemon")); // ok at 2019.8.26
+            //Lexer lexer=new Lexer(new File("examples/BoolTest01.lemon")); // ok at 2019.8.26
             //Lexer lexer=new Lexer(new File("examples/BoolTest03.lemon")); //ok at 2019.8.26
-            // Lexer lexer=new Lexer(new File("examples/BoolTest04.lemon")); 暂时不支持bool类型变量
+             Lexer lexer=new Lexer(new File("examples/BoolTest04.lemon")); // ok at 2019.8.26
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();

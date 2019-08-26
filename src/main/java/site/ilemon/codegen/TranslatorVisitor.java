@@ -260,9 +260,11 @@ public class TranslatorVisitor implements ISemanticVisitor {
         emit(new Ast.Stmt.Goto(falseLabel));
     }
 
+    private boolean conditionFlag = false;
 
     @Override
     public void visit(Stmt.If obj) {
+        conditionFlag = true;
         // 遍历条件表达式
         this.visit(obj.condition);
         Label nextStmtLabel = new Label();
@@ -277,6 +279,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
             emit(new Ast.Stmt.Goto(nextStmtLabel));
         }
         emit(new Ast.Stmt.LabelJ(nextStmtLabel));
+        conditionFlag = false;
     }
 
     @Override
@@ -289,6 +292,30 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     }
 
+    @Override
+    public void visit(Stmt.Assign obj) {
+        int index = this.indexTable.get(obj.id.id);
+        if( obj.expr instanceof Expr.GT || obj.expr instanceof Expr.LT
+        || obj.expr instanceof Expr.Not || obj.expr instanceof Expr.And
+        || obj.expr instanceof Expr.Or || obj.expr instanceof Expr.True
+        || obj.expr instanceof Expr.False){
+            Stmt.Assign thenStmt = new Stmt.Assign(
+                    obj.id,
+                    new Expr.Number(new Type.Int(),1,obj.lineNum),obj.lineNum);
+            Stmt.Assign elseStmt = new Stmt.Assign(
+                    obj.id,
+                    new Expr.Number(new Type.Int(),0,obj.lineNum),obj.lineNum);
+            Stmt.If ifStmt = new Stmt.If(obj.expr,thenStmt,elseStmt,obj.lineNum);
+            this.visit(ifStmt);
+            return;
+        }
+        this.visit(obj.expr);
+        if (obj.id.type instanceof Type.Int || obj.id.type instanceof Type.Bool)
+            emit(new Ast.Stmt.Istore(index));
+        else if (obj.id.type instanceof Type.Float)
+            emit(new Ast.Stmt.Fstore(index));
+    }
+
 
     @Override
     public void visit(Expr.Id obj) {
@@ -296,6 +323,25 @@ public class TranslatorVisitor implements ISemanticVisitor {
         if (obj.type instanceof Type.Int || obj.type instanceof Type.Bool) {
             this.type = new Ast.Type.Int();
             emit(new Ast.Stmt.Iload(index));
+            if( conditionFlag ){
+                emit(new Ast.Stmt.Ldc(0));
+                Label trueLabel = null;
+                Label falseLabel = null;
+                if(obj.trueList.isEmpty()){
+                    trueLabel = new Label();
+                    obj.trueList.addToTail(trueLabel);
+                }else{
+                    trueLabel = obj.trueList.get(0);
+                }
+                if(obj.falseList.isEmpty()){
+                    falseLabel = new Label();
+                    obj.falseList.addToTail(falseLabel);
+                }else{
+                    falseLabel = obj.falseList.get(0);
+                }
+                emit(new Ast.Stmt.Ificmpgt(trueLabel));
+                emit(new Ast.Stmt.Goto(falseLabel));
+            }
         } else if (obj.type instanceof Type.Float) {
             this.type = new Ast.Type.Float();
             emit(new Ast.Stmt.Fload(index));
@@ -496,15 +542,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         // else error
     }
 
-    @Override
-    public void visit(Stmt.Assign obj) {
-        int index = this.indexTable.get(obj.id.id);
-        this.visit(obj.expr);
-        if (obj.id.type instanceof Type.Int || obj.id.type instanceof Type.Bool)
-            emit(new Ast.Stmt.Istore(index));
-        else if (obj.id.type instanceof Type.Float)
-            emit(new Ast.Stmt.Fstore(index));
-    }
+
 
     @Override
     public void visit(Stmt.Block obj) {

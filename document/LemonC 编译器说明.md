@@ -27,6 +27,7 @@ void|
 main|
 int|
 float|
+bool|
 if|
 true|
 false|
@@ -34,7 +35,7 @@ while|
 printf|
 printNewLine|
 
-在LemonC的源代码中，保留了bool关键字，但是并不支持直接在控制流语句中使用bool类型的变量，后续版本可能考虑支持。
+~~在LemonC的源代码中，保留了bool关键字，但是并不支持直接在控制流语句中使用bool类型的变量，后续版本可能考虑支持。~~
 ## 1.3 控制流
 LemonC中的控制流只有两种，if和while。
 if的代码示例如下所示：

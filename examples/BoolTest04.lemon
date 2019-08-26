@@ -9,5 +9,54 @@ class BoolTest04{
             b = 1;
         }
         printf("b=%d\n",b);// 0
+
+        a = false || false && true;
+        if( a ){
+            b = 2;
+        }else{
+            b = 3;
+        }
+        printf("b=%d\n",b);// 3
+
+        a = !(!(a) || a && !(a));
+        if( a ){
+            b = 4;
+        }else{
+            b = 5;
+        }
+        printf("b=%d\n",b);// 5
+
+        a = !(!(a) && a && !(a));
+        if( a ){
+            b = 6;
+        }else{
+            b = 7;
+        }
+        printf("b=%d\n",b);// 6
+
+        a = !(!(a) && a && !(a));
+        if( a && 1 > 10){
+            b = 8;
+        }else{
+            b = 9;
+        }
+        printf("b=%d\n",b);//9
+
+
+        a = 1 > 0 || 19 > 18 && 20 > 19;
+        if( a ){
+            b = 10;
+        }else{
+            b = 11;
+        }
+        printf("b=%d\n",b);//10
+
+        a = 1 > 0 || 19 > 18 && 20 > 19;
+        if( !(a) ){
+            b = 12;
+        }else{
+            b = 13;
+        }
+        printf("b=%d\n",b);//13
 	}
 }
