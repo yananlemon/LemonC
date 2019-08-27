@@ -92,7 +92,7 @@ public class Parser {
 		mainClass = new Ast.MainClass.MainClassSingle(className,null,methods);
 		match("}");
 		match("EOF");
-		System.out.println("语法分析成功");
+		//System.out.println("语法分析成功");
 		return mainClass;
 	}
 
@@ -559,10 +559,15 @@ public class Parser {
             || look.kind == TokenKind.True || look.kind == TokenKind.False){
                 if( look.kind == TokenKind.Id)
                     args.add(parseFactor());
-                else if( look.kind == TokenKind.Num )
-                    args.add(new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber));
-                else if( look.kind == TokenKind.DNum )
-                    args.add(new Ast.Expr.Number(new Ast.Type.Float(),look.lexeme,look.lineNumber));
+                else if( look.kind == TokenKind.Num ){
+					args.add(new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber));
+					move();
+				}
+
+                else if( look.kind == TokenKind.DNum ) {
+					args.add(new Ast.Expr.Number(new Ast.Type.Float(), look.lexeme, look.lineNumber));
+					move();
+				}
                 else if( look.kind == TokenKind.True ){
                     args.add(new Ast.Expr.True(look.lineNumber));
                     move();
@@ -572,8 +577,6 @@ public class Parser {
                     args.add(new Ast.Expr.False(look.lineNumber));
                     move();
                 }
-
-                //move();
                 if( look.kind == TokenKind.Commer)
                     move();
             }

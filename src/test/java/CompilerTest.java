@@ -18,7 +18,21 @@ public class CompilerTest {
         try {
             //Lexer lexer=new Lexer(new File("examples/BoolTest01.lemon")); // ok at 2019.8.26
             //Lexer lexer=new Lexer(new File("examples/BoolTest03.lemon")); //ok at 2019.8.26
-             Lexer lexer=new Lexer(new File("examples/BoolTest04.lemon")); // ok at 2019.8.26
+             //Lexer lexer=new Lexer(new File("examples/BoolTest04.lemon")); // ok at 2019.8.26
+            //Lexer lexer=new Lexer(new File("examples/BoolTest05.lemon"));// ok at 2019.8.27
+            //Lexer lexer=new Lexer(new File("examples/BoolTest06.lemon")); // ok at 2019.8.27
+            // Lexer lexer=new Lexer(new File("examples/BoolTest07.lemon")); //ok at 2019.8.27
+            Lexer lexer=new Lexer(new File("examples/BoolTest08.lemon")); // ok at 2019.8.27
+            doCompiler(lexer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void testMethodCall() {
+        try {
+            Lexer lexer=new Lexer(new File("examples/MethodCallTest01.lemon"));// ok at 2019.8.27
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();

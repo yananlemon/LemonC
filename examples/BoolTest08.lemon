@@ -1,0 +1,20 @@
+class BoolTest08{
+	void main(){
+	    int a;
+        bool b1;
+         b1 = !(testBoolCall());
+         if( !(b1) )
+              a = 19;
+         else
+              a = 20;
+         printf("a=%d\n",a);// a = 19
+	}
+
+    // return true
+	bool testBoolCall(){
+	    return 1 > 5 && testBoolCall2() || true;
+	}
+	bool testBoolCall2(){
+        return false;
+    }
+    }

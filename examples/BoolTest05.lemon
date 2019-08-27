@@ -2,12 +2,59 @@ class BoolTest05{
 	void main(){
 	    bool a;
 	    int b;
-	    a = true;
+	    a = true && testBool();
         if( a ){
             b = 0;
         }else{
             b = 1;
         }
-        printf("b=%d\n",b);// 0
+        printf("b=%d\n",b);// 1
+
+        a = !(true && testBool());
+        if( a ){
+            b = 2;
+        }else{
+            b = 3;
+        }
+        printf("b=%d\n",b);// 2
+
+        a = true && testBool() || testBool2();
+        if( a ){
+            b = 4;
+        }else{
+            b = 5;
+        }
+        printf("b=%d\n",b);// 4
+
+        a = testBool3() && testBool() || testBool2();
+        if( a ){
+            b = 6;
+        }else{
+            b = 7;
+        }
+        printf("b=%d\n",b);// 6
+
+        a = !(testBool3() && testBool() || testBool2());
+        if( a ){
+            b = 8;
+        }else{
+            b = 9;
+        }
+        printf("b=%d\n",b);// 9
 	}
+
+    // return false
+	bool testBool(){
+	    return false;
+	}
+
+    // return true
+	bool testBool2(){
+        return !(false);
+    }
+
+    // return true
+    bool testBool3(){
+        return 1 > 2 || 3 < 5 && 19 > 1;
+    }
 }

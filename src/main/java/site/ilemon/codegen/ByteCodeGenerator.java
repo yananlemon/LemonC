@@ -284,9 +284,10 @@ public class ByteCodeGenerator implements Visitor {
     public void visit(Ast.Stmt.Invokevirtual s) {
         this.write("    invokestatic " + currClassId + "/" + s.name + "(");
         for( int i = 0; i< s.at.size(); i++){
-            if( s.at.get(i) instanceof Ast.Type.Int){
+            Ast.Type.T t = s.at.get(i);
+            if( t instanceof Ast.Type.Int ||  t instanceof Ast.Type.Bool){
                 this.write("I");
-            }else{
+            }else if(t instanceof Ast.Type.Float){
                 this.write("F");
             }
         }

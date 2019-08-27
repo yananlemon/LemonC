@@ -1,0 +1,18 @@
+class MethodCallTest01{
+	void main(){
+        int sum;
+        float num;
+        sum = add(1,2);
+        num = addFloat(1.0,2.0);
+        printf("sum=%d\n",sum);
+        printf("num=%d\n",num);
+	}
+
+	int add(int a,int b){
+	    return a + b;
+	}
+
+	float addFloat(float a,float b){
+        return a + b;
+    }
+}

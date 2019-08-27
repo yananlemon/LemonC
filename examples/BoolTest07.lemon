@@ -1,0 +1,45 @@
+class BoolTest07{
+	void main(){
+	    int a;
+        bool b1;
+        b1 = testBoolCall4();
+        if( b1 )
+               a = 6;
+        else
+               a = 7;
+        printf("a=%d\n",a);// a = 6
+
+        b1 = testBoolCall5();
+        if( b1 )
+               a = 8;
+        else
+               a = 9;
+        printf("a=%d\n",a);// a = 8
+
+         b1 = testBoolCall6();
+         if( b1 )
+               a = 10;
+         else
+               a = 11;
+         printf("a=%d\n",a);// a = 11
+	}
+
+	bool testBoolCall(){
+	    return true;
+	}
+	bool testBoolCall2(){
+        return false;
+    }
+    bool testBoolCall4(){
+         return testBoolCall() && true;// true
+    }
+
+    bool testBoolCall5(){
+        return testBoolCall4() || testBoolCall() && testBoolCall2();// true
+    }
+
+    bool testBoolCall6(){
+        return !(testBoolCall4() || testBoolCall() && testBoolCall2());// false
+    }
+
+}
