@@ -1,0 +1,16 @@
+class BoolTest09{
+	void main(){
+	    int a;
+        bool b1;
+        b1 = rtNum() > 0;
+        if( b1 )
+             a = 19;
+        else
+             a = 20;
+         printf("a=%d\n",a);// a = 19
+	}
+
+	int rtNum(){
+	    return 19;
+	}
+}
