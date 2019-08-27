@@ -25,8 +25,8 @@ LemonC中的关键字是Java语言的子集，下表列出了关键字：
 class|声明类
 void|
 main|
-int|
-float|
+int|整型数字
+float|浮点型数字
 bool|
 if|
 true|
@@ -79,7 +79,7 @@ class Iteration02{
 ---|---|---
 ldc | ldc 1 | 将1加载到操作数栈栈顶
 ldc | ldc "hello" | 将字符串hello加载到操作数栈栈顶
-istore | istore index | 将栈顶int类型的数字存储到局部变量表索引为index处
+istore | istore index | 将操作数栈栈顶int类型的数字存储到局部变量表索引为index处
 iload | iload index | 加载局部变量表中索引为index的int变量到操作数栈
 
 与上述加载和存储指令类似，float类型的操作的指令是：fstore和fload。
@@ -101,6 +101,7 @@ idiv | 将栈顶两int型数值相除并将结果压入栈顶
 ---|---
 if_icmpgt | 如果次栈顶元素大于栈顶则跳转到指定标号处执行
 if_icmplt | 如果次栈顶元素小于栈顶则跳转到指定标号处执行
+fcmpl | compare two floats. If same, pushes 0; else if value 2 greater, pushes 1; else pushes -1. Returns -1 on NaN.
 goto | 无条件跳转到指定标号处执行
 
 事实上，JVM还支持很多转移指令（if_icmpge,if_icmple,ifeq,ifne）,这也是实现>=,<=,==,!=所需要做的事情。  

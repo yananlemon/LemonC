@@ -85,10 +85,12 @@ public class ByteCodeGenerator implements Visitor {
             if( methodSingle.formals !=null && methodSingle.formals.size() > 0 ){
                 this.write(".method static " + methodSingle.id + "(");
                 for( int i = 0; i< methodSingle.formals.size(); i++){
-                    if( methodSingle.formals.get(i).type instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
+                    //if( methodSingle.formals.get(i).type instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
+                    if( methodSingle.formals.get(i).type instanceof Ast.Type.Int || methodSingle.formals.get(i).type instanceof Ast.Type.Bool)
                         this.write("I");
-                    else
+                    else if(methodSingle.formals.get(i).type instanceof Ast.Type.Float)
                         this.write("F");
+                    //else
                 }
                 if(methodSingle.retType instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
                     this.write(")I");
@@ -165,6 +167,8 @@ public class ByteCodeGenerator implements Visitor {
             this.visit((Ast.Stmt.Ificmpgt)stmt);
         else if( stmt instanceof Ast.Stmt.Ificmplt )
             this.visit((Ast.Stmt.Ificmplt)stmt);
+        else if( stmt instanceof Ast.Stmt.Fcmpl )
+            this.visit((Ast.Stmt.Fcmpl)stmt);
         else if( stmt instanceof Ast.Stmt.Ificmpget )
             this.visit((Ast.Stmt.Ificmpget)stmt);
         else if( stmt instanceof Ast.Stmt.Ificmplet )
@@ -257,6 +261,12 @@ public class ByteCodeGenerator implements Visitor {
     public void visit(Ast.Stmt.Ificmplt s) {
 
         this.iwriteln("if_icmplt " + s.l.toString());
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Fcmpl s) {
+
+        this.iwriteln("fcmpl ");
     }
 
     @Override

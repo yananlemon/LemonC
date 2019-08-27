@@ -2,13 +2,13 @@ class BoolTest10{
 	void main(){
 	    bool a;
 	    int b;
-	    a = true && testBool();
+	    a = true && testBool() || !(testBool());
         if( a ){
             b = 0;
         }else{
             b = 1;
         }
-        printf("b=%d\n",b);// 1
+        printf("b=%d\n",b);// 0
 
 
 	}

@@ -2,13 +2,13 @@ class BoolTest11{
 	void main(){
 	    bool a;
 	    int b;
-	    a = rtNum()-5>0;
+	    a = rtNum()-5>0 || true;
         if( a ){
             b = 0;
         }else{
             b = 1;
         }
-        printf("b=%d\n",b);// 1
+        printf("b=%d\n",b);// 0
 
 
 	}

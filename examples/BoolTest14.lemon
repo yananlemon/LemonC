@@ -1,0 +1,29 @@
+class BoolTest14{
+	void main(){
+        int a;
+        bool b1;
+        b1 =  cal(1.0);
+        if( b1 )
+            a = 1;
+        else
+            a = 2;
+        printf("a=%d\n",a);// a = 2
+
+        b1 =  cal(1.0 + 199.0);
+        if( b1 )
+            a = 3;
+        else
+            a = 4;
+        printf("a=%d\n",a);// a = 3
+	}
+
+
+
+	bool cal(float a){
+	    return a > 10.0 || true && getIntNum() > 19;
+	}
+
+	int getIntNum(){
+	    return 19;
+	}
+}

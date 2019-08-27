@@ -11,7 +11,6 @@ class BoolTest13{
 	}
 
 	bool cal(float a){
-	    //return true;
 	    return a > 12.0;
 	}
 }

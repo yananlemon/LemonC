@@ -149,9 +149,23 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
         obj.trueList.addToTail(trueLabel);
         obj.falseList.addToTail(falseLabel);
-        emit(new Ast.Stmt.Ificmpgt(trueLabel));
-        emit(new Ast.Stmt.Goto(falseLabel));
+        if( this.type instanceof Ast.Type.Float){
+            emit(new Ast.Stmt.Fcmpl());
+            emit(new Ast.Stmt.Istore(varIndexOfMethod));
+            emit(new Ast.Stmt.Iload(varIndexOfMethod++));
+            emit(new Ast.Stmt.Ldc(0));
+            emit(new Ast.Stmt.Ificmpgt(trueLabel));
+            emit(new Ast.Stmt.Goto(falseLabel));
+        }
+
+        else{
+            emit(new Ast.Stmt.Ificmpgt(trueLabel));
+            emit(new Ast.Stmt.Goto(falseLabel));
+        }
+
     }
+
+    private int varIndexOfMethod = 0;
 
 
     @Override
@@ -201,8 +215,22 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
         obj.trueList.addToTail(trueLabel);
         obj.falseList.addToTail(falseLabel);
-        emit(new Ast.Stmt.Ificmplt(trueLabel));
-        emit(new Ast.Stmt.Goto(falseLabel));
+
+        if( this.type instanceof Ast.Type.Float){
+            emit(new Ast.Stmt.Fcmpl());
+            emit(new Ast.Stmt.Istore(varIndexOfMethod));
+            emit(new Ast.Stmt.Iload(varIndexOfMethod++));
+            emit(new Ast.Stmt.Ldc(0));
+            emit(new Ast.Stmt.Ificmpgt(trueLabel));
+            emit(new Ast.Stmt.Goto(falseLabel));
+        }
+        else{
+            emit(new Ast.Stmt.Ificmplt(trueLabel));
+            emit(new Ast.Stmt.Goto(falseLabel));
+        }
+
+        //emit(new Ast.Stmt.Ificmplt(trueLabel));
+        //emit(new Ast.Stmt.Goto(falseLabel));
     }
 
     @Override
@@ -576,6 +604,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.classId = mainClassSingle.classId;
         List<Ast.Method.MethodSingle> methods = new ArrayList<>();
         for (int i = 0; i < mainClassSingle.methods.size(); i++) {
+            // 将方法变量索引设置为0
+            varIndexOfMethod = 0;
             Method.MethodSingle methodSingle = (Method.MethodSingle) mainClassSingle.methods.get(i);
             this.visit(methodSingle);
             methods.add(this.method);

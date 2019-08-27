@@ -27,10 +27,13 @@ public interface Visitor {
     void visit(Ast.Stmt.Fsub s);
     void visit(Ast.Stmt.Fmul s);
     void visit(Ast.Stmt.Fdiv s);
+
     void visit(Ast.Stmt.Ificmplt s);
     void visit(Ast.Stmt.Ificmpgt s);
     void visit(Ast.Stmt.Ificmpget s);
     void visit(Ast.Stmt.Ificmplet s);
+    void visit(Ast.Stmt.Fcmpl s);
+
     void visit(Ast.Stmt.Iload s);
     void visit(Ast.Stmt.Invokevirtual s);
     void visit(Ast.Stmt.Ireturn s);

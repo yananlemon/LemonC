@@ -198,6 +198,15 @@ public class Ast {
             }
         }
 
+        /**
+         * 浮点数比较指令
+         */
+        public static class Fcmpl extends T {
+            public Fcmpl() {
+
+            }
+        }
+
         public static class Ificmplet extends T {
             public Label l;
 
