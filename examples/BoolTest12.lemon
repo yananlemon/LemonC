@@ -1,0 +1,43 @@
+class BoolTest12{
+	void main(){
+        int a;
+        bool b1;
+        a = 19;
+        b1 = a > 10 && a > 11 && a < 0;
+        if( b1 )
+            a = 0;
+        else
+            a = 1;
+        printf("a=%d\n",a);// a = 1
+
+        b1 = cal(19);
+        if( b1 )
+            a = 2;
+        else
+            a = 3;
+        printf("a=%d\n",a);// a = 2
+
+        b1 = rtBool(false);
+        if( b1 )
+            a = 4;
+        else
+            a = 5;
+        printf("a=%d\n",a);// a = 4
+
+        b1 = rtBool(false || 19 > 5);
+        if( b1 )
+            a = 5;
+        else
+            a = 6;
+        printf("a=%d\n",a);// a = 6
+	}
+
+
+	bool cal(int a){
+	    return a > 10;
+	}
+
+	bool rtBool(bool b){
+	    return !(b);
+	}
+}

@@ -542,7 +542,7 @@ public class Parser {
 		return expr;
 	}
 
-	private Ast.Expr.T parseMethodCall() throws IOException {
+	private Ast.Expr.T parseMethodCall2() throws IOException {
 		Token ahead;
 		Ast.Expr.T expr;
 		String methodName = look.lexeme;
@@ -553,7 +553,7 @@ public class Parser {
 		args = new ArrayList<Ast.Expr.T>();
 		ahead = lexer.lookahead(1);
 		if( ahead.kind == TokenKind.Add || ahead.kind == TokenKind.Sub){
-            args.add(parseAdditiveExpr());
+            args.add(parseAdditiveExpr()); //2019/8/27 测试BoolTest11时注释掉
         }else{
             while( look.kind == TokenKind.Id || look.kind == TokenKind.Num  || look.kind == TokenKind.DNum
             || look.kind == TokenKind.True || look.kind == TokenKind.False){
@@ -581,6 +581,33 @@ public class Parser {
                     move();
             }
         }
+		match(")");
+		expr = new Ast.Expr.Call(methodName, args, lineNumber);
+		return expr;
+	}
+
+	// methodCall->methodCall(Expr,Expr)
+	private Ast.Expr.T parseMethodCall() throws IOException {
+		Token ahead;
+		Ast.Expr.T expr;
+		String methodName = look.lexeme;
+		int lineNumber = look.lineNumber;
+		move();
+		match("(");
+		ArrayList<Ast.Expr.T> args = null;
+		args = new ArrayList<Ast.Expr.T>();
+		ahead = lexer.lookahead(1);
+		if( look.kind == TokenKind.Rparen){
+
+		}else{
+			Ast.Expr.T e = parseExpr();
+			args.add(e);
+			while( look.kind == TokenKind.Commer){
+				match(",");
+				args.add(parseExpr());
+			}
+		}
+
 		match(")");
 		expr = new Ast.Expr.Call(methodName, args, lineNumber);
 		return expr;

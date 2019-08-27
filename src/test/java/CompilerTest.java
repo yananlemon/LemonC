@@ -18,12 +18,16 @@ public class CompilerTest {
         try {
             //Lexer lexer=new Lexer(new File("examples/BoolTest01.lemon")); // ok at 2019.8.26
             //Lexer lexer=new Lexer(new File("examples/BoolTest03.lemon")); //ok at 2019.8.26
-             //Lexer lexer=new Lexer(new File("examples/BoolTest04.lemon")); // ok at 2019.8.26
-            //Lexer lexer=new Lexer(new File("examples/BoolTest05.lemon"));// ok at 2019.8.27
+            //Lexer lexer=new Lexer(new File("examples/BoolTest04.lemon")); // ok at 2019.8.26
+            // Lexer lexer=new Lexer(new File("examples/BoolTest05.lemon"));// ok at 2019.8.27
             //Lexer lexer=new Lexer(new File("examples/BoolTest06.lemon")); // ok at 2019.8.27
             // Lexer lexer=new Lexer(new File("examples/BoolTest07.lemon")); //ok at 2019.8.27
             //Lexer lexer=new Lexer(new File("examples/BoolTest08.lemon")); // ok at 2019.8.27
-            Lexer lexer=new Lexer(new File("examples/BoolTest09.lemon")); // ok at 2019.8.27
+            //Lexer lexer=new Lexer(new File("examples/BoolTest09.lemon")); // ok at 2019.8.27
+            //Lexer lexer=new Lexer(new File("examples/BoolTest10.lemon"));// ok at 2019.8.27
+            //Lexer lexer=new Lexer(new File("examples/BoolTest11.lemon"));// ok at 2019.8.27
+            Lexer lexer=new Lexer(new File("examples/BoolTest12.lemon"));// ok at 2019.8.27
+            //Lexer lexer=new Lexer(new File("examples/BoolTest13.lemon"));// float 类型的比较需要实现指令：fcmpl
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();
@@ -33,7 +37,9 @@ public class CompilerTest {
     @Test
     public void testMethodCall() {
         try {
-            Lexer lexer=new Lexer(new File("examples/MethodCallTest01.lemon"));// ok at 2019.8.27
+            //Lexer lexer=new Lexer(new File("examples/MethodCallTest01.lemon"));// ok at 2019.8.27
+            //Lexer lexer=new Lexer(new File("examples/MethodCallTest02.lemon"));// ok at 2019.8.27
+            Lexer lexer=new Lexer(new File("examples/MethodCallTest03.lemon"));
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();

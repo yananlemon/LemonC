@@ -1,0 +1,17 @@
+class BoolTest13{
+	void main(){
+        int a;
+        bool b1;
+        b1 = cal(1.0);
+        if( b1 )
+            a = 25;
+        else
+            a = 26;
+        printf("a=%d\n",a);// a = 26
+	}
+
+	bool cal(float a){
+	    //return true;
+	    return a > 12.0;
+	}
+}

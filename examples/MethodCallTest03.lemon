@@ -1,0 +1,11 @@
+class MethodCallTest03{
+	void main(){
+        int sum;
+        sum = getNum(1+1);
+        printf("sum=%d\n",sum);//4
+	}
+
+	int getNum(int a){
+	    return a;
+	}
+}

@@ -1,16 +1,42 @@
 class BoolTest09{
 	void main(){
-	    int a;
+        int a;
         bool b1;
-        b1 = rtNum() > 0;
+        b1 = rtNum(1) > 0 && rtNum(1) > 20 || true;
         if( b1 )
-             a = 19;
+            a = 19;
         else
-             a = 20;
-         printf("a=%d\n",a);// a = 19
+            a = 20;
+        printf("a=%d\n",a);// a = 19
+
+        b1 = rtNum(1)-100 > 0 && rtNum(1) > 20 || true;
+        if( b1 )
+            a = 21;
+        else
+            a = 22;
+        printf("a=%d\n",a);// a = 21
+
+
+        b1 = rtNum(1)-100 > 0 && rtNum(1) > 20 || rtNum(1)/19 > 2;
+        if( b1 )
+            a = 23;
+        else
+            a = 24;
+        printf("a=%d\n",a);// a = 24
+
+        //b1 = rtNum(1)-100 > 0 && cal(1.0) > 20.0;
+        //if( b1 )
+        //    a = 25;
+        //else
+          //  a = 26;
+        //printf("a=%d\n",a);// a = 26
 	}
 
-	int rtNum(){
-	    return 19;
+	int rtNum(int i){
+	    return 19 * i;
 	}
+
+	//bool cal(float a){
+	  //  return a > 10.0;
+	//}
 }

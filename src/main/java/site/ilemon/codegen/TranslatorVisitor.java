@@ -4,6 +4,7 @@ package site.ilemon.codegen;
 import site.ilemon.ast.Ast.*;
 import site.ilemon.codegen.ast.Ast;
 import site.ilemon.codegen.ast.Label;
+import site.ilemon.list.DoublyLinkedList;
 import site.ilemon.visitor.ISemanticVisitor;
 
 import java.util.ArrayList;
@@ -96,12 +97,22 @@ public class TranslatorVisitor implements ISemanticVisitor {
     }
 
 
-
-
     @Override
     public void visit(Expr obj) {
 
     }
+
+    private DoublyLinkedList<Label> union(DoublyLinkedList<Label> list1,DoublyLinkedList<Label> list2){
+        DoublyLinkedList<Label> result = new DoublyLinkedList<>();
+        for(int i = 0; i < list1.size(); i++){
+            result.addToTail(list1.get(i));
+        }
+        for(int i = 0; i < list2.size(); i++){
+            result.addToTail(list2.get(i));
+        }
+        return  result;
+    }
+
 
     @Override
     public void visit(Expr.GT obj) {
@@ -110,13 +121,28 @@ public class TranslatorVisitor implements ISemanticVisitor {
         Label trueLabel = null;
         Label falseLabel = null;
         if (obj.trueList.isEmpty()) {
-            trueLabel = new Label();
+            if( obj.left.trueList.isEmpty() && obj.right.trueList.isEmpty())
+                trueLabel = new Label();
+            else{
+                obj.trueList = union(obj.left.trueList,obj.right.trueList);
+                trueLabel = obj.trueList.get(0);
+                obj.trueList.clear();
+            }
+
         } else {
             trueLabel = obj.trueList.get(0);
             obj.trueList.clear();
         }
         if (obj.falseList.isEmpty()) {
-            falseLabel = new Label();
+
+            if( obj.left.falseList.isEmpty() && obj.right.falseList.isEmpty())
+                falseLabel = new Label();
+            else{
+                obj.falseList = union(obj.left.falseList,obj.right.falseList);
+                falseLabel = obj.falseList.get(0);
+                obj.falseList.clear();
+            }
+
         } else {
             falseLabel = obj.falseList.get(0);
             obj.falseList.clear();
@@ -134,7 +160,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.right);
         Label trueLabel = null;
         Label falseLabel = null;
-        if (obj.trueList.isEmpty()) {
+        /*if (obj.trueList.isEmpty()) {
             trueLabel = new Label();
         } else {
             trueLabel = obj.trueList.get(0);
@@ -142,6 +168,33 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
         if (obj.falseList.isEmpty()) {
             falseLabel = new Label();
+        } else {
+            falseLabel = obj.falseList.get(0);
+            obj.falseList.clear();
+        }*/
+        if (obj.trueList.isEmpty()) {
+            if( obj.left.trueList.isEmpty() && obj.right.trueList.isEmpty())
+                trueLabel = new Label();
+            else{
+                obj.trueList = union(obj.left.trueList,obj.right.trueList);
+                trueLabel = obj.trueList.get(0);
+                obj.trueList.clear();
+            }
+
+        } else {
+            trueLabel = obj.trueList.get(0);
+            obj.trueList.clear();
+        }
+        if (obj.falseList.isEmpty()) {
+
+            if( obj.left.falseList.isEmpty() && obj.right.falseList.isEmpty())
+                falseLabel = new Label();
+            else{
+                obj.falseList = union(obj.left.falseList,obj.right.falseList);
+                falseLabel = obj.falseList.get(0);
+                obj.falseList.clear();
+            }
+
         } else {
             falseLabel = obj.falseList.get(0);
             obj.falseList.clear();
@@ -287,49 +340,53 @@ public class TranslatorVisitor implements ISemanticVisitor {
         List<Ast.Type.T> at = new ArrayList<>();
         for (int i = 0; i < obj.inputParams.size(); i++) {
             Expr.T expr = obj.inputParams.get(i);
-            if( expr instanceof Expr.GT || expr instanceof Expr.LT
+            if (expr instanceof Expr.GT || expr instanceof Expr.LT
                     || expr instanceof Expr.Not || expr instanceof Expr.And
                     || expr instanceof Expr.Or || expr instanceof Expr.True
-                    || expr instanceof Expr.False){
+                    || expr instanceof Expr.False) {
                 String iden = UUID.randomUUID().toString();
-                Expr.Id id = new Expr.Id(iden,obj.lineNum);
+                Expr.Id id = new Expr.Id(iden, obj.lineNum);
                 this.indexTable.put(iden, index++);
                 Stmt.Assign thenStmt = new Stmt.Assign(
                         id,
-                        new Expr.Number(new Type.Int(),1,obj.lineNum),obj.lineNum);
+                        new Expr.Number(new Type.Int(), 1, obj.lineNum), obj.lineNum);
                 Stmt.Assign elseStmt = new Stmt.Assign(
                         id,
-                        new Expr.Number(new Type.Int(),0,obj.lineNum),obj.lineNum);
-                Stmt.If ifStmt = new Stmt.If(expr,thenStmt,elseStmt,obj.lineNum);
+                        new Expr.Number(new Type.Int(), 0, obj.lineNum), obj.lineNum);
+                Stmt.If ifStmt = new Stmt.If(expr, thenStmt, elseStmt, obj.lineNum);
                 this.visit(ifStmt);
                 //return;
                 this.type = new Ast.Type.Int();
-            }else{
+            } else {
                 this.visit(expr);
             }
             at.add(this.type);
         }
         emit(new Ast.Stmt.Invokevirtual(obj.name, at, returnType));
-        if( conditionFlag ){
+        if (conditionFlag) {
             emit(new Ast.Stmt.Istore(++index));
             emit(new Ast.Stmt.Iload(index));
-            Label trueLabel = new Label();
-            Label falseLabel = new Label();
-            obj.trueList.addToTail(trueLabel);
-            obj.falseList.addToTail(falseLabel);
-            emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmpgt(trueLabel));
-            emit(new Ast.Stmt.Goto(falseLabel));
+            // 只有当方法是bool返回类型时，才需要生成跳转指令
+            if (obj.returnType instanceof Type.Bool) {
+                Label trueLabel = new Label();
+                Label falseLabel = new Label();
+                obj.trueList.addToTail(trueLabel);
+                obj.falseList.addToTail(falseLabel);
+                emit(new Ast.Stmt.Ldc(0));
+                emit(new Ast.Stmt.Ificmpgt(trueLabel));
+                emit(new Ast.Stmt.Goto(falseLabel));
+            }
+
         }
     }
 
     @Override
     public void visit(Stmt.Assign obj) {
         int index = this.indexTable.get(obj.id.id);
-        if( obj.expr instanceof Expr.GT || obj.expr instanceof Expr.LT
-        || obj.expr instanceof Expr.Not || obj.expr instanceof Expr.And
-        || obj.expr instanceof Expr.Or || obj.expr instanceof Expr.True
-        || obj.expr instanceof Expr.False){
+        if (obj.expr instanceof Expr.GT || obj.expr instanceof Expr.LT
+                || obj.expr instanceof Expr.Not || obj.expr instanceof Expr.And
+                || obj.expr instanceof Expr.Or || obj.expr instanceof Expr.True
+                || obj.expr instanceof Expr.False) {
             expr2IfStmt(obj);
             return;
         }
@@ -343,13 +400,12 @@ public class TranslatorVisitor implements ISemanticVisitor {
     private void expr2IfStmt(Stmt.Assign obj) {
         Stmt.Assign thenStmt = new Stmt.Assign(
                 obj.id,
-                new Expr.Number(new Type.Int(),1,obj.lineNum),obj.lineNum);
+                new Expr.Number(new Type.Int(), 1, obj.lineNum), obj.lineNum);
         Stmt.Assign elseStmt = new Stmt.Assign(
                 obj.id,
-                new Expr.Number(new Type.Int(),0,obj.lineNum),obj.lineNum);
-        Stmt.If ifStmt = new Stmt.If(obj.expr,thenStmt,elseStmt,obj.lineNum);
+                new Expr.Number(new Type.Int(), 0, obj.lineNum), obj.lineNum);
+        Stmt.If ifStmt = new Stmt.If(obj.expr, thenStmt, elseStmt, obj.lineNum);
         this.visit(ifStmt);
-        return;
     }
 
 
@@ -359,20 +415,20 @@ public class TranslatorVisitor implements ISemanticVisitor {
         if (obj.type instanceof Type.Int || obj.type instanceof Type.Bool) {
             this.type = new Ast.Type.Int();
             emit(new Ast.Stmt.Iload(index));
-            if( conditionFlag ){
+            if (conditionFlag && obj.type instanceof Type.Bool) {
                 emit(new Ast.Stmt.Ldc(0));
                 Label trueLabel = null;
                 Label falseLabel = null;
-                if(obj.trueList.isEmpty()){
+                if (obj.trueList.isEmpty()) {
                     trueLabel = new Label();
                     obj.trueList.addToTail(trueLabel);
-                }else{
+                } else {
                     trueLabel = obj.trueList.get(0);
                 }
-                if(obj.falseList.isEmpty()){
+                if (obj.falseList.isEmpty()) {
                     falseLabel = new Label();
                     obj.falseList.addToTail(falseLabel);
-                }else{
+                } else {
                     falseLabel = obj.falseList.get(0);
                 }
                 emit(new Ast.Stmt.Ificmpgt(trueLabel));
@@ -417,10 +473,15 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.Number obj) {
-        if (obj.type instanceof Type.Int)
+        if (obj.type instanceof Type.Int){
             emit(new Ast.Stmt.Ldc(Integer.parseInt(obj.value.toString())));
-        else if (obj.type instanceof Type.Float)
+            this.type = new Ast.Type.Int();
+        }
+
+        else if (obj.type instanceof Type.Float){
             emit(new Ast.Stmt.Ldc(Float.parseFloat(obj.value.toString())));
+            this.type = new Ast.Type.Float();
+        }
         //else
     }
 
@@ -579,7 +640,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
     }
 
 
-
     @Override
     public void visit(Stmt.Block obj) {
         for (int i = 0; i < obj.stmts.size(); i++) {
@@ -623,30 +683,29 @@ public class TranslatorVisitor implements ISemanticVisitor {
     @Override
     public void visit(Stmt.Return obj) {
         // 返回的表达式可能是bool表达式
-        if( obj.expr instanceof Expr.GT || obj.expr instanceof Expr.LT
+        if (obj.expr instanceof Expr.GT || obj.expr instanceof Expr.LT
                 || obj.expr instanceof Expr.Not || obj.expr instanceof Expr.And
                 || obj.expr instanceof Expr.Or || obj.expr instanceof Expr.True
-                || obj.expr instanceof Expr.False){
+                || obj.expr instanceof Expr.False) {
             String iden = UUID.randomUUID().toString();
-            Expr.Id id = new Expr.Id(iden,obj.lineNum);
+            Expr.Id id = new Expr.Id(iden, obj.lineNum);
             this.indexTable.put(iden, index++);
             Stmt.Assign thenStmt = new Stmt.Assign(
                     id,
-                    new Expr.Number(new Type.Int(),1,obj.lineNum),obj.lineNum);
+                    new Expr.Number(new Type.Int(), 1, obj.lineNum), obj.lineNum);
             Stmt.Assign elseStmt = new Stmt.Assign(
                     id,
-                    new Expr.Number(new Type.Int(),0,obj.lineNum),obj.lineNum);
-            Stmt.If ifStmt = new Stmt.If(obj.expr,thenStmt,elseStmt,obj.lineNum);
+                    new Expr.Number(new Type.Int(), 0, obj.lineNum), obj.lineNum);
+            Stmt.If ifStmt = new Stmt.If(obj.expr, thenStmt, elseStmt, obj.lineNum);
             this.visit(ifStmt);
             this.type = new Ast.Type.Int();
         }
         // 返回的表达式可能是方法调用
-        else if(obj.expr instanceof Expr.Call){
-            this.visit((Expr.Call)obj.expr);
+        else if (obj.expr instanceof Expr.Call) {
+            this.visit((Expr.Call) obj.expr);
             if (this.type.toString().equals("@bool"))
                 emit(new Ast.Stmt.Ireturn());
-        }
-        else{
+        } else {
             if (obj.expr instanceof Expr.Add)
                 this.visit((Expr.Add) obj.expr);
             else if (obj.expr instanceof Expr.Sub)
@@ -659,7 +718,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
                 this.visit((Expr.Number) obj.expr);
             else if (obj.expr instanceof Expr.Id)
                 this.visit((Expr.Id) obj.expr);
-            else if (obj.expr instanceof Expr.Not){
+            else if (obj.expr instanceof Expr.Not) {
                 this.visit((Expr.Not) obj.expr);
             }
         }

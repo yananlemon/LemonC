@@ -71,7 +71,11 @@ public class SemanticVisitor implements ISemanticVisitor {
     public void visit(Ast.Stmt.Assign obj) {
         if(obj.expr instanceof Ast.Expr.T){
             this.visit((Ast.Expr.T)obj.expr);
-            Ast.Type.T exprType = this.currType;
+            Ast.Type.T exprType = null;
+            if( obj.expr instanceof Ast.Expr.Call)
+                exprType = ((Ast.Expr.Call) obj.expr).returnType;
+            else
+                exprType = this.currType;
             if( this.currMethodLocalVar.contains(obj.id.id))
                 this.currMethodLocalVar.remove(obj.id.id);
             this.visit(obj.id);
@@ -104,11 +108,12 @@ public class SemanticVisitor implements ISemanticVisitor {
                            obj.toString(),obj.inputParams.get(i).toString(),this.currType.toString()));
            }
            obj.returnType = this.methodNameRetTypeMap.get(obj.name);
-           this.currType = obj.returnType;
+           //this.currType = obj.returnType;
            ArrayList<Ast.Expr.T> inputParams = obj.inputParams;
            for( int i = 0; i < obj.inputParams.size(); i++){
                this.visit(obj.inputParams.get(i));
            }
+           this.currType = obj.returnType;
 
        }else{
            error(obj.lineNum,"未定义的方法："+obj.name);
