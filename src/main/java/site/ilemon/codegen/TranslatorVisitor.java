@@ -151,8 +151,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
         obj.falseList.addToTail(falseLabel);
         if( this.type instanceof Ast.Type.Float){
             emit(new Ast.Stmt.Fcmpl());
-            emit(new Ast.Stmt.Istore(varIndexOfMethod));
-            emit(new Ast.Stmt.Iload(varIndexOfMethod++));
+            //emit(new Ast.Stmt.Istore(varIndexOfMethod));
+            //emit(new Ast.Stmt.Iload(varIndexOfMethod++));
+            emit(new Ast.Stmt.Istore(++index));
+            emit(new Ast.Stmt.Iload(index));
             emit(new Ast.Stmt.Ldc(0));
             emit(new Ast.Stmt.Ificmpgt(trueLabel));
             emit(new Ast.Stmt.Goto(falseLabel));
@@ -218,10 +220,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
         if( this.type instanceof Ast.Type.Float){
             emit(new Ast.Stmt.Fcmpl());
-            emit(new Ast.Stmt.Istore(varIndexOfMethod));
-            emit(new Ast.Stmt.Iload(varIndexOfMethod++));
+            emit(new Ast.Stmt.Istore(++index));
+            emit(new Ast.Stmt.Iload(index));
             emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmpgt(trueLabel));
+            emit(new Ast.Stmt.Ificmplt(trueLabel));
             emit(new Ast.Stmt.Goto(falseLabel));
         }
         else{
@@ -361,6 +363,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     }
 
+    private boolean conditionWhileFlag = false;
+
     @Override
     public void visit(Expr.Call obj) {
         this.visit(obj.returnType);
@@ -391,9 +395,16 @@ public class TranslatorVisitor implements ISemanticVisitor {
             at.add(this.type);
         }
         emit(new Ast.Stmt.Invokevirtual(obj.name, at, returnType));
-        if (conditionFlag) {
-            emit(new Ast.Stmt.Istore(++index));
-            emit(new Ast.Stmt.Iload(index));
+        if (conditionFlag || conditionWhileFlag) {
+            if( this.type instanceof Ast.Type.Int || obj.returnType instanceof Type.Bool){
+                emit(new Ast.Stmt.Istore(++index));
+                emit(new Ast.Stmt.Iload(index));
+            }
+            else if( this.type instanceof Ast.Type.Float){
+                emit(new Ast.Stmt.Fstore(++index));
+                emit(new Ast.Stmt.Fload(index));
+            }
+
             // 只有当方法是bool返回类型时，才需要生成跳转指令
             if (obj.returnType instanceof Type.Bool) {
                 Label trueLabel = new Label();
@@ -768,6 +779,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
     //S.code  := gen(S.begin':') || E.code || gen(E.true':')|| S1.code || gen('goto' S.begin)
     @Override
     public void visit(Stmt.While obj) {
+        conditionWhileFlag = true;
         Label whileBegin = new Label();
         emit(new Ast.Stmt.LabelJ(whileBegin));
         this.visit(obj.condition);
@@ -783,6 +795,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
             Label falseLabel = obj.condition.falseList.get(i);
             emit(new Ast.Stmt.LabelJ(falseLabel));
         }
+        conditionWhileFlag = false;
     }
 
     @Override

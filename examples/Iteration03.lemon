@@ -9,9 +9,20 @@ class Iteration03{
             start = start+1;
         }
         printf("1到100之和是：%d\n",sum);
+
+        start = 1;
+        while( testCondition(start) ){
+            sum = sum + start;
+            start = start+1;
+        }
+        printf("1到100之和乘以2是：%d\n",sum);
 	}
 
 	int getNum(int i){
         return i;
+	}
+
+	bool testCondition( int num){
+	    return num < 101;
 	}
 }

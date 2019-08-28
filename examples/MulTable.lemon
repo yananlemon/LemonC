@@ -10,7 +10,8 @@ class MulTable{
 		int t;
 		k = 1;
 		t = 1;
-		while(k < 10 ){
+		//while(k < 10 ){
+		while(k < 2*5 ){
 			t = 1;
 			while(t < 10 ){				
 				printf("%d*%d=%d\t",k,t,k*t);

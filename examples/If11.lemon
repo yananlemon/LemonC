@@ -1,0 +1,32 @@
+class If11{
+	void main(){
+        int a;
+        a = 19;
+        if( ( a > getNum() ) || (5 > 10) && (6 > 10)){
+           a = 1;
+        }else{
+           a = 2;
+        }
+        printf("a=%d\n",a);// 1
+
+        a = 19;
+        if( !(a > getNum()) || ( getNum2() > getNum3() ) && ( 6 > 10 ) ){
+           a = 3;
+        }else{
+           a = 4;
+        }
+        printf("a=%d\n",a);// 4
+    }
+
+    int getNum(){
+        return 18;
+    }
+
+    int getNum2(){
+        return 5;
+    }
+
+    int getNum3(){
+        return 10;
+    }
+}

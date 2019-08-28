@@ -1,0 +1,11 @@
+class FloatTest02{
+	void main(){
+        float b;
+        b = getFloat1();
+        printf("b=%d\n",b);// 0.9
+	}
+
+	float getFloat1(){
+	    return 0.9;
+	}
+}

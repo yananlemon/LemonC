@@ -27,7 +27,7 @@ public class CompilerTest {
             //Lexer lexer=new Lexer(new File("examples/BoolTest10.lemon"));// ok at 2019.8.27
             //Lexer lexer=new Lexer(new File("examples/BoolTest11.lemon"));// ok at 2019.8.27
             //Lexer lexer=new Lexer(new File("examples/BoolTest12.lemon"));// ok at 2019.8.27
-            //Lexer lexer=new Lexer(new File("examples/BoolTest13.lemon"));// ok at 2019.8.28
+            // Lexer lexer=new Lexer(new File("examples/BoolTest13.lemon"));// ok at 2019.8.28
             //Lexer lexer=new Lexer(new File("examples/BoolTest14.lemon")); // ok at 2019.8.28
             Lexer lexer=new Lexer(new File("examples/BoolTest15.lemon")); // ok at 2019.8.28
             doCompiler(lexer);
@@ -65,7 +65,8 @@ public class CompilerTest {
              //Lexer lexer=new Lexer(new File("examples/If08.lemon")); //ok at 2019/8/19
 
              //Lexer lexer=new Lexer(new File("examples/If09.lemon")); // ok at 2019/8/19
-            Lexer lexer=new Lexer(new File("examples/If10.lemon")); //ok
+            //Lexer lexer=new Lexer(new File("examples/If10.lemon")); //ok
+            Lexer lexer=new Lexer(new File("examples/If11.lemon")); // ok at 2019.8.28
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();
@@ -112,11 +113,22 @@ public class CompilerTest {
     }
 
     @Test
+    public void testFloat() {
+        try {
+            Lexer lexer = new Lexer(new File("examples/FloatTest02.lemon"));
+            doCompiler(lexer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
     public void testWhile() {
         try {
-            // Lexer lexer = new Lexer(new File("examples/Iteration01.lemon")); ok
-            //Lexer lexer = new Lexer(new File("examples/Iteration02.lemon"));
-            Lexer lexer = new Lexer(new File("examples/Iteration03.lemon"));
+            // Lexer lexer = new Lexer(new File("examples/Iteration01.lemon")); // ok at 2019.8.28
+            // Lexer lexer = new Lexer(new File("examples/Iteration02.lemon"));// ok at 2019.8.28
+            // Lexer lexer = new Lexer(new File("examples/Iteration03.lemon"));// ok at 2019.8.28
+            Lexer lexer = new Lexer(new File("examples/MulTable.lemon"));// ok at 2019.8.28
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();

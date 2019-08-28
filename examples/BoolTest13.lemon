@@ -7,10 +7,17 @@ class BoolTest13{
             a = 25;
         else
             a = 26;
-        printf("a=%d\n",a);// a = 26
+        printf("a=%d\n",a);// a = 25
 	}
 
+    // true
 	bool cal(float a){
-	    return a > 12.0;
+	    float b;
+	    b = 0.9 + 19.0;
+	    return a > 0.0 && a < getFloat1() || a < b;
+	}
+
+	float getFloat1(){
+	    return 0.9;
 	}
 }
