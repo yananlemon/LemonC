@@ -1,0 +1,17 @@
+class Iteration04{
+	void main(){
+		int start;
+		int sum;
+        start = 1;
+        sum = 0;
+        while( getNum(getNum(start)+1) < 101 ){
+            sum = sum + 1;
+            start = start+1;
+        }
+        printf("sum=%d\n",sum);
+	}
+
+	int getNum(int i){
+        return i;
+	}
+}

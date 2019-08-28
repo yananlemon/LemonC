@@ -1,0 +1,53 @@
+class BoolTest16{
+	void main(){
+        int a;
+        bool c;
+        //if( getBool(getIntNum() > 10) )
+        //    a = 1;
+        //else
+          //  a = 2;
+        //printf("a=%d\n",a);// a = 1
+
+        //if( cal(1.0) || getIntNum() > 10 &&  getBool(getIntNum() > 10) )
+          //  a = 3;
+        //else
+          // a = 4;
+        //printf("a=%d\n",a);// a = 3
+
+
+        //if( cal(1.0) || getIntNum() > 10 && getBool(getIntNum() > 10 && getFloat() > 20.0) )
+          //  a = 5;
+        //else
+          // a = 6;
+        //printf("a=%d\n",a);// a = 6
+
+        c = cal(1.0) || getIntNum() > 10 && getBool(getIntNum() > 10 && getFloat() > 20.0);
+
+        if( !(c) )
+            a = 7;
+        else
+           a = 8;
+        printf("a=%d\n",a);// a = 7
+
+
+	}
+
+
+
+    // false
+	bool cal(float a){
+	    return a > 10.0 || true && getIntNum() > 19;
+	}
+
+	int getIntNum(){
+	    return 19;
+	}
+
+	bool getBool(bool b){
+	    return b;
+	}
+
+	float getFloat(){
+	    return 19.0;
+	}
+}
