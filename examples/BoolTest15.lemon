@@ -1,0 +1,39 @@
+class BoolTest15{
+	void main(){
+        int a;
+        if( cal(1.0) )
+            a = 1;
+        else
+            a = 2;
+        printf("a=%d\n",a);// a = 2
+
+        if( cal(1.0) || !(cal(1.0)))
+            a = 3;
+        else
+            a = 4;
+        printf("a=%d\n",a);// a = 3
+
+        if( getIntNum() > 10 || !(cal(1.0))){
+           if( getIntNum() * 10 > 100 ){
+                 a = 5;
+           }else{
+                a = 6;
+           }
+        }
+        else{
+            a = 7;
+        }
+        printf("a=%d\n",a);// a = 5
+
+	}
+
+
+
+	bool cal(float a){
+	    return a > 10.0 || true && getIntNum() > 19;
+	}
+
+	int getIntNum(){
+	    return 19;
+	}
+}

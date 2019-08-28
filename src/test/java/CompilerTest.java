@@ -28,7 +28,8 @@ public class CompilerTest {
             //Lexer lexer=new Lexer(new File("examples/BoolTest11.lemon"));// ok at 2019.8.27
             //Lexer lexer=new Lexer(new File("examples/BoolTest12.lemon"));// ok at 2019.8.27
             //Lexer lexer=new Lexer(new File("examples/BoolTest13.lemon"));// ok at 2019.8.28
-            Lexer lexer=new Lexer(new File("examples/BoolTest14.lemon")); // ok at 2019.8.28
+            //Lexer lexer=new Lexer(new File("examples/BoolTest14.lemon")); // ok at 2019.8.28
+            Lexer lexer=new Lexer(new File("examples/BoolTest15.lemon")); // ok at 2019.8.28
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();
