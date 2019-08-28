@@ -115,7 +115,8 @@ public class CompilerTest {
     public void testWhile() {
         try {
             // Lexer lexer = new Lexer(new File("examples/Iteration01.lemon")); ok
-            Lexer lexer = new Lexer(new File("examples/Iteration02.lemon"));
+            //Lexer lexer = new Lexer(new File("examples/Iteration02.lemon"));
+            Lexer lexer = new Lexer(new File("examples/Iteration03.lemon"));
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();
