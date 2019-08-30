@@ -1,0 +1,16 @@
+class If13{
+	void main(){
+        int a;
+        if( boolOne(19,20)){
+          a = 19;
+        }
+        else{
+          a = 20;
+        }
+        printf("a=%d",a);//20
+    }
+
+    bool boolOne(int num1,int num2){
+        return num1 > num2;
+    }
+}

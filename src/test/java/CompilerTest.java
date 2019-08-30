@@ -66,7 +66,10 @@ public class CompilerTest {
 
              //Lexer lexer=new Lexer(new File("examples/If09.lemon")); // ok at 2019/8/19
             //Lexer lexer=new Lexer(new File("examples/If10.lemon")); //ok
-            Lexer lexer=new Lexer(new File("examples/If11.lemon")); // ok at 2019.8.28
+            //Lexer lexer=new Lexer(new File("examples/If11.lemon")); // ok at 2019.8.28
+            //Lexer lexer=new Lexer(new File("examples/If12.lemon")); // ok at 2019.8.30
+
+            Lexer lexer=new Lexer(new File("examples/If13.lemon")); // ok at 2019.8.30
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();
