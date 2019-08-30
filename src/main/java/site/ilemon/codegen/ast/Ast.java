@@ -199,6 +199,20 @@ public class Ast {
         }
 
         /**
+         * ifgt
+         *  当栈顶int型数值大于0时跳转
+         */
+        public static class Ifgt extends T {
+            public Label l;
+
+            public Ifgt(Label l) {
+
+                this.l = l;
+            }
+        }
+
+
+        /**
          * 浮点数比较指令
          */
         public static class Fcmpl extends T {

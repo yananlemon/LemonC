@@ -32,6 +32,7 @@ public interface Visitor {
     void visit(Ast.Stmt.Ificmpgt s);
     void visit(Ast.Stmt.Ificmpget s);
     void visit(Ast.Stmt.Ificmplet s);
+    void visit(Ast.Stmt.Ifgt s);
     void visit(Ast.Stmt.Fcmpl s);
 
     void visit(Ast.Stmt.Iload s);

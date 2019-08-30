@@ -173,6 +173,8 @@ public class ByteCodeGenerator implements Visitor {
             this.visit((Ast.Stmt.Ificmpget)stmt);
         else if( stmt instanceof Ast.Stmt.Ificmplet )
             this.visit((Ast.Stmt.Ificmplet)stmt);
+        else if( stmt instanceof Ast.Stmt.Ifgt )
+            this.visit((Ast.Stmt.Ifgt)stmt);
 
         else if( stmt instanceof Ast.Stmt.Iload )
             this.visit((Ast.Stmt.Iload)stmt);
@@ -261,6 +263,12 @@ public class ByteCodeGenerator implements Visitor {
     public void visit(Ast.Stmt.Ificmplt s) {
 
         this.iwriteln("if_icmplt " + s.l.toString());
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Ifgt s) {
+
+        this.iwriteln("ifgt " + s.l.toString());
     }
 
     @Override

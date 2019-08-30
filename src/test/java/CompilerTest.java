@@ -71,6 +71,7 @@ public class CompilerTest {
 
             Lexer lexer=new Lexer(new File("examples/If13.lemon")); // ok at 2019.8.30
             doCompiler(lexer);
+
         } catch (IOException e) {
             e.printStackTrace();
         }

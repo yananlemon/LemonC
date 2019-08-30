@@ -1,7 +1,7 @@
 class If13{
 	void main(){
         int a;
-        if( boolOne(19,20)){
+        if( boolOne(19,20) || boolTwo(20,10) && boolThree(1,0)   ){
           a = 19;
         }
         else{
@@ -11,6 +11,14 @@ class If13{
     }
 
     bool boolOne(int num1,int num2){
+        return num1 > num2;
+    }
+
+    bool boolTwo(int num1,int num2){
+        return num1 > num2;
+    }
+
+    bool boolThree(int num1,int num2){
         return num1 > num2;
     }
 }

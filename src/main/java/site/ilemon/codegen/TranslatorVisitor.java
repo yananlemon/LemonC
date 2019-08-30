@@ -212,7 +212,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
         // E.code
         this.visit(obj.condition);
-        // E.true
+        // gen(E.true':')
         emit(new Ast.Stmt.LabelJ(trueLabel));
         // S1.code
         this.visit(obj.thenStmt);
@@ -248,8 +248,15 @@ public class TranslatorVisitor implements ISemanticVisitor {
             at.add(this.type);
         }
         emit(new Ast.Stmt.Invokevirtual(obj.name, at, returnType));
-        emit(new Ast.Stmt.Istore(++index));
-        emit(new Ast.Stmt.Iload(index));
+
+        // 这里似乎不应该保存到局部，再load到操作栈
+        //emit(new Ast.Stmt.Istore(++index));
+        //emit(new Ast.Stmt.Iload(index));
+        // E-> call(EList)
+        if( obj.returnType instanceof Type.Bool){
+            emit(new Ast.Stmt.Ifgt(obj.trueList.get(0)));
+            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
+        }
 
     }
 
@@ -521,37 +528,31 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Stmt.Return obj) {
-        // 返回的表达式可能是bool表达式
-        if (obj.expr instanceof Expr.GT || obj.expr instanceof Expr.LT
+        boolean checkWhetherBool = obj.expr instanceof Expr.GT || obj.expr instanceof Expr.LT
                 || obj.expr instanceof Expr.Not || obj.expr instanceof Expr.And
                 || obj.expr instanceof Expr.Or || obj.expr instanceof Expr.True
-                || obj.expr instanceof Expr.False) {
-
+                || obj.expr instanceof Expr.False;
+        // 如果return的表达式具有bool类型
+        if ( checkWhetherBool ) {
+            obj.expr.trueList.addToTail(new Label());
+            obj.expr.falseList.addToTail(new Label());
         }
-        // 返回的表达式可能是方法调用
-        else if (obj.expr instanceof Expr.Call) {
-            this.visit((Expr.Call) obj.expr);
-            if (this.type.toString().equals("@bool"))
-                emit(new Ast.Stmt.Ireturn());
-        } else {
-            if (obj.expr instanceof Expr.Add)
-                this.visit((Expr.Add) obj.expr);
-            else if (obj.expr instanceof Expr.Sub)
-                this.visit((Expr.Sub) obj.expr);
-            else if (obj.expr instanceof Expr.Mul)
-                this.visit((Expr.Mul) obj.expr);
-            else if (obj.expr instanceof Expr.Div)
-                this.visit((Expr.Div) obj.expr);
-            else if (obj.expr instanceof Expr.Number)
-                this.visit((Expr.Number) obj.expr);
-            else if (obj.expr instanceof Expr.Id)
-                this.visit((Expr.Id) obj.expr);
-            else if (obj.expr instanceof Expr.Not) {
-                this.visit((Expr.Not) obj.expr);
-            }
-        }
+        this.visit(obj.expr);
 
-        if (this.type.toString().equals("@int"))
+        // 如果return的表达式具有bool类型
+        if ( checkWhetherBool ) {
+            Label nextLabel = new Label();
+            // gen(E.true':')
+            emit(new Ast.Stmt.LabelJ(obj.expr.trueList.get(0)));;
+            emit(new Ast.Stmt.Ldc(1));
+            emit(new Ast.Stmt.Goto(nextLabel));
+            // gen(E.false':')
+            emit(new Ast.Stmt.LabelJ(obj.expr.falseList.get(0)));;
+            emit(new Ast.Stmt.Ldc(0));
+            emit(new Ast.Stmt.Goto(nextLabel));
+            emit(new Ast.Stmt.LabelJ(nextLabel));
+        }
+        if (this.type.toString().equals("@int") || this.type.toString().equals("@bool"))
             emit(new Ast.Stmt.Ireturn());
         else if (this.type.toString().equals("@float"))
             emit(new Ast.Stmt.Freturn());
