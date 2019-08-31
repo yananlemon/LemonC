@@ -34,7 +34,7 @@ public class CompilerTest {
             // Lexer lexer=new Lexer(new File("examples/BoolTest13.lemon"));// ok at 2019.8.31
 
             //Lexer lexer=new Lexer(new File("examples/BoolTest14.lemon")); // ok at 2019.8.31
-            Lexer lexer=new Lexer(new File("examples/BoolTest15.lemon")); // ok at 2019.8.31
+            Lexer lexer = new Lexer(new File("examples/BoolTest15.lemon")); // ok at 2019.8.31
             doCompiler(lexer);
             //jasmin.Main.main(new String[]{"BoolTest04.il"});
         } catch (IOException e) {
@@ -47,7 +47,7 @@ public class CompilerTest {
         try {
             //Lexer lexer=new Lexer(new File("examples/MethodCallTest01.lemon"));// ok at 2019.8.27
             //Lexer lexer=new Lexer(new File("examples/MethodCallTest02.lemon"));// ok at 2019.8.27
-            Lexer lexer=new Lexer(new File("examples/MethodCallTest03.lemon"));
+            Lexer lexer = new Lexer(new File("examples/MethodCallTest03.lemon"));
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();
@@ -58,24 +58,25 @@ public class CompilerTest {
     @Test
     public void testIf() {
         try {
-              // Lexer lexer = new Lexer(new File("examples/If01.lemon")); // ok
-              //Lexer lexer=new Lexer(new File("examples/If02.lemon"));  // ok
+             // Lexer lexer = new Lexer(new File("examples/If01.lemon")); // ok at 2019/9/1
+            // Lexer lexer=new Lexer(new File("examples/If02.lemon"));  // ok at 2019/9/1
 
-             // Lexer lexer=new Lexer(new File("examples/If03.lemon"));
-             // Lexer lexer=new Lexer(new File("examples/If04.lemon")); //ok 2019/8/19
+            // Lexer lexer=new Lexer(new File("examples/If03.lemon"));// ok at 2019/9/1
+            // Lexer lexer=new Lexer(new File("examples/If04.lemon")); // ok at 2019/9/1
 
-             //Lexer lexer=new Lexer(new File("examples/If05.lemon")); // ok
-             //Lexer lexer=new Lexer(new File("examples/If06.lemon")); //ok at 2019/8/19
+            //Lexer lexer=new Lexer(new File("examples/If05.lemon")); // ok at 2019/9/1
+            //Lexer lexer=new Lexer(new File("examples/If06.lemon")); //ok at 2019/9/1
 
-            // Lexer lexer=new Lexer(new File("examples/If07.lemon")); // ok at 2019/8/19
-             //Lexer lexer=new Lexer(new File("examples/If08.lemon")); //ok at 2019/8/19
+            // Lexer lexer=new Lexer(new File("examples/If07.lemon")); // ok at 2019/9/1
+            //Lexer lexer=new Lexer(new File("examples/If08.lemon")); //ok at 2019/9/1
 
-             //Lexer lexer=new Lexer(new File("examples/If09.lemon")); // ok at 2019/8/19
-            //Lexer lexer=new Lexer(new File("examples/If10.lemon")); //ok
-            //Lexer lexer=new Lexer(new File("examples/If11.lemon")); // ok at 2019.8.28
-            //Lexer lexer=new Lexer(new File("examples/If12.lemon")); // ok at 2019.8.30
+            //Lexer lexer=new Lexer(new File("examples/If09.lemon")); //ok at 2019/9/1
+            //Lexer lexer=new Lexer(new File("examples/If10.lemon")); //ok at 2019/9/1
 
-            Lexer lexer=new Lexer(new File("examples/If13.lemon")); // ok at 2019.8.31
+            //Lexer lexer=new Lexer(new File("examples/If11.lemon")); // ok at 2019/9/1
+            //Lexer lexer=new Lexer(new File("examples/If12.lemon")); // ok at 2019/9/1
+
+            Lexer lexer=new Lexer(new File("examples/If13.lemon")); // ok at 2019/9/1
             doCompiler(lexer);
 
         } catch (IOException e) {
