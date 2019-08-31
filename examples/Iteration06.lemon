@@ -1,0 +1,17 @@
+class Iteration06{
+	void main(){
+		int start;
+		int b;
+        start = 1;
+        b = 10;
+        while(start < 10 || getNum(b)+10  > 1 ){
+            start = start + 1;
+            b = b - 1;
+        }
+        printf("start = %d\n",start);
+	}
+
+	int getNum(int a){
+	    return a;
+	}
+}

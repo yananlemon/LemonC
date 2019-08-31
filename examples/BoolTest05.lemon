@@ -1,3 +1,4 @@
+// 测试：bool 变量赋值（true,false,方法调用）
 class BoolTest05{
 	void main(){
 	    bool a;
@@ -41,6 +42,14 @@ class BoolTest05{
             b = 9;
         }
         printf("b=%d\n",b);// 9
+
+        a = (!(testBool3() && testBool() || testBool2())) || testBool2() && getNum(19) > 10;
+        if( a ){
+            b = 10;
+        }else{
+            b = 11;
+        }
+        printf("b=%d\n",b);// 10
 	}
 
     // return false
@@ -56,5 +65,9 @@ class BoolTest05{
     // return true
     bool testBool3(){
         return 1 > 2 || 3 < 5 && 19 > 1;
+    }
+
+    int getNum( int a){
+        return a;
     }
 }

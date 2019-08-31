@@ -22,6 +22,20 @@ class BoolTest06{
         else
             a = 5;
         printf("a=%d\n",a);// a = 5
+
+        b1 = testBoolCall4((!(b1||false)),b1||true,b1&&true);
+        if( b1 )
+            a = 6;
+        else
+            a = 7;
+        printf("a=%d\n",a);// a = 6
+
+        b1 = testBoolCall4((!(b1||false)),b1||true,b1&&true);
+        if( b1 && false )
+            a = 8;
+        else
+            a = 9;
+        printf("a=%d\n",a);// a = 9
 	}
 
 	bool testBoolCall(bool b){
@@ -34,5 +48,9 @@ class BoolTest06{
 
     bool testBoolCall3(bool b1,bool b2){
          return b1 && b2 || false;
+    }
+
+    bool testBoolCall4(bool b1,bool b2,bool b3){
+        return b1 || b2 && b3;
     }
 }

@@ -1,3 +1,4 @@
+// 测试：If条件表达式中数字
 class BoolTest03{
 	void main(){
 	    int a;
