@@ -20,14 +20,20 @@ public class Lexer {
 	public int line=1;
 	private int index=0;
 	private String lineSeparator = System.getProperty("line.separator");
+	private String className;
 	Pattern iNumberPattern = Pattern.compile("^\\d+$|-\\d+$"); // 就是判断是否为整数
 	Pattern dNumberPattern = Pattern.compile("\\d+\\.\\d+$|-\\d+\\.\\d+$");//判断是否为小数
 	public Lexer(File f) throws IOException{
+		this.className = f.getName().substring(0,f.getName().lastIndexOf("."));
 		this.reader=new BufferedReader(new InputStreamReader(new FileInputStream(f),"UTF-8"));
 		this.source=new StringBuffer();
 		
 		//读取源程序文件
 		readFile();
+	}
+
+	public String getClassName(){
+		return this.className;
 	}
 
 	public void lexicalAnalysis(){

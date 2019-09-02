@@ -21,11 +21,11 @@ public class CompilerTest {
             //Lexer lexer=new Lexer(new File("examples/BoolTest04.lemon")); // ok at 2019.8.31
             // Lexer lexer=new Lexer(new File("examples/BoolTest05.lemon"));// ok at 2019.8.31
 
-            //Lexer lexer=new Lexer(new File("examples/BoolTest06.lemon")); // ok at 2019.8.31
-            // Lexer lexer=new Lexer(new File("examples/BoolTest07.lemon")); //ok at 2019.8.31
+           // Lexer lexer=new Lexer(new File("examples/BoolTest06.lemon")); // ok at 2019.8.31
+           //  Lexer lexer=new Lexer(new File("examples/BoolTest07.lemon")); //ok at 2019.8.31
 
-            //Lexer lexer=new Lexer(new File("examples/BoolTest08.lemon")); // ok at 2019.8.31
-            //Lexer lexer=new Lexer(new File("examples/BoolTest09.lemon")); // error ok at 2019.8.31
+          //  Lexer lexer=new Lexer(new File("examples/BoolTest08.lemon")); // ok at 2019.8.31
+          //  Lexer lexer=new Lexer(new File("examples/BoolTest09.lemon")); // error ok at 2019.8.31
 
             //Lexer lexer=new Lexer(new File("examples/BoolTest10.lemon"));// ok at 2019.8.31
             //Lexer lexer=new Lexer(new File("examples/BoolTest11.lemon"));// ok at 2019.8.31
@@ -33,7 +33,7 @@ public class CompilerTest {
             //Lexer lexer=new Lexer(new File("examples/BoolTest12.lemon"));// ok at 2019.8.31
             // Lexer lexer=new Lexer(new File("examples/BoolTest13.lemon"));// ok at 2019.8.31
 
-            //Lexer lexer=new Lexer(new File("examples/BoolTest14.lemon")); // ok at 2019.8.31
+           // Lexer lexer=new Lexer(new File("examples/BoolTest14.lemon")); // ok at 2019.8.31
             Lexer lexer = new Lexer(new File("examples/BoolTest15.lemon")); // ok at 2019.8.31
             doCompiler(lexer);
             //jasmin.Main.main(new String[]{"BoolTest04.il"});
@@ -47,7 +47,8 @@ public class CompilerTest {
         try {
             //Lexer lexer=new Lexer(new File("examples/MethodCallTest01.lemon"));// ok at 2019.8.27
             //Lexer lexer=new Lexer(new File("examples/MethodCallTest02.lemon"));// ok at 2019.8.27
-            Lexer lexer = new Lexer(new File("examples/MethodCallTest03.lemon"));
+              Lexer lexer = new Lexer(new File("examples/MethodCallTest03.lemon"));// ok at 2019.9.2
+            //Lexer lexer = new Lexer(new File("examples/MethodCallTest04.lemon")); // ok at 2019.9.2
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();
@@ -59,19 +60,19 @@ public class CompilerTest {
     public void testIf() {
         try {
              // Lexer lexer = new Lexer(new File("examples/If01.lemon")); // ok at 2019/9/1
-            // Lexer lexer=new Lexer(new File("examples/If02.lemon"));  // ok at 2019/9/1
+            //Lexer lexer=new Lexer(new File("examples/If02.lemon"));  // ok at 2019/9/1
 
             // Lexer lexer=new Lexer(new File("examples/If03.lemon"));// ok at 2019/9/1
             // Lexer lexer=new Lexer(new File("examples/If04.lemon")); // ok at 2019/9/1
 
-            //Lexer lexer=new Lexer(new File("examples/If05.lemon")); // ok at 2019/9/1
-            //Lexer lexer=new Lexer(new File("examples/If06.lemon")); //ok at 2019/9/1
+           // Lexer lexer=new Lexer(new File("examples/If05.lemon")); // ok at 2019/9/1
+           // Lexer lexer=new Lexer(new File("examples/If06.lemon")); //ok at 2019/9/1
 
-            // Lexer lexer=new Lexer(new File("examples/If07.lemon")); // ok at 2019/9/1
-            //Lexer lexer=new Lexer(new File("examples/If08.lemon")); //ok at 2019/9/1
+           // Lexer lexer=new Lexer(new File("examples/If07.lemon")); // ok at 2019/9/1
+           // Lexer lexer=new Lexer(new File("examples/If08.lemon")); //ok at 2019/9/1
 
-            //Lexer lexer=new Lexer(new File("examples/If09.lemon")); //ok at 2019/9/1
-            //Lexer lexer=new Lexer(new File("examples/If10.lemon")); //ok at 2019/9/1
+           // Lexer lexer=new Lexer(new File("examples/If09.lemon")); //ok at 2019/9/1
+           // Lexer lexer=new Lexer(new File("examples/If10.lemon")); //ok at 2019/9/1
 
             //Lexer lexer=new Lexer(new File("examples/If11.lemon")); // ok at 2019/9/1
             //Lexer lexer=new Lexer(new File("examples/If12.lemon")); // ok at 2019/9/1

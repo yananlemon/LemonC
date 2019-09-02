@@ -1,8 +1,8 @@
 class MethodCallTest03{
 	void main(){
         int sum;
-        sum = getNum(1+1);
-        printf("sum=%d\n",sum);//4
+        sum = getNum(1+1) * 20 / 5;
+        printf("sum=%d\n",sum);//8
 	}
 
 	int getNum(int a){

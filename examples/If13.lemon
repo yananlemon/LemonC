@@ -2,6 +2,7 @@
 class If13{
 	void main(){
         int a;
+        bool b;
         if( boolOne(19,20) || boolTwo(20,10) && boolThree(1,0)   ){
             a = 19;
         }
@@ -67,6 +68,26 @@ class If13{
             a = 29;
         }
         printf("a=%d\n",a);//26
+
+        b = (!(!(checkBool(
+                        checkBool(
+                                boolOne(getInt(),getInt()+1) || boolTwo(20,10) && boolThree(1,0),
+                                false,
+                                3 >5
+                        ),
+                        1>0,
+                        2>1
+                )))) && true && 1 > 5;
+        if( b )
+            a = 30;
+        else
+            a = 31;
+        printf("a=%d\n",a);//31
+
+    }
+
+    int getInt(){
+        return 19;
     }
 
     bool checkBool(bool b1,bool b2,bool b3){

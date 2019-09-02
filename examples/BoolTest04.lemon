@@ -59,5 +59,13 @@ class BoolTest04{
             b = 13;
         }
         printf("b=%d\n",b);//13
+
+        a = !(1 > 0) || 19 > 18 && 20 > 19;
+        if( !(a) ){
+            b = 14;
+        }else{
+            b = 15;
+        }
+        printf("b=%d\n",b);//15
 	}
 }

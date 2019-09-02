@@ -273,25 +273,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         List<Ast.Type.T> at = new ArrayList<>();
         for (int i = 0; i < obj.inputParams.size(); i++) {
             Expr.T expr = obj.inputParams.get(i);
-            // 如果方法参数是bool表达式
-            // 或者方法返回类型是bool
-            if( checkWhetherBoolExpression(expr) || ( expr instanceof Expr.Call && ((Expr.Call)expr).returnType instanceof Type.Bool) ){
-                String iden = UUID.randomUUID().toString();
-                Expr.Id id = new Expr.Id(iden, obj.lineNum);
-                this.indexTable.put(iden, index++);
-                Stmt.Assign thenStmt = new Stmt.Assign(
-                        id,
-                        new Expr.Number(new Type.Int(), 1, obj.lineNum), obj.lineNum);
-                Stmt.Assign elseStmt = new Stmt.Assign(
-                        id,
-                        new Expr.Number(new Type.Int(), 0, obj.lineNum), obj.lineNum);
-                Stmt.If ifStmt = new Stmt.If(expr, thenStmt, elseStmt, obj.lineNum);
-                this.visit(ifStmt);
-                this.type = new Ast.Type.Int();
-            }else{
-                this.visit(expr);
-            }
-
+            processExpression(obj, expr);
             at.add(this.type);
         }
         emit(new Ast.Stmt.Invokevirtual(obj.name, at, returnType));
@@ -305,6 +287,32 @@ public class TranslatorVisitor implements ISemanticVisitor {
             emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
         }
 
+    }
+
+    /**
+     * 处理方法调用中的参数是表达式的情况
+     * @param obj 方法调用
+     * @param expr 参数
+     */
+    private void processExpression(Expr.Call obj, Expr.T expr) {
+        // 如果方法参数是bool表达式
+        // 或者方法返回类型是bool
+        if( checkWhetherBoolExpression(expr) || ( expr instanceof Expr.Call && ((Expr.Call)expr).returnType instanceof Type.Bool) ){
+            String iden = generateVarName();
+            Expr.Id id = new Expr.Id(iden, obj.lineNum);
+            this.indexTable.put(iden, index++);
+            Stmt.Assign thenStmt = new Stmt.Assign(
+                    id,
+                    new Expr.Number(new Type.Int(), 1, obj.lineNum), obj.lineNum);
+            Stmt.Assign elseStmt = new Stmt.Assign(
+                    id,
+                    new Expr.Number(new Type.Int(), 0, obj.lineNum), obj.lineNum);
+            Stmt.If ifStmt = new Stmt.If(expr, thenStmt, elseStmt, obj.lineNum);
+            this.visit(ifStmt);
+            this.type = new Ast.Type.Int();
+        }else{
+            this.visit(expr);
+        }
     }
 
     /**
@@ -653,12 +661,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     }
 
-    //S.begin := newlabel
-    //E.true  := newlabel
-    //E.false := S.next
-    //S1.next := S.begin
-    //S.code  := gen(S.begin':') || E.code || gen(E.true':')|| S1.code || gen('goto' S.begin)
-
     /**
      *  S -> while(E) do S1
      *      S.begin := newlabel
@@ -707,7 +709,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
         Ast.Type.T returnType = this.type;
         List<Ast.Type.T> at = new ArrayList<>();
         for (int i = 0; i < obj.inputParams.size(); i++) {
-            this.visit(obj.inputParams.get(i));
+            Expr.Call targetObj = new Expr.Call(obj.name,obj.inputParams,obj.lineNum,obj.returnType);
+            processExpression(targetObj,obj.inputParams.get(i));
             at.add(this.type);
         }
         emit(new Ast.Stmt.Invokevirtual(obj.name, at, returnType));
