@@ -8,6 +8,23 @@ class Iteration01{
             sum = sum + start;
             start = start + 1;
         }
-        printf("1到100之和是：%d\n",sum);
+        printf("1到100之和是：%d\n",sum);//5050
+        sum = calSum(1,101);
+        printf("calSum()结果是：%d\n",sum);// 5050
+	}
+
+	int calSum(int start,int end){
+	    int rs;
+	    rs = 0;
+	    while(checkCondition(start,end)){
+	        rs = rs + start;
+            start = start + 1;
+	    }
+	    printf("rs=%d\n",rs);//5050
+	    return rs;
+	}
+
+	bool checkCondition(int start,int end){
+	    return start < end;
 	}
 }

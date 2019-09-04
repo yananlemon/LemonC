@@ -2,7 +2,7 @@ class FloatTest02{
 	void main(){
         float b;
         b = getFloat1();
-        printf("b=%d\n",b);// 0.9
+        printf("b=%d\n",b+getFloat1());// 0.9
 	}
 
 	float getFloat1(){

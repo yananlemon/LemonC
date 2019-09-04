@@ -20,10 +20,10 @@ class BoolTest14{
 
 
 	bool cal(float a){
-	    return a > 10.0 || true && getIntNum() > 19;
+	    return a > 10.0 || true && getIntNum(1+2+getIntNum(16)) > 19;
 	}
 
-	int getIntNum(){
-	    return 19;
+	int getIntNum(int i){
+	    return i;
 	}
 }

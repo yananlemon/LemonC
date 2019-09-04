@@ -10,11 +10,15 @@ class If02{
         c = b;//18
         d = b + a * c; //  360
         printf("c=%d,d=%d\n",c,d);
-        if( a < b || c < d && d/36 > 9){
+        if( a < b || c < d && d/getInt(36) > 9){
             a = 0;
         }else{
             a = 1;
         }
         printf("a=%d\n",a);//0
+	}
+
+	int getInt(int b){
+	    return b;
 	}
 }

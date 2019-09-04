@@ -3,7 +3,7 @@ class MethodCallTest01{
         int sum;
         float num;
         sum = add(1,2)*5;
-        num = addFloat(1.0,2.0);
+        num = addFloat(1.0,2.0)*3.0/3.0;
         printf("sum=%d\n",sum);
         printf("num=%d\n",num);
 	}

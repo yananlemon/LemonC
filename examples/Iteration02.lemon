@@ -8,6 +8,6 @@ class Iteration02{
             sum = sum + start;
             start = start + 1;
         }
-        printf("1到100之和是：%d\n",sum);
+        printf("1到100之和是：%d\n",sum);//0
 	}
 }

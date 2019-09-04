@@ -33,9 +33,9 @@ class If13{
 
         if( checkBool(boolOne(19,20), boolTwo(20,10),boolThree(1,0)) ){
             if( checkBool(boolOne(19,20) || boolTwo(20,10) && boolThree(1,0),false,3 >5 ) ){
-                   a = 25;
+                a = 25;
             }else{
-                   a = 26;
+                a = 26;
             }
 
         }else{
@@ -46,15 +46,15 @@ class If13{
         if( checkBool(boolOne(19,20), boolTwo(20,10),boolThree(1,0)) ){
             if( checkBool(boolOne(19,20) || boolTwo(20,10) && boolThree(1,0),false,3 >5 ) ){
                 if( (!(!(checkBool(
-                                        checkBool(
-                                                boolOne(19,20) || boolTwo(20,10) && boolThree(1,0),
-                                                false,
-                                                3 >5
-                                        ),
-                                        1>0,
-                                        2>1
-                                ))))
-                 ){
+                        checkBool(
+                                boolOne(19,20) || boolTwo(20,10) && boolThree(1,0),
+                                false,
+                                3 >5
+                        ),
+                        1>0,
+                        2>1
+                ))))
+                ){
                     a = 26;
                 }else{
                     a = 27;
@@ -62,7 +62,7 @@ class If13{
 
             }else{
                 a = 28;
-        }
+            }
 
         }else{
             a = 29;
@@ -70,6 +70,22 @@ class If13{
         printf("a=%d\n",a);//26
 
         b = (!(!(checkBool(
+                checkBool(
+                        boolOne(getInt(),getInt()+1) || boolTwo(20,10) && boolThree(1,0),
+                        false,
+                        3 >5
+                ),
+                1>0,
+                2>1
+        )))) && true && 1 > 5;
+        if( b )
+            a = 30;
+        else
+            a = 31;
+        printf("a=%d\n",a);//31
+
+        if(
+                (!(!(checkBool(
                         checkBool(
                                 boolOne(getInt(),getInt()+1) || boolTwo(20,10) && boolThree(1,0),
                                 false,
@@ -77,13 +93,37 @@ class If13{
                         ),
                         1>0,
                         2>1
-                )))) && true && 1 > 5;
-        if( b )
-            a = 30;
-        else
-            a = 31;
-        printf("a=%d\n",a);//31
+                )))) && false && boolFour() ||  19 > 25
+        ){
+            a = 32;
+        }else{
+            a = 33;
+        }
+        printf("a=%d\n",a);//32
+        b = (!(!(checkBool(
+                checkBool(
+                        boolOne(getInt(),getInt()+1) || boolTwo(20,10) && boolThree(1,0),
+                        false,
+                        3 >5
+                ),
+                1>0,
+                2>1
+        )))) && !(false) && boolFour() || 19 > 50;
+        a = getNumber(b);
+        printf("a=%d\n",a);//33
 
+        b = boolFour();
+        if( b )
+            a = 34;
+        else
+            a = 35;
+        printf("a=%d\n",a);//35
+
+        if( boolFive() )
+            a = 36;
+        else
+            a = 37;
+        printf("a=%d\n",a);//36
     }
 
     int getInt(){
@@ -104,5 +144,22 @@ class If13{
 
     bool boolThree(int num1,int num2){
         return num1 > num2;
+    }
+
+    bool boolFour(){
+        return checkBool(boolOne(19,18) || false,getInt() > 28,true || 1 > 5) && boolThree(getInt()+1,20) || 5 > 10 || !(true) ;
+    }
+
+    bool boolFive(){
+        return !(checkBool(boolOne(19,18) || false,getInt() > 28,true || 1 > 5) && boolThree(getInt()+1,20) || 5 > 10 || !(true)) ;
+    }
+
+    int getNumber(bool b){
+        int result;
+        if(b)
+            result = 1;
+        else
+            result = 0;
+        return result;
     }
 }

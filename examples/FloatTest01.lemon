@@ -4,9 +4,8 @@ class FloatTest01{
         float num2;
         num1 = 19.0;
         num2 = 1.9;
-		printf("num1=%d,num2=%d,num1+num2=%d,num1-num2=%d,num1*num2=%d,num1/num2=%d",
-		    num1,num2,add(num1,num2),sub(num1,num2),mul(num1,num2),div(num1,num2));
-		printLine();
+		printf("num1=%f,num2=%f,num1+num2+19.9=%f,num1-num2=%f,num1*num2=%f,num1/num2=%f",
+		    num1,num2,add(num1,num2)+19.9,sub(num1,num2),mul(num1,num2),div(num1,num2));
 	}
 
 	float add(float num1,float num2){

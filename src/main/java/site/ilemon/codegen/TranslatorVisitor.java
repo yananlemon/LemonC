@@ -316,7 +316,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
     }
 
     /**
-     *
+     * 暂时使用UUID作为临时变量名
      * @return
      */
     private String generateVarName(){
@@ -598,7 +598,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
             emit(new Ast.Stmt.Aload(index - 1));
             emit(new Ast.Stmt.Printf(new Ast.Type.Str(), array[i]));
             if (i + 1 < obj.exprs.size()) {
-                this.visit(obj.exprs.get(i + 1));
+                Expr.T expr = obj.exprs.get(i + 1);
+                this.visit(expr);
                 if (this.type instanceof Ast.Type.Int)
                     emit(new Ast.Stmt.Printf(new Ast.Type.Int(), null));
                 else if (this.type instanceof Ast.Type.Float)
@@ -632,14 +633,17 @@ public class TranslatorVisitor implements ISemanticVisitor {
     @Override
     public void visit(Stmt.Return obj) {
         // 如果return的表达式具有bool类型
-        if ( checkWhetherBoolExpression(obj.expr) ) {
+        // 或者所返回的方法具有bool类型
+        if ( checkWhetherBoolExpression(obj.expr) ||  ( obj.expr instanceof Expr.Call && ((Expr.Call)obj.expr).returnType instanceof Type.Bool)) {
             obj.expr.trueList.addToTail(new Label());
             obj.expr.falseList.addToTail(new Label());
         }
         this.visit(obj.expr);
 
         // 如果return的表达式具有bool类型
-        if ( checkWhetherBoolExpression(obj.expr) ) {
+        // 或者所返回的方法具有bool类型
+        // 需要生成跳转指令
+        if ( checkWhetherBoolExpression(obj.expr) ||  ( obj.expr instanceof Expr.Call && ((Expr.Call)obj.expr).returnType instanceof Type.Bool)) {
             Label nextLabel = new Label();
             // gen(E.true':')
             emit(new Ast.Stmt.LabelJ(obj.expr.trueList.get(0)));;

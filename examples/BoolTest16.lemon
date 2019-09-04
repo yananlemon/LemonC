@@ -2,24 +2,24 @@ class BoolTest16{
 	void main(){
         int a;
         bool c;
-        //if( getBool(getIntNum() > 10) )
-        //    a = 1;
-        //else
-          //  a = 2;
-        //printf("a=%d\n",a);// a = 1
+        if( getBool(getIntNum() > 10) )
+            a = 1;
+        else
+            a = 2;
+        printf("a=%d\n",a);// a = 1
 
-        //if( cal(1.0) || getIntNum() > 10 &&  getBool(getIntNum() > 10) )
-          //  a = 3;
-        //else
-          // a = 4;
-        //printf("a=%d\n",a);// a = 3
+        if( cal(1.0) || getIntNum() > 10 &&  getBool(getIntNum() > 10) )
+            a = 3;
+        else
+           a = 4;
+        printf("a=%d\n",a);// a = 3
 
 
-        //if( cal(1.0) || getIntNum() > 10 && getBool(getIntNum() > 10 && getFloat() > 20.0) )
-          //  a = 5;
-        //else
-          // a = 6;
-        //printf("a=%d\n",a);// a = 6
+        if( cal(1.0) || getIntNum() > 10 && getBool(getIntNum() > 10 && getFloat() > 20.0) )
+            a = 5;
+        else
+           a = 6;
+        printf("a=%d\n",a);// a = 6
 
         c = cal(1.0) || getIntNum() > 10 && getBool(getIntNum() > 10 && getFloat() > 20.0);
 

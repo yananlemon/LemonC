@@ -4,6 +4,6 @@ class Cal01{
 		int n;
 		k2 = 10 + 9;
 		n = k2 * 10 * k2 + (5);
-		printf("k2=%d,n=%d\n",k2,n);
+		printf("k2=%d,n=%d\n",k2,n);//3615
 	}
 }
