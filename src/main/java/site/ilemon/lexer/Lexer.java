@@ -107,13 +107,11 @@ public class Lexer {
 		
 		while(c==' ' || c == '\t' || c == '\r' ||c == '\n'){
 			if( lineSeparator.equals("\r\n")){ // for windows
-				if(c == 13 || source.charAt(position+1) == 10){
-					//position++;
+				if(c == '\r' &&  source.charAt(position) == '\n'){
 					line++;
 				}
 			}else if(lineSeparator.equals("\n")){ // for mac
 				if( c == '\n' ){
-					//position++;
 					line++;
 				}
 			}
@@ -158,11 +156,8 @@ public class Lexer {
 				position++;
 				tempPosition--;
 			}
-			/*do{
-				letter.append((char)source.charAt(position));
-				position++;
-				tempPosition--;
-			}while(Character.isLetter(source.charAt(position)) || Character.isDigit(source.charAt(position)));*/
+
+			// 识别关键字
 			switch (letter.toString()) {
 				case "class":
 					return new Token(TokenKind.Class, "class",line);
@@ -199,6 +194,7 @@ public class Lexer {
 			}
 			
 		}
+
 		//进行数字处理
 		else if(Character.isDigit(c)){
 			StringBuffer letter=new StringBuffer();
@@ -217,6 +213,7 @@ public class Lexer {
 			}
 			
 		}
+
 		//操作符,分界符处理
 		else{
 			switch (c) {

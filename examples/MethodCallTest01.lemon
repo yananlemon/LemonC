@@ -8,6 +8,7 @@ class MethodCallTest01{
         printf("num=%d\n",num);
 	}
 
+    // add method
 	int add(int a,int b){
 	    return a + b;
 	}

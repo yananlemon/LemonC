@@ -99,7 +99,7 @@ class If13{
         }else{
             a = 33;
         }
-        printf("a=%d\n",a);//32
+        printf("a=%d\n",a);//33
         b = (!(!(checkBool(
                 checkBool(
                         boolOne(getInt(),getInt()+1) || boolTwo(20,10) && boolThree(1,0),
@@ -110,7 +110,7 @@ class If13{
                 2>1
         )))) && !(false) && boolFour() || 19 > 50;
         a = getNumber(b);
-        printf("a=%d\n",a);//33
+        printf("a=%d\n",a);//0
 
         b = boolFour();
         if( b )
