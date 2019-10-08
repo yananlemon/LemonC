@@ -36,9 +36,9 @@ public class CompilerTest {
 
             // Lexer lexer=new Lexer(new File("examples/BoolTest14.lemon")); // ok at 2019.8.31
             // Lexer lexer = new Lexer(new File("examples/BoolTest15.lemon")); // ok at 2019.8.31
-            Lexer lexer = new Lexer(new File("examples/BoolTest16.lemon")); // ok at 2019.9.4
+             Lexer lexer = new Lexer(new File("examples/BoolTest16.lemon")); // ok at 2019.9.4
             doCompiler(lexer);
-            //jasmin.Main.main(new String[]{"BoolTest04.il"});
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -64,7 +64,7 @@ public class CompilerTest {
             //Lexer lexer = new Lexer(new File("examples/If01.lemon")); // ok at 2019/9/1
             //Lexer lexer=new Lexer(new File("examples/If02.lemon"));  // ok at 2019/9/1
 
-            //  Lexer lexer=new Lexer(new File("examples/If03.lemon"));// ok at 2019/9/1
+             // Lexer lexer=new Lexer(new File("examples/If03.lemon"));// ok at 2019/9/1
              //Lexer lexer=new Lexer(new File("examples/If04.lemon")); // ok at 2019/9/1
 
             // Lexer lexer=new Lexer(new File("examples/If05.lemon")); // ok at 2019/9/1
@@ -112,7 +112,6 @@ public class CompilerTest {
             //Lexer lexer=new Lexer(new File("examples/Cal01.lemon"));
             //Lexer lexer=new Lexer(new File("examples/Cal.lemon"));
             //Lexer lexer=new Lexer(new File("examples/IterationDemo.lemon"));
-
             Lexer lexer=new Lexer(new File("examples/MulTable.lemon"));
 
             doCompiler(lexer);
@@ -124,8 +123,8 @@ public class CompilerTest {
     @Test
     public void testFloat() {
         try {
-            //Lexer lexer = new Lexer(new File("examples/FloatTest01.lemon")); // ok at 2019.9.4
-            Lexer lexer = new Lexer(new File("examples/FloatTest02.lemon")); // ok at 2019.9.4
+            Lexer lexer = new Lexer(new File("examples/FloatTest01.lemon")); // ok at 2019.9.4
+            //Lexer lexer = new Lexer(new File("examples/FloatTest02.lemon")); // ok at 2019.9.4
             doCompiler(lexer);
         } catch (IOException e) {
             e.printStackTrace();

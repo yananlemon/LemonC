@@ -8,11 +8,11 @@ class If08{
         }
         printf("a=%d\n",a);//0
 
-        if( 19 < 27 && 1 > 10 ){
+        if( !(19 < 27 && 100 > 10) || 19 > 9 ){
            a = 1;
         }else{
            a = 5;
         }
-        printf("a=%d\n",a);//5
+        printf("a=%d\n",a);//1
 	}
 }

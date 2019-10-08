@@ -16,6 +16,13 @@ class If02{
             a = 1;
         }
         printf("a=%d\n",a);//0
+
+        if( a > b || c > d && d > 9){
+            a = 2;
+        }else{
+            a = 3;
+        }
+        printf("a=%d\n",a);//3
 	}
 
 	int getInt(int b){

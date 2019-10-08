@@ -2,6 +2,8 @@ class Iteration05{
 	void main(){
 		int start;
 		int num;
+		bool b;
+		b = true;
         start = 1;
         num = 1;
         while(start < 10 || num < 20){
@@ -17,6 +19,11 @@ class Iteration05{
             num = num + 2;
         }
         printf("start = %d",start);// 11
+        // 死循环
+        while(  true ){
+             printf("start = %d\n",start);// 11
+        }
+
 	}
 
 	bool check(int a,int b,int c,int d){

@@ -115,6 +115,11 @@ public class Lexer {
 					line++;
 				}
 			}
+			// added on 2019/10/8
+			if( position >= source.length()-1){
+				line++;
+				return new Token("EOF",line,TokenKind.EOF);
+			}
 			c = source.charAt(position++);
 			tempPosition--;
 

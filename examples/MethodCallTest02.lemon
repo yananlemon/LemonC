@@ -1,4 +1,13 @@
+
+// 测试方法调用
+
+// test.....
 class MethodCallTest02{
+
+	int add(int a,int b){
+    	    return a + b;
+    }
+
 	void main(){
         int sum;
         sum = add(1+1,2);
@@ -7,7 +16,9 @@ class MethodCallTest02{
         printf("sum=%d\n",sum);//32
 	}
 
-	int add(int a,int b){
-	    return a + b;
-	}
+
 }
+
+
+
+

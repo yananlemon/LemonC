@@ -4,7 +4,7 @@ class IterationDemo{
 		k = iteration();
 		iteration();
         while( false ){
-            printf("k=%d\n",k);
+            printf("k...1=%d\n",k);
         }
 		// 死循环
 		while(

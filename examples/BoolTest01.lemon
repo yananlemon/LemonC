@@ -52,4 +52,7 @@ class BoolTest01{
          }
         printf("a=%d\n",a);// 12
 	}
+
 }
+
+

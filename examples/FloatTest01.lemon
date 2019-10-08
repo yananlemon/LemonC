@@ -1,4 +1,9 @@
+
+// 测试
+// 浮点型
 class FloatTest01{
+
+    // main
 	void main(){
         float num1;
         float num2;
@@ -8,17 +13,24 @@ class FloatTest01{
 		    num1,num2,add(num1,num2)+19.9,sub(num1,num2),mul(num1,num2),div(num1,num2));
 	}
 
+
+    // 加法
 	float add(float num1,float num2){
 	    return num1 + num2;
 	}
 
+
+    // 减法
 	float sub(float num1,float num2){
         return num1 - num2;
     }
 
+    // 乘法
     float mul(float num1,float num2){
         return num1 * num2;
     }
+
+    // 除法
     float div(float num1,float num2){
         return num1 / num2;
     }
