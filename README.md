@@ -3,6 +3,7 @@
 2. syntactic parsing
 3. semantic analysis
 4. code generation  
+
 The following steps explain how to run.
 1. require：  
 	(1)jdk1.8+  
