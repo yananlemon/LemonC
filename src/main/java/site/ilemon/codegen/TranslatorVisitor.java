@@ -24,8 +24,6 @@ public class TranslatorVisitor implements ISemanticVisitor {
     public Ast.Program.ProgramSingle prog;
     private List<Ast.Stmt.T> stmts;
 
-    private Label tempLabel;
-
     public TranslatorVisitor() {
         this.stmts = new ArrayList<Ast.Stmt.T>();
         this.classId = null;

@@ -13,8 +13,8 @@ import static site.ilemon.lexer.TokenKind.Num;
 
 
 /**
- * 语法分析
- * @author andy
+ * <p>基于递归下降实现的语法分析</p>
+ * @author Andy.Yan
  *
  */
 public class Parser {
