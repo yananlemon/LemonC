@@ -2,7 +2,7 @@ class BoolTest11{
 	void main(){
 	    bool a;
 	    int b;
-	    a = rtNum()-5>0 || !(true);
+	    a = rtNum(1)-rtNum(5)>0 || !(true);
         if( a ){
             b = 0;
         }else{
@@ -13,7 +13,7 @@ class BoolTest11{
 
 	}
 
-	int rtNum(){
-	    return 1;
+	int rtNum(int i){
+	    return i;
 	}
 }

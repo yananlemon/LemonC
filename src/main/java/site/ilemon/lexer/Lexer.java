@@ -20,14 +20,20 @@ public class Lexer {
 	public int line=1;
 	private int index=0;
 	private String lineSeparator = System.getProperty("line.separator");
+	private String className;
 	Pattern iNumberPattern = Pattern.compile("^\\d+$|-\\d+$"); // 就是判断是否为整数
 	Pattern dNumberPattern = Pattern.compile("\\d+\\.\\d+$|-\\d+\\.\\d+$");//判断是否为小数
 	public Lexer(File f) throws IOException{
+		this.className = f.getName().substring(0,f.getName().lastIndexOf("."));
 		this.reader=new BufferedReader(new InputStreamReader(new FileInputStream(f),"UTF-8"));
 		this.source=new StringBuffer();
 		
 		//读取源程序文件
 		readFile();
+	}
+
+	public String getClassName(){
+		return this.className;
 	}
 
 	public void lexicalAnalysis(){
@@ -101,15 +107,18 @@ public class Lexer {
 		
 		while(c==' ' || c == '\t' || c == '\r' ||c == '\n'){
 			if( lineSeparator.equals("\r\n")){ // for windows
-				if(c == 13 || source.charAt(position+1) == 10){
-					//position++;
+				if(c == '\r' &&  source.charAt(position) == '\n'){
 					line++;
 				}
 			}else if(lineSeparator.equals("\n")){ // for mac
 				if( c == '\n' ){
-					//position++;
 					line++;
 				}
+			}
+			// added on 2019/10/8
+			if( position >= source.length()-1){
+				line++;
+				return new Token("EOF",line,TokenKind.EOF);
 			}
 			c = source.charAt(position++);
 			tempPosition--;
@@ -152,11 +161,8 @@ public class Lexer {
 				position++;
 				tempPosition--;
 			}
-			/*do{
-				letter.append((char)source.charAt(position));
-				position++;
-				tempPosition--;
-			}while(Character.isLetter(source.charAt(position)) || Character.isDigit(source.charAt(position)));*/
+
+			// 识别关键字
 			switch (letter.toString()) {
 				case "class":
 					return new Token(TokenKind.Class, "class",line);
@@ -193,6 +199,7 @@ public class Lexer {
 			}
 			
 		}
+
 		//进行数字处理
 		else if(Character.isDigit(c)){
 			StringBuffer letter=new StringBuffer();
@@ -211,6 +218,7 @@ public class Lexer {
 			}
 			
 		}
+
 		//操作符,分界符处理
 		else{
 			switch (c) {

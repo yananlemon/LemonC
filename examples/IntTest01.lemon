@@ -1,0 +1,26 @@
+class IntTest01{
+	void main(){
+        int num1;
+        int num2;
+        num1 = 20;
+        num2 = num1/num1+1;
+		printf("num1=%d,num2=%d,num1+num2+19=%d,num1-num2=%d,num1*num2=%d,num1/num2=%d",
+		    num1,num2,add(num1,num2)+19,sub(num1,num2),mul(num1,num2),div(num1,num2));
+	}
+
+	int add(int num1,int num2){
+	    return num1 + num2;
+	}
+
+	int sub(int num1,int num2){
+        return num1 - num2;
+    }
+
+    int mul(int num1,int num2){
+        return num1 * num2;
+    }
+    int div(int num1,int num2){
+        return num1 / num2;
+    }
+
+}

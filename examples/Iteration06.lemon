@@ -1,0 +1,25 @@
+class Iteration06{
+	void main(){
+		int start;
+		int b;
+		float c;
+        start = 1;
+        b = 10;
+        c = 1.0;
+        while(start < 10 || getNum(b)+10  > 1 ){
+            start = start + 1;
+            b = b - 1;
+        }
+
+        printf("start = %d",start);//20
+        while(c < 10.0 || getNum(b)+10 > 1){
+            c = c + 1.0;
+            b = b - 1;
+        }
+        printf("c = %f",c);//10.0
+	}
+
+	int getNum(int a){
+	    return a;
+	}
+}

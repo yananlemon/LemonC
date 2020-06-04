@@ -4,7 +4,7 @@ class Gauss{
 		int end;
 		int result;
 		start = 1;
-		end = 10000;
+		end = 100;
 		result = sum(start,end);//调用求和方法sum，计算1加到100的和
 		printf("%d加到%d的和是%d",start,end,result);
 	}

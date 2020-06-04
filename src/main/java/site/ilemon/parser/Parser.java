@@ -86,6 +86,10 @@ public class Parser {
 		Ast.MainClass.MainClassSingle mainClass = null;
 		match("class");
 		String className = look.lexeme;
+		// 检查class名称是否一致
+		if( !className.equals(lexer.getClassName()) ){
+			this.error(String.format("类名%s和文件名%s不一致",className,lexer.getClassName()));
+		}
 		move();
 		match("{");
 		ArrayList<Ast.Method.T> methods = parseMethodList();

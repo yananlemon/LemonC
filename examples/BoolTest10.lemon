@@ -5,10 +5,13 @@ class BoolTest10{
 	    a = true && testBool() || !(testBool());
         if( a ){
             b = 0;
+            a = 1 > 0;
+            if( a)
+                b = getNum(10);
         }else{
-            b = 1;
+            b = getNum(1);
         }
-        printf("b=%d\n",b);// 0
+        printf("b=%d\n",b);// 10
 
 
 	}
@@ -16,5 +19,9 @@ class BoolTest10{
     // return false
 	bool testBool(){
 	    return false;
+	}
+
+	int getNum(int i){
+	    return i;
 	}
 }

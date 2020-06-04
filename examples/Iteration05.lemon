@@ -1,0 +1,35 @@
+class Iteration05{
+	void main(){
+		int start;
+		int num;
+		bool b;
+		b = true;
+        start = 1;
+        num = 1;
+        while(start < 10 || num < 20){
+            start = start + 1;
+            num = num + 2;
+        }
+        printf("start = %d\n",start);// 11
+
+        start = 1;
+        num = 1;
+        while(check(getInt(start),getInt(9)+1,getInt(num),getInt(4)*5)){
+            start = start + 1;
+            num = num + 2;
+        }
+        printf("start = %d",start);// 11
+        // 死循环
+        while(  true ){
+             printf("start = %d\n",start);// 11
+        }
+
+	}
+
+	bool check(int a,int b,int c,int d){
+	    return a < b || c < d;
+	}
+	int getInt(int i){
+	    return i;
+	}
+}

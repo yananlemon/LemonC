@@ -1,11 +1,31 @@
+// 测试：If条件表达式中数字，ID比较
 class If02{
 	void main(){
         int a;
-        if( 19 < 18 || 20 < 30){
+        int b;
+        int c;
+        int d;
+        a = 19;
+        b = 18;
+        c = b;//18
+        d = b + a * c; //  360
+        printf("c=%d,d=%d\n",c,d);
+        if( a < b || c < d && d/getInt(36) > 9){
             a = 0;
         }else{
             a = 1;
         }
         printf("a=%d\n",a);//0
+
+        if( a > b || c > d && d > 9){
+            a = 2;
+        }else{
+            a = 3;
+        }
+        printf("a=%d\n",a);//3
+	}
+
+	int getInt(int b){
+	    return b;
 	}
 }

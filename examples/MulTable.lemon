@@ -3,6 +3,8 @@ class MulTable{
 	void main(){
 		int k;
 		k = showMulTable();
+		printLine();
+		showMulTable();
 	}
 	
 	int showMulTable(){

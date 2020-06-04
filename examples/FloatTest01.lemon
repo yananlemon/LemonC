@@ -1,25 +1,36 @@
+
+// 测试
+// 浮点型
 class FloatTest01{
+
+    // main
 	void main(){
         float num1;
         float num2;
         num1 = 19.0;
         num2 = 1.9;
-		printf("num1=%d,num2=%d,num1+num2=%d,num1-num2=%d,num1*num2=%d,num1/num2=%d",
-		    num1,num2,add(num1,num2),sub(num1,num2),mul(num1,num2),div(num1,num2));
-		printLine();
+		printf("num1=%f,num2=%f,num1+num2+19.9=%f,num1-num2=%f,num1*num2=%f,num1/num2=%f",
+		    num1,num2,add(num1,num2)+19.9,sub(num1,num2),mul(num1,num2),div(num1,num2));
 	}
 
+
+    // 加法
 	float add(float num1,float num2){
 	    return num1 + num2;
 	}
 
+
+    // 减法
 	float sub(float num1,float num2){
         return num1 - num2;
     }
 
+    // 乘法
     float mul(float num1,float num2){
         return num1 * num2;
     }
+
+    // 除法
     float div(float num1,float num2){
         return num1 / num2;
     }

@@ -360,13 +360,13 @@ public class SemanticVisitor implements ISemanticVisitor {
         if( obj.exprs == null || obj.exprs.size() <= 0)
             error(obj.lineNum,"printf 需要有表达式");
         String format = obj.format;
-        String[] array = format.split("%d");
+        String[] array = format.split("%d|%f");
         if( array.length == 0 )
             error(obj.lineNum,"printf 语句第1个参数必须包含%d");
-        for( int i = 1; i < array.length; i++ ){
+        for( int i = 1; i < obj.exprs.size(); i++ ){
             Ast.Expr.T expr = obj.exprs.get(i);
             this.visit(expr);
-            if(!isMatch(new Ast.Type.Int(),this.currType) && !isMatch(new Ast.Type.Float(),this.currType))
+            if(!isMatch(new Ast.Type.Str(),this.currType) &&!isMatch(new Ast.Type.Int(),this.currType) && !isMatch(new Ast.Type.Float(),this.currType))
                 error(expr.lineNum,String.format("表达式%s的类型需要是int或float",expr.toString()));
         }
 

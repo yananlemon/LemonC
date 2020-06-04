@@ -1,3 +1,4 @@
+// 测试：bool 变量赋值表达式（true,false,id,number）
 class BoolTest04{
 	void main(){
 	    bool a;
@@ -57,6 +58,21 @@ class BoolTest04{
         }else{
             b = 13;
         }
+
+
+
+
+
+
+
         printf("b=%d\n",b);//13
+
+        a = !(1 > 0) || 19 > 18 && 20 > 19;
+        if( !(a) ){
+            b = 14;
+        }else{
+            b = 15;
+        }
+        printf("b=%d\n",b);//15
 	}
 }

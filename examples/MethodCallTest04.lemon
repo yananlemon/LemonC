@@ -1,0 +1,50 @@
+class MethodCallTest04{
+	void main(){
+        int a;
+        bool c;
+        cal(1.0);
+        getIntNum();
+        getBool(getIntNum() > 10 && getFloat() > 20.0);
+        c = false;
+        if( !(c) )
+            a = 7;
+        else
+           a = 8;
+        printf("a=%d\n",a);// a = 7
+
+        if( c ||   getBool(getIntNum() > 10 || getFloat() > 20.0))
+            a = 9;
+        else
+           a = 10;
+        printf("a=%d\n",a);// a = 9
+
+
+	}
+
+
+
+    // false
+	bool cal(float a){
+	    printf("进入cal方法，参数=%d\n",a);
+	    return a > 10.0 || true && getIntNum() > 19;
+	}
+
+	int getIntNum(){
+	    int a;
+	    a = 19;
+	    printf("进入getIntNum方法，返回值=%d\n",a);
+	    return a;
+	}
+
+	bool getBool(bool b){
+	    //printf("进入getBool方法，参数=%d\n",b);
+	    return b;
+	}
+
+	float getFloat(){
+        float a;
+        a = 19.0;
+        printf("进入getFloat方法，返回值=%f\n",a);
+        return a;
+	}
+}
