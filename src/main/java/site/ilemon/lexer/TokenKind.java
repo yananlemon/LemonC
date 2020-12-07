@@ -6,7 +6,20 @@ public enum TokenKind {
 	EOF,
 
 	/***关键字****/
-	KEYWORD,
+	Class,
+	Main,
+	Void,
+	String,
+	Int,
+	Float,
+	Bool,
+	While,
+	True,
+	False,
+	If,
+	Else,
+	Printf,
+	Return,
 
 	/***算术运算符****/
 	Add,
@@ -42,6 +55,5 @@ public enum TokenKind {
 	DNum,
 	Assign,
 	Unknown, PrintLine,
-	String,
 
 }

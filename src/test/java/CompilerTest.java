@@ -161,4 +161,15 @@ public class CompilerTest {
             e.printStackTrace();
         }
     }
+
+    @Test
+    public void testHello() {
+        try {
+            Lexer lexer = new Lexer(new File("examples/HelloWorld.lemon")); // ok at 2019.9.4
+
+            doCompiler(lexer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

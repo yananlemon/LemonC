@@ -11,6 +11,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * <p>编译visitor,该类实现了{@link ISemanticVisitor}接口,
+ * 根据给定的抽象语法树{@link Ast.Program.ProgramSingle} 自上而下地进行翻译.最终将指令发射到{@link TranslatorVisitor#stmts}</p>
+ * @author yanan
+ */
 public class TranslatorVisitor implements ISemanticVisitor {
 
     private String classId;

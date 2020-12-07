@@ -33,7 +33,6 @@ public class Parser {
 
 	public Parser(Lexer lexer) throws IOException{
 		this.lexer=lexer;
-		lexer.lexicalAnalysis();
 		move();
 	}
 
@@ -46,27 +45,29 @@ public class Parser {
 
 
 	/**
-	 * 将{@code token}与当前词法分析器读到的token进行对比
+	 * 将{@code token}与当前词法分析器读到的token进行对比,如果匹配则读取下一个token;否则抛出异常.
 	 * @param lexeme
 	 * @throws IOException
 	 */
 	private void match(String lexeme) throws IOException{
-		if( lexeme.equals(look.lexeme))
+		if(lexeme.equals(look.getLexeme())) {
 			move();
-		else
+		} else {
 			error(lexeme);
+		}
+
 	}
 	
 	private void match(Token token) throws IOException{
-		if( token.kind == look.kind ){
+		if( token.getKind() == look.getKind() ){
 			move();
 		}else{
-			error(token.kind.toString());
+			error(token.getKind().toString());
 		}
 	}
 
 	private void error(String s) { 
-		throw new Error("near line : "+look.lineNumber+" syntax error,excepted get '"+s+"',but got "+look.lexeme);
+		throw new Error("near line : " + look.getLineNumber() + " syntax error,excepted get '" + s + "',but got " + look.getLexeme());
 	}
 
 	/**
@@ -85,7 +86,7 @@ public class Parser {
 	private Ast.MainClass.MainClassSingle parseMainClass() throws IOException {
 		Ast.MainClass.MainClassSingle mainClass = null;
 		match("class");
-		String className = look.lexeme;
+		String className = look.getLexeme();
 		// 检查class名称是否一致
 		if( !className.equals(lexer.getClassName()) ){
 			this.error(String.format("类名%s和文件名%s不一致",className,lexer.getClassName()));
@@ -103,10 +104,10 @@ public class Parser {
 	// <methodList> -> <method>*
 	private ArrayList<Ast.Method.T> parseMethodList() throws IOException {
 		ArrayList<Ast.Method.T> methods = new ArrayList<Ast.Method.T>();
-		while( look.kind == TokenKind.Void ||
-				look.kind == TokenKind.Int ||
-				look.kind == TokenKind.Float||
-				look.kind == TokenKind.Bool) {
+		while( look.getKind() == TokenKind.Void ||
+				look.getKind() == TokenKind.Int ||
+				look.getKind() == TokenKind.Float||
+				look.getKind() == TokenKind.Bool) {
 			methods.add(parseMethod());
 		}
 		return methods;
@@ -116,10 +117,10 @@ public class Parser {
 	// <method> -> void | int | double | methodname ( <inputparams> ) {<varDeclares> <stmts> [return <expr>]}
 	private Ast.Method.MethodSingle parseMethod() throws IOException {
 		Ast.Type.T t = parseType();
-		String methodName = look.lexeme;
+		String methodName = look.getLexeme();
 		this.currMethod= methodName;
 		this.varTable.clear();
-		int lineNumber = look.lineNumber;
+		int lineNumber = look.getLineNumber();
 		move();
 		match("(");
 			ArrayList<Ast.Declare.T> inputParams = parseInputParams();
@@ -141,10 +142,10 @@ public class Parser {
 	// <varDeclares> -> <varDeclare>*
 	private ArrayList<Ast.Declare.T> parseVarDeclares() throws IOException{
 		ArrayList<Ast.Declare.T> rs = new ArrayList<Ast.Declare.T>();
-		while(look.kind == TokenKind.Int || 
-				look.kind == TokenKind.Float||
-				look.kind == TokenKind.Bool){
-			String id = look.lexeme;
+		while(look.getKind() == TokenKind.Int ||
+				look.getKind() == TokenKind.Float||
+				look.getKind() == TokenKind.Bool){
+			String id = look.getLexeme();
 			Ast.Declare.T d = parseDeclare();
 			if( d != null ){
 				if( d instanceof  Ast.Declare.DeclareSingle){
@@ -163,39 +164,39 @@ public class Parser {
 	// // <declare> -> type id;
 	private Ast.Declare.T parseDeclare() throws IOException {
 		Token t = lexer.lookahead(2);
-		if( t !=null && t.kind == TokenKind.Lparen){
+		if( t !=null && t.getKind() == TokenKind.Lparen){
 			isValDecl = false;
 			return null;
 		}
 		t = lexer.lookahead(1);
-		if( t !=null && t.kind == TokenKind.Assign){
+		if( t !=null && t.getKind() == TokenKind.Assign){
 			isValDecl = false;
 			return null;
 		}
 		Ast.Type.T type = parseType();
-		if( look.kind == TokenKind.Assign ) {
+		if( look.getKind() == TokenKind.Assign ) {
 			isValDecl = false;
 			return null;
-		}else if( look.kind == TokenKind.Id ){
-			String id = look.lexeme;
+		}else if( look.getKind() == TokenKind.Id ){
+			String id = look.getLexeme();
 			move();
 			// type id;
-			if( look.kind == TokenKind.Semicolon) {
+			if( look.getKind() == TokenKind.Semicolon) {
 				isValDecl = true;
-				Ast.Declare.DeclareSingle d = new Ast.Declare.DeclareSingle(type,id,look.lineNumber);
+				Ast.Declare.DeclareSingle d = new Ast.Declare.DeclareSingle(type,id,look.getLineNumber());
 				match(";");
 				return d;
 			}
-			else if( look.kind == TokenKind.Lparen ) {
+			else if( look.getKind() == TokenKind.Lparen ) {
 				isValDecl = false;
 				return null;
 			}else {
-				error(look.lexeme);
+				error(look.getLexeme());
 				return null;
 			}
 
 		}else {
-			error(look.lexeme);
+			error(look.getLexeme());
 			return null;
 		}
 	}
@@ -203,50 +204,50 @@ public class Parser {
 	// <inputparams> -> type id,
 	private ArrayList<Ast.Declare.T> parseInputParams() throws IOException {
 		ArrayList<Ast.Declare.T> rs = new ArrayList<Ast.Declare.T>();
-		if( look.kind == TokenKind.Int){
+		if( look.getKind() == TokenKind.Int){
 			Ast.Type.T t = parseType();
-			String id = look.lexeme;
-			int lineNumber = look.lineNumber;
+			String id = look.getLexeme();
+			int lineNumber = look.getLineNumber();
 			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 			match(new Token(TokenKind.Id));
 			this.varTable.put(id,new Ast.Type.Int());
-			while(look.kind == TokenKind.Commer ){
+			while(look.getKind() == TokenKind.Commer ){
 				move();
 				t = parseType();
-				id = look.lexeme;
-				lineNumber = look.lineNumber;
+				id = look.getLexeme();
+				lineNumber = look.getLineNumber();
 				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 				match(new Token(TokenKind.Id));
 				this.varTable.put(id,new Ast.Type.Int());
 			}
-		}else if( look.kind == TokenKind.Float){
+		}else if( look.getKind() == TokenKind.Float){
 			Ast.Type.T t = parseType();
-			String id = look.lexeme;
-			int lineNumber = look.lineNumber;
+			String id = look.getLexeme();
+			int lineNumber = look.getLineNumber();
 			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 			match(new Token(TokenKind.Id));
 			this.varTable.put(id,new Ast.Type.Float());
-			while(look.kind == TokenKind.Commer ){
+			while(look.getKind() == TokenKind.Commer ){
 				move();
 				t = parseType();
-				id = look.lexeme;
-				lineNumber = look.lineNumber;
+				id = look.getLexeme();
+				lineNumber = look.getLineNumber();
 				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 				match(new Token(TokenKind.Id));
 				this.varTable.put(id,new Ast.Type.Float());
 			}
-		}else if( look.kind == TokenKind.Bool){
+		}else if( look.getKind() == TokenKind.Bool){
 			Ast.Type.T t = parseType();
-			String id = look.lexeme;
-			int lineNumber = look.lineNumber;
+			String id = look.getLexeme();
+			int lineNumber = look.getLineNumber();
 			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 			match(new Token(TokenKind.Id));
 			this.varTable.put(id,new Ast.Type.Bool());
-			while(look.kind == TokenKind.Commer ){
+			while(look.getKind() == TokenKind.Commer ){
 				move();
 				t = parseType();
-				id = look.lexeme;
-				lineNumber = look.lineNumber;
+				id = look.getLexeme();
+				lineNumber = look.getLineNumber();
 				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 				match(new Token(TokenKind.Id));
 				this.varTable.put(id,new Ast.Type.Bool());
@@ -256,39 +257,39 @@ public class Parser {
 	}
 
 	private Ast.Type.T parseType() {
-		if( look.kind == TokenKind.Int ){
-			//varTable.put(look.lexeme, new Ast.Type.Int());
+		if( look.getKind() == TokenKind.Int ){
+			//varTable.put(look.getLexeme(), new Ast.Type.Int());
 			move();
 			return new Ast.Type.Int();
 		}
-		else if(look.kind == TokenKind.Void){
-			//varTable.put(look.lexeme, new Ast.Type.Void());
+		else if(look.getKind() == TokenKind.Void){
+			//varTable.put(look.getLexeme(), new Ast.Type.Void());
 			move();
 			return new Ast.Type.Void();
 		}
-		else if(look.kind == TokenKind.Float){
-			//varTable.put(look.lexeme, new Ast.Type.Float());
+		else if(look.getKind() == TokenKind.Float){
+			//varTable.put(look.getLexeme(), new Ast.Type.Float());
 			move();
 			return new Ast.Type.Float();
-		}else if(look.kind == TokenKind.Bool){
-			//varTable.put(look.lexeme, new Ast.Type.Bool());
+		}else if(look.getKind() == TokenKind.Bool){
+			//varTable.put(look.getLexeme(), new Ast.Type.Bool());
 			move();
 			return new Ast.Type.Bool();
 		}
 		else 
-			error(look.lexeme);
+			error(look.getLexeme());
 		return null;
 	}
 	
 	private ArrayList<Ast.Stmt.T> parseStmts() throws IOException {
 		ArrayList<Ast.Stmt.T> rs = new ArrayList<Ast.Stmt.T>();
-		while( look.kind == TokenKind.Printf || 
-				look.kind == TokenKind.PrintLine ||
-				look.kind == TokenKind.If ||
-				look.kind == TokenKind.While ||
-				look.kind == TokenKind.Lbrace ||
-				look.kind == TokenKind.Id || 
-				look.kind == TokenKind.Return){
+		while( look.getKind() == TokenKind.Printf || 
+				look.getKind() == TokenKind.PrintLine ||
+				look.getKind() == TokenKind.If ||
+				look.getKind() == TokenKind.While ||
+				look.getKind() == TokenKind.Lbrace ||
+				look.getKind() == TokenKind.Id || 
+				look.getKind() == TokenKind.Return){
 			rs.add(parseStmt());
 		}
 		return rs;
@@ -297,17 +298,17 @@ public class Parser {
 	private Ast.Stmt.T parseStmt() throws IOException {
 		Ast.Stmt.T stmt = null;
 		
-		if( look.kind == TokenKind.Printf ){
+		if( look.getKind() == TokenKind.Printf ){
 			match(new Token(TokenKind.Printf));
 			match(new Token(TokenKind.Lparen));
-			String format = look.lexeme;
-			int lineNumber = look.lineNumber;
+			String format = look.getLexeme();
+			int lineNumber = look.getLineNumber();
 			Token ahead = lexer.lookahead(1);
 			ArrayList<Ast.Expr.T> exprs = null;
-			if( ahead.kind == TokenKind.Commer ){
+			if( ahead.getKind() == TokenKind.Commer ){
 				exprs = new ArrayList<Ast.Expr.T>();
-				while( look.kind != TokenKind.Rparen ){
-					if( look.kind == TokenKind.Commer )
+				while( look.getKind() != TokenKind.Rparen ){
+					if( look.getKind() == TokenKind.Commer )
 						move();
 					exprs.add(parseExpr());
 				}
@@ -318,31 +319,31 @@ public class Parser {
 				match(new Token(TokenKind.Lparen));
 			}
 		}
-		else if( look.kind == TokenKind.PrintLine ){
+		else if( look.getKind() == TokenKind.PrintLine ){
 			match(new Token(TokenKind.PrintLine));
 			match(new Token(TokenKind.Lparen));
 			match(new Token(TokenKind.Rparen));
 			match( new Token(TokenKind.Semicolon) );
-			String format = look.lexeme;
-			int lineNumber = look.lineNumber;
+			String format = look.getLexeme();
+			int lineNumber = look.getLineNumber();
 			stmt = new Ast.Stmt.PrintLine();
 		}
-		else if( look.kind == TokenKind.While ){
+		else if( look.getKind() == TokenKind.While ){
 			match(new Token(TokenKind.While));
 			match(new Token(TokenKind.Lparen));
-			int lineNumber = look.lineNumber;
+			int lineNumber = look.getLineNumber();
 			Ast.Expr.T condition = parseExpr();
 			match(new Token(TokenKind.Rparen));
 			Ast.Stmt.T whileStmt = parseStmt();
 			stmt = new Ast.Stmt.While(condition, whileStmt, lineNumber);
 		}
-		else if ( look.kind == TokenKind.Id ) {
+		else if ( look.getKind() == TokenKind.Id ) {
 			Token ahead = lexer.lookahead(1);
 			
 			// 方法调用
-			if( ahead.kind == TokenKind.Lparen ){
-				String mthName = look.lexeme;
-				int lineNumber = look.lineNumber;
+			if( ahead.getKind() == TokenKind.Lparen ){
+				String mthName = look.getLexeme();
+				int lineNumber = look.getLineNumber();
 				Ast.Expr.T expr =  parseMethodCall();
 				if( expr instanceof Ast.Expr.Call){
 					stmt = new Ast.Stmt.Call(mthName,((Ast.Expr.Call)expr).inputParams,lineNumber);
@@ -350,8 +351,8 @@ public class Parser {
 				}
 
 			}else{
-				String id = look.lexeme;
-				int lineNum = look.lineNumber;
+				String id = look.getLexeme();
+				int lineNum = look.getLineNumber();
 				match( new Token(TokenKind.Id) );
 				match( new Token(TokenKind.Assign) );
 				Ast.Expr.T expr = parseExpr();
@@ -360,29 +361,29 @@ public class Parser {
 				
 			}
 		}
-		else if( look.kind == TokenKind.Lbrace ) {
+		else if( look.getKind() == TokenKind.Lbrace ) {
 			match( "{" );
-			int lineNumber = look.lineNumber;
+			int lineNumber = look.getLineNumber();
 			stmt = new Ast.Stmt.Block(parseStmts(), lineNumber);
 			match( "}" );
 
 		}
-		else if( look.kind == TokenKind.Return ) {
+		else if( look.getKind() == TokenKind.Return ) {
 			match( "return" );
-			int lineNumber = look.lineNumber;
+			int lineNumber = look.getLineNumber();
 			Ast.Expr.T expr = parseExpr();
 			stmt = new Ast.Stmt.Return(expr, lineNumber);
 			match( ";" );
 
-		}else if( look.kind == TokenKind.If ){
+		}else if( look.getKind() == TokenKind.If ){
 			match( "if" );
 			match( "(" );
-			int lineNumber = look.lineNumber;
+			int lineNumber = look.getLineNumber();
 			Ast.Expr.T condition = parseExpr();
 			match( ")" );
 			Ast.Stmt.T thenStmt = parseStmt();
 			Ast.Stmt.T elseStmt = null;
-			if( look.kind == TokenKind.Else){
+			if( look.getKind() == TokenKind.Else){
 
 				match( "else" );
 				elseStmt = parseStmt();
@@ -403,7 +404,7 @@ public class Parser {
 	//  -> AndExp
 	private Ast.Expr.T parseExpr() throws IOException {
 		Ast.Expr.T expr = parseAndExpr();
-		while( look.kind == TokenKind.Or ) {
+		while( look.getKind() == TokenKind.Or ) {
 			move();
 			Ast.Expr.T right = parseAndExpr();
 			expr = new Ast.Expr.Or(expr, right, expr.lineNum);
@@ -417,7 +418,7 @@ public class Parser {
 	//  -> AndExp
 	private Ast.Expr.T parseAndExpr() throws IOException {
 		Ast.Expr.T expr = parseRelationExpr();
-		while( look.kind == TokenKind.And) {
+		while( look.getKind() == TokenKind.And) {
 			move();
 			Ast.Expr.T right = parseRelationExpr();
 			expr = new Ast.Expr.And(expr, right, expr.lineNum);
@@ -428,21 +429,21 @@ public class Parser {
 	// <relation_expr> -> additive_expr |<additive_expr>(>|<|>=|<=|==|!=)<additive_expr>
 	private Ast.Expr.T parseRelationExpr() throws IOException {
 		Ast.Expr.T expr = parseAdditiveExpr();
-		while( look.kind == TokenKind.LT ||
-				look.kind == TokenKind.GT ||
-				look.kind == TokenKind.LTE ||
-				look.kind == TokenKind.GTE ||
-				look.kind == TokenKind.NEQ ||
-				look.kind == TokenKind.EQ ) {
-			String operator = look.lexeme;
+		while( look.getKind() == TokenKind.LT ||
+				look.getKind() == TokenKind.GT ||
+				look.getKind() == TokenKind.LTE ||
+				look.getKind() == TokenKind.GTE ||
+				look.getKind() == TokenKind.NEQ ||
+				look.getKind() == TokenKind.EQ ) {
+			String operator = look.getLexeme();
 			move();
 			Ast.Expr.T expr1 = parseAdditiveExpr();
 			switch (operator) {
 			case ">":
-				expr = new Ast.Expr.GT(expr, expr1, look.lineNumber);
+				expr = new Ast.Expr.GT(expr, expr1, look.getLineNumber());
 				break;
 			case "<":
-				expr = new Ast.Expr.LT(expr, expr1, look.lineNumber);
+				expr = new Ast.Expr.LT(expr, expr1, look.getLineNumber());
 				break;
 			default:
 				break;
@@ -455,15 +456,15 @@ public class Parser {
 	//<additiveExpr>-><term>{(+|-)<term>}
 	private Ast.Expr.T parseAdditiveExpr() throws IOException {
 		Ast.Expr.T expr = parseTerm();
-		while(look.kind==TokenKind.Add
-				||look.kind==TokenKind.Sub) {
+		while(look.getKind()==TokenKind.Add
+				||look.getKind()==TokenKind.Sub) {
 			Token temp=look;
 			move();
 			Ast.Expr.T otherExpr = parseTerm();
-			if(temp.kind==TokenKind.Add) {
-				expr = new Ast.Expr.Add(expr, otherExpr, look.lineNumber);
+			if(temp.getKind()==TokenKind.Add) {
+				expr = new Ast.Expr.Add(expr, otherExpr, look.getLineNumber());
 			}else {
-				expr = new Ast.Expr.Sub(expr, otherExpr, look.lineNumber);
+				expr = new Ast.Expr.Sub(expr, otherExpr, look.getLineNumber());
 			}
 		}
 		return expr;
@@ -472,15 +473,15 @@ public class Parser {
 	// <term> -> <factor> *|/ <factor>
 	private Ast.Expr.T parseTerm() throws IOException{
 		Ast.Expr.T expr = parseFactor();
-		while(look.kind==TokenKind.Mul
-				||look.kind==TokenKind.Div) {
+		while(look.getKind()==TokenKind.Mul
+				||look.getKind()==TokenKind.Div) {
 			Token temp=look;
 			move();
 			Ast.Expr.T otherExpr = parseFactor();
-			if(temp.kind == TokenKind.Mul) {
-				expr = new Ast.Expr.Mul(expr, otherExpr, look.lineNumber);
+			if(temp.getKind() == TokenKind.Mul) {
+				expr = new Ast.Expr.Mul(expr, otherExpr, look.getLineNumber());
 			}else {
-				expr = new Ast.Expr.Div(expr, otherExpr, look.lineNumber);
+				expr = new Ast.Expr.Div(expr, otherExpr, look.getLineNumber());
 			}
 		}
 		return expr;
@@ -493,54 +494,54 @@ public class Parser {
 	//          | not(<expression>)
 	private Ast.Expr.T parseFactor() throws IOException{
 		Ast.Expr.T expr = null;
-		if(look.kind==TokenKind.Lparen){
+		if(look.getKind()==TokenKind.Lparen){
 			move();
 			expr = parseExpr();
 			match(new Token(TokenKind.Rparen));
 			return expr;
-		}else if(look.kind== Num){
-			expr = new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber);
+		}else if(look.getKind()== Num){
+			expr = new Ast.Expr.Number(new Ast.Type.Int(),look.getLexeme(),look.getLineNumber());
 			move();
 			return expr;
-		}else if(look.kind==TokenKind.DNum){
-			expr = new Ast.Expr.Number(new Ast.Type.Float(),look.lexeme,look.lineNumber);
+		}else if(look.getKind()==TokenKind.DNum){
+			expr = new Ast.Expr.Number(new Ast.Type.Float(),look.getLexeme(),look.getLineNumber());
 			move();
 			return expr;
-		}else if( look.kind==TokenKind.Id ){
+		}else if( look.getKind()==TokenKind.Id ){
 			Token temp = look;
 			Token ahead = lexer.lookahead(1);
-			if( ahead.kind == TokenKind.Lparen){
+			if( ahead.getKind() == TokenKind.Lparen){
 				expr = parseMethodCall();
 			}else{
-				expr = new Ast.Expr.Id(look.lexeme,this.varTable.get(look.lexeme),look.lineNumber);
+				expr = new Ast.Expr.Id(look.getLexeme(),this.varTable.get(look.getLexeme()),look.getLineNumber());
 				move();
 			}
 			return expr;
 		}
-		else if(look.kind==TokenKind.String ){
-			expr = new Ast.Expr.Str(look.lexeme, look.lineNumber);
+		else if(look.getKind()==TokenKind.String ){
+			expr = new Ast.Expr.Str(look.getLexeme(), look.getLineNumber());
 			move();
 			return expr;
 		}
-		else if(look.kind==TokenKind.Not ){
+		else if(look.getKind()==TokenKind.Not ){
 			move();
 			match("(");
 			expr = new Ast.Expr.Not(parseExpr());
 			match(")");
 			return expr;
 		}
-		else if(look.kind==TokenKind.True ){
-			expr = new Ast.Expr.True(look.lineNumber);
+		else if(look.getKind()==TokenKind.True ){
+			expr = new Ast.Expr.True(look.getLineNumber());
 			move();
 			return expr;
 		}
-		else if(look.kind==TokenKind.False ){
-			expr = new Ast.Expr.False(look.lineNumber);
+		else if(look.getKind()==TokenKind.False ){
+			expr = new Ast.Expr.False(look.getLineNumber());
 			move();
 			return expr;
 		}
 		else{
-			System.out.println("near line : "+look.lineNumber+" syntax error: "+"excepted get identifier or expression or number or String, but got "+look.lexeme);
+			System.out.println("near line : "+look.getLineNumber()+" syntax error: "+"excepted get identifier or expression or number or String, but got "+look.getLexeme());
 			System.exit(1);
 		}
 		return expr;
@@ -549,39 +550,39 @@ public class Parser {
 	private Ast.Expr.T parseMethodCall2() throws IOException {
 		Token ahead;
 		Ast.Expr.T expr;
-		String methodName = look.lexeme;
-		int lineNumber = look.lineNumber;
+		String methodName = look.getLexeme();
+		int lineNumber = look.getLineNumber();
 		move();
 		match("(");
 		ArrayList<Ast.Expr.T> args = null;
 		args = new ArrayList<Ast.Expr.T>();
 		ahead = lexer.lookahead(1);
-		if( ahead.kind == TokenKind.Add || ahead.kind == TokenKind.Sub){
+		if( ahead.getKind() == TokenKind.Add || ahead.getKind() == TokenKind.Sub){
             args.add(parseAdditiveExpr()); //2019/8/27 测试BoolTest11时注释掉
         }else{
-            while( look.kind == TokenKind.Id || look.kind == TokenKind.Num  || look.kind == TokenKind.DNum
-            || look.kind == TokenKind.True || look.kind == TokenKind.False){
-                if( look.kind == TokenKind.Id)
+            while( look.getKind() == TokenKind.Id || look.getKind() == TokenKind.Num  || look.getKind() == TokenKind.DNum
+            || look.getKind() == TokenKind.True || look.getKind() == TokenKind.False){
+                if( look.getKind() == TokenKind.Id)
                     args.add(parseFactor());
-                else if( look.kind == TokenKind.Num ){
-					args.add(new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber));
+                else if( look.getKind() == TokenKind.Num ){
+					args.add(new Ast.Expr.Number(new Ast.Type.Int(),look.getLexeme(),look.getLineNumber()));
 					move();
 				}
 
-                else if( look.kind == TokenKind.DNum ) {
-					args.add(new Ast.Expr.Number(new Ast.Type.Float(), look.lexeme, look.lineNumber));
+                else if( look.getKind() == TokenKind.DNum ) {
+					args.add(new Ast.Expr.Number(new Ast.Type.Float(), look.getLexeme(), look.getLineNumber()));
 					move();
 				}
-                else if( look.kind == TokenKind.True ){
-                    args.add(new Ast.Expr.True(look.lineNumber));
+                else if( look.getKind() == TokenKind.True ){
+                    args.add(new Ast.Expr.True(look.getLineNumber()));
                     move();
                 }
 
-                else if( look.kind == TokenKind.False ){
-                    args.add(new Ast.Expr.False(look.lineNumber));
+                else if( look.getKind() == TokenKind.False ){
+                    args.add(new Ast.Expr.False(look.getLineNumber()));
                     move();
                 }
-                if( look.kind == TokenKind.Commer)
+                if( look.getKind() == TokenKind.Commer)
                     move();
             }
         }
@@ -594,19 +595,19 @@ public class Parser {
 	private Ast.Expr.T parseMethodCall() throws IOException {
 		Token ahead;
 		Ast.Expr.T expr;
-		String methodName = look.lexeme;
-		int lineNumber = look.lineNumber;
+		String methodName = look.getLexeme();
+		int lineNumber = look.getLineNumber();
 		move();
 		match("(");
 		ArrayList<Ast.Expr.T> args = null;
 		args = new ArrayList<Ast.Expr.T>();
 		ahead = lexer.lookahead(1);
-		if( look.kind == TokenKind.Rparen){
+		if( look.getKind() == TokenKind.Rparen){
 
 		}else{
 			Ast.Expr.T e = parseExpr();
 			args.add(e);
-			while( look.kind == TokenKind.Commer){
+			while( look.getKind() == TokenKind.Commer){
 				match(",");
 				args.add(parseExpr());
 			}

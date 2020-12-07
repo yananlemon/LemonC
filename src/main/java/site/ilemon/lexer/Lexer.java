@@ -2,312 +2,479 @@ package site.ilemon.lexer;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
- * 词法分析
- * @author andy
- * @version 1.0
+ * <p>基于DFA实现的词法分析器</p>
+ * @author Andy.Yan
  */
 public class Lexer {
-	
-	private BufferedReader  reader;
-	private StringBuffer source;
-	public int position=0;
-	public int tempPosition=0;
-	public List<Token> tokens=new ArrayList<Token>();
-	public int line=1;
-	private int index=0;
-	private String lineSeparator = System.getProperty("line.separator");
-	private String className;
-	Pattern iNumberPattern = Pattern.compile("^\\d+$|-\\d+$"); // 就是判断是否为整数
-	Pattern dNumberPattern = Pattern.compile("\\d+\\.\\d+$|-\\d+\\.\\d+$");//判断是否为小数
-	public Lexer(File f) throws IOException{
-		this.className = f.getName().substring(0,f.getName().lastIndexOf("."));
-		this.reader=new BufferedReader(new InputStreamReader(new FileInputStream(f),"UTF-8"));
-		this.source=new StringBuffer();
-		
-		//读取源程序文件
-		readFile();
-	}
+    
+    /*词法分析器当前所读入的字符*/
+    private char currChar;
 
-	public String getClassName(){
-		return this.className;
-	}
+    /*输入流字符索引*/
+    private int index = 0;
 
-	public void lexicalAnalysis(){
-		Token token=null;
-		try {
-			while((token=this.nextToken()) != null){
-				tokens.add(token);
-				if(token.kind == TokenKind.EOF)
-					break;
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public Token next(){
-		if(index<tokens.size()){
-			return tokens.get(index++);
-		}else{
-			return null;
-		}
-	}
-	
-	public Token prev(){
-		if( index < tokens.size()){
-			index -= 2;
-			return tokens.get(index);
-		}else{
-			return null;
-		}
-	}
-	
-	/**
-	 * 向前看i个token
-	 * @param i 向前看的个数
-	 * @return {@link site.ilemon.lexer.Token}
-	 */
-	public Token lookahead(int i){
-		if(index+i<tokens.size()){
-			return tokens.get(index-1+i);
-		}else{
-			return null;
-		}
-	}
-	
-	/**
-	 * 读取源程序文件内容到source
-	 * @throws IOException
-	 */
-	private void readFile() throws IOException{
-		int c=-1;
-		while((c=reader.read())!=-1){
-			source.append(String.valueOf((char)c));
-		}
-		source.append(String.valueOf((char)-1));
-	}
+    /*token索引*/
+    private int indexToken = 0;
 
-	/**
-	 * 每次读取一个token并返回
-	 * @return Token
-	 * @throws IOException
-	 */
-	private Token nextToken() throws IOException{
-		if(position >= source.length()-1){
-			line++;
-			return new Token("EOF",line,TokenKind.EOF);
-		}
-		tempPosition=position;
-		int c=source.charAt(position++);
-		tempPosition--;
-		
-		while(c==' ' || c == '\t' || c == '\r' ||c == '\n'){
-			if( lineSeparator.equals("\r\n")){ // for windows
-				if(c == '\r' &&  source.charAt(position) == '\n'){
-					line++;
-				}
-			}else if(lineSeparator.equals("\n")){ // for mac
-				if( c == '\n' ){
-					line++;
-				}
-			}
-			// added on 2019/10/8
-			if( position >= source.length()-1){
-				line++;
-				return new Token("EOF",line,TokenKind.EOF);
-			}
-			c = source.charAt(position++);
-			tempPosition--;
+    /*缓冲流*/
+    private BufferedReader reader;
 
-		}
-		
-		// 忽略注释
-		if( c == '/' ){
-			StringBuffer letter=new StringBuffer();
-			letter.append((char)c);
-			while((char)source.charAt(position) == '/'){
-				letter.append((char)source.charAt(position));
-				position++;
-				tempPosition--;
-				c=source.charAt(position);
-			}
-			boolean flag = false;
-			if(letter.toString().equals("//")){
-				flag = true;
-				while( c != '\n' ){
-					c=source.charAt(position++);
-					tempPosition--;
-					if(c == '\n'){
-						line++;
-					}
-				}
-			}
-			if( flag )
-				return this.nextToken();
-			else
-				return new Token(TokenKind.Div, "/",line);
-		}
-		
-		//如果是字母则需要判断是否是标识符,关键字
-		if(Character.isLetter(c)){
-			StringBuffer letter=new StringBuffer();
-			letter.append((char)c);
-			while(Character.isLetter(source.charAt(position)) || Character.isDigit(source.charAt(position))){
-				letter.append((char)source.charAt(position));
-				position++;
-				tempPosition--;
-			}
+    /*源程序字符串表示*/
+    private StringBuffer source;
 
-			// 识别关键字
-			switch (letter.toString()) {
-				case "class":
-					return new Token(TokenKind.Class, "class",line);
-				case "main":
-					return new Token(TokenKind.Main, "main",line);
-				case "true":
-					return new Token(TokenKind.True, "true",line);
-				case "false":
-					return new Token(TokenKind.False, "false",line);
-				case "void":
-					return new Token(TokenKind.Void, "void",line);
-				case "String":
-					return new Token(TokenKind.String, "String",line);
-				case "int":
-					return new Token(TokenKind.Int, "int",line);
-				case "bool":
-					return new Token(TokenKind.Bool, "bool",line);
-				case "float":
-					return new Token(TokenKind.Float, "float",line);
-				case "if":
-					return new Token(TokenKind.If, "if",line);
-				case "else":
-					return new Token(TokenKind.Else, "else",line);
-				case "while":
-					return new Token(TokenKind.While, "while",line);
-				case "printf":
-					return new Token(TokenKind.Printf, "printf",line);
-				case "printLine":
-					return new Token(TokenKind.PrintLine, "printLine",line);
-				case "return":
-					return new Token(TokenKind.Return, "return",line);
-				default:
-					return new Token(TokenKind.Id, letter.toString(),line);
-			}
-			
-		}
+    /*DFA初始状态*/
+    private DFAState state = DFAState.INITIAL;
 
-		//进行数字处理
-		else if(Character.isDigit(c)){
-			StringBuffer letter=new StringBuffer();
-			letter.append((char)c);
-			while(Character.isDigit(source.charAt(position)) || source.charAt(position) == '.' ){
-				letter.append((char)source.charAt(position));
-				position++;
-				tempPosition--;
-			}
-			if( iNumberPattern.matcher(letter.toString()).matches() ){
-				return new Token(TokenKind.Num,String.valueOf(letter),line);
-			}else if( dNumberPattern.matcher(letter.toString()).matches() ){
-				return new Token(TokenKind.DNum,String.valueOf(letter),line);
-			}else{
-				new Token(TokenKind.Unknown, "Unknown Token"+(char)c+c,line);
-			}
-			
-		}
+    /*临时token*/
+    private StringBuffer bufferToken = new StringBuffer();
 
-		//操作符,分界符处理
-		else{
-			switch (c) {
-				case '+':
-					return new Token(TokenKind.Add, "+",line);
-				case '-':
-					return new Token(TokenKind.Sub, "-",line);
-				case '*':
-					return new Token(TokenKind.Mul, "*",line);
-				case '/':
-					return new Token(TokenKind.Div, "/",line);
-				case '%':
-					return new Token(TokenKind.Mod, "%",line);
-				case '{':
-					return new Token(TokenKind.Lbrace, "{",line);
-				case '}':
-					return new Token(TokenKind.Rbrace, "}",line);
-				case '(':
-					return new Token(TokenKind.Lparen, "(",line);
-				case ')':
-					return new Token(TokenKind.Rparen, ")",line);
-				case ',':
-					return new Token(TokenKind.Commer, ",",line);
-				case '>':
-					c=source.charAt(position++);
-					if(c==61){
-						return new Token(TokenKind.GTE, ">=",line);
-					}else{
-						position--;
-						tempPosition--;
-						return new Token(TokenKind.GT, ">",line);
-					}
-				case '<':
-					c=source.charAt(position++);
-					if(c==61){
-						return new Token(TokenKind.LTE, "<=",line);
-					}else{
-						position--;
-						tempPosition--;
-						return new Token(TokenKind.LT, "<",line);
-					}
-				case '=':
-					c=source.charAt(position++);
-					if(c==61){
-						return new Token(TokenKind.EQ, "==",line);
-					}else{
-						position--;
-						tempPosition--;
-						return new Token(TokenKind.Assign, "=",line);
-					}
-				case '!':
-					c=source.charAt(position++);
-					if(c==61){
-						return new Token(TokenKind.NEQ, "!=",line);
-					}else{
-						position--;
-						tempPosition--;
-						return new Token(TokenKind.Not, "!",line);
-					}
-				case '&':
-					c=source.charAt(position++);
-					if(c==38){
-						return new Token(TokenKind.And, "&&",line);
-					}else{
-						return new Token(TokenKind.Unknown, "Unknown Token"+(char)c+c,line);
-					}
-				case '|':
-					c=source.charAt(position++);
-					if(c==124){
-						return new Token(TokenKind.Or, "||",line);
-					}else{
-						return new Token(TokenKind.Unknown, "Unknown Token"+(char)c+c,line);
-					}
-				case ';':
-					return new Token(TokenKind.Semicolon, ";",line);
-				case '"':
-					StringBuffer letter=new StringBuffer();
-					while(source.charAt(position)!='"'){
-						letter.append((char)source.charAt(position));
-						position++;
-						tempPosition--;
-					}
-					position++;
-					tempPosition--;
-					return new Token(TokenKind.String,String.valueOf(letter),line);
-				default:
-					break;
-			}//end of switch
-		}//end of else
-		return new Token(TokenKind.Unknown, "Unknown Token"+(char)c+c,line);
-	}
+    /*源程序行号*/
+    private int lineNumber = 1;
+
+    /*保留字哈希表*/
+    private HashMap<String,Token> reserve = new HashMap<>();
+
+    /*token集合*/
+    private List<Token> tokens = new ArrayList<>();
+
+    private String className;
+
+    public TokenKind obtainTokenKind(String lexeme) {
+        return reserve.get(lexeme).getKind();
+    }
+
+    public List<Token> getTokens() {
+        return this.tokens;
+    }
+    /**
+     * 根据给定的源程序文件{@code file},构造词法分析器.
+     * @param file Lemon源程序文件
+     * @throws IOException
+     */
+    public Lexer(File file) throws IOException {
+        // 构建保留字映射表
+        this.reserve.put("class", new Token(TokenKind.Class, "class"));
+        this.reserve.put("void", new Token(TokenKind.Void, "void"));
+        this.reserve.put("main", new Token(TokenKind.Main, "main"));
+        this.reserve.put("int", new Token(TokenKind.Int, "int"));
+        this.reserve.put("float", new Token(TokenKind.Float, "float"));
+        this.reserve.put("bool", new Token(TokenKind.Bool, "bool"));
+        this.reserve.put("true", new Token(TokenKind.True, "true"));
+        this.reserve.put("false", new Token(TokenKind.False, "false"));
+        this.reserve.put("if", new Token(TokenKind.If, "if"));
+        this.reserve.put("else", new Token(TokenKind.Else, "else"));
+        this.reserve.put("while", new Token(TokenKind.While, "while"));
+        this.reserve.put("return", new Token(TokenKind.Return, "return"));
+        this.reserve.put("printf", new Token(TokenKind.Printf, "printf"));
+
+        //读取源程序文件
+        this.reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+        this.source = new StringBuffer();
+        this.className = file.getName().substring(0, file.getName().lastIndexOf("."));
+        readFile();
+        tokenize();
+    }
+    public String getClassName(){
+        return this.className;
+    }
+
+    /**
+     * 读取源程序文件内容到source
+     * @throws IOException
+     */
+    private void readFile() throws IOException{
+        int c=-1;
+        while((c = reader.read())!=-1){
+            source.append(String.valueOf((char)c));
+        }
+    }
+
+    public Token next(){
+        if(indexToken < tokens.size()){
+            return tokens.get(indexToken++);
+        }else{
+            return null;
+        }
+    }
+
+    /**
+     * 回滚索引
+     */
+    private void rollback(){
+        index--;
+    }
+
+    /**
+     * 向前看i个token
+     * @param i 向前看的个数
+     * @return {@link site.ilemon.lexer.Token}
+     */
+    public Token lookahead(int i){
+        if(indexToken + i < tokens.size()){
+            return tokens.get(indexToken - 1 + i);
+        }else{
+            return null;
+        }
+    }
+
+    /**
+     * 读取源程序并切分token
+     * @throws IOException
+     */
+    private void tokenize() throws IOException {
+        int c = 0;
+
+        //while(index < source.length() || state != DFAState.INITIAL) {
+        while( c != 65535 || state != DFAState.INITIAL ) {
+            switch (state){
+                // 初始状态
+                case INITIAL:
+                    c = getChar();
+                    switch (c){
+                        // 处理空格，制表符，换行
+                        case ' ':
+                        case '\t':
+                        case '\n':
+                        case '\r':
+                            if( c == '\n')
+                                this.lineNumber++;
+                            break;
+
+                        // 处理标识符，关键字：
+                        case 'a':case 'b':case 'c':case 'd':
+                        case 'e':case 'f':case 'g':case 'h':
+                        case 'i':case 'j':case 'k':case 'l':
+                        case 'm':case 'n':case 'o':case 'p':
+                        case 'q':case 'r':case 's':case 't':
+                        case 'u':case 'v':case 'w':case 'x':
+                        case 'y':case 'z':
+                        case 'A':case 'B':case 'C':case 'D':
+                        case 'E':case 'F':case 'G':case 'H':
+                        case 'I':case 'J':case 'K':case 'L':
+                        case 'M':case 'N':case 'O':case 'P':
+                        case 'Q':case 'R':case 'S':case 'T':
+                        case 'U':case 'V':case 'W':case 'X':
+                        case 'Y':case 'Z':
+                            bufferToken.append((char)c);
+                            c = getChar();
+                            if(Character.isAlphabetic(c) || c == '_' || Character.isDigit(c)) {
+                                bufferToken.append((char)c);
+
+                            } else {
+                                rollback();
+                            }
+                            state = DFAState.IDENTIFIER;
+                            break;
+
+                        // 处理注释
+                        case '/':
+                            bufferToken.append((char)c);
+                            c = getChar();
+                            if( c == '/') {
+                                while( c != '\n' ){
+                                    c = getChar();
+                                }
+                                this.lineNumber++;
+                                bufferToken.delete(0,bufferToken.length());
+                            }
+                            else {
+                                state = DFAState.ARITH_OPERATION;
+                                rollback();
+                            }
+                            break;
+
+                        // 处理数字
+                        case '0':case '1':case '2':case '3':case '4':
+                        case '5':case '6':case '7':case '8':case '9':
+                            bufferToken.append((char)c);
+                            state = DFAState.DIGITAL;
+                            break;
+
+                        // 处理'='
+                        case '=':
+                            bufferToken.append((char)c);
+                            state = DFAState.ASSIGN;
+                            break;
+
+                        // 处理'>'
+                        case '>':
+                            bufferToken.append((char)c);
+                            state = DFAState.GREATER_THAN;
+                            break;
+
+                        // 处理'<'
+                        case '<':
+                            bufferToken.append((char)c);
+                            state = DFAState.LESS_THAN;
+                            break;
+
+                        // 处理'!'
+                        case '!':
+                            bufferToken.append((char)c);
+                            state = DFAState.NOT;
+                            break;
+
+                        // 处理'|'
+                        case '|':
+                            bufferToken.append((char)c);
+                            state = DFAState.OR;
+                            break;
+
+                        // 处理'&'
+                        case '&':
+                            bufferToken.append((char)c);
+                            state = DFAState.AND;
+                            break;
+
+                        // 处理'+','-','*'，'/'
+                        case '+': case '-': case '*':
+                            bufferToken.append((char)c);
+                            state = DFAState.ARITH_OPERATION;
+                            break;
+
+                        // 处理'('
+                        case '(':
+                            bufferToken.append((char)c);
+                            state = DFAState.LEFT_PAREN;
+                            break;
+
+                        // 处理'!'
+                        case ')':
+                            bufferToken.append((char)c);
+                            state = DFAState.RIGHT_PAREN;
+                            break;
+
+                        // 处理';'
+                        case ';':
+                            bufferToken.append((char)c);
+                            state = DFAState.SEMICOLON;
+                            break;
+
+                        // 处理','
+                        case ',':
+                            bufferToken.append((char)c);
+                            state = DFAState.COMMA;
+                            break;
+
+                        // 处理'{'
+                        case '{':
+                            bufferToken.append((char)c);
+                            state = DFAState.LEFT_BRACE;
+                            break;
+
+                        // 处理'}'
+                        case '}':
+                            bufferToken.append((char)c);
+                            state = DFAState.RIGHT_BRACE;
+                            break;
+
+                        // 处理' " '
+                        case '"':
+                            state = DFAState.DOUBLE_QUOTATION;
+                            break;
+                        // 处理异常情况
+                        default:
+                            error(String.valueOf((char)c));
+                            break;
+                    }
+                    break;
+
+                // 标识符状态
+                case IDENTIFIER:
+                    c = getChar();
+                    while( Character.isAlphabetic(c) || Character.isDigit(c) || c == '_' ){
+                        bufferToken.append((char)c);
+                        c = getChar();
+                    }
+                    Token t = reserve.get(bufferToken.toString());
+                    if(t == null) { // 是标识符
+                        tokens.add(new Token(TokenKind.Id,bufferToken.toString(),this.lineNumber));
+                    } else { // 是关键字
+                        t.setLineNumber(this.lineNumber);
+                        tokens.add(t);
+                    }
+                    rollback();
+                    initDFAState(bufferToken);
+                    break;
+
+                // 数字状态
+                case DIGITAL:
+                    c = getChar();
+                    while( Character.isDigit(c) ){
+                        bufferToken.append((char)c);
+                        c = getChar();
+                    }
+                    if( c == '.'){
+                        bufferToken.append((char)c);
+                        c = getChar();
+                        while( Character.isDigit(c) ){
+                            bufferToken.append((char)c);
+                            c = getChar();
+                        }
+                        tokens.add( new Token(TokenKind.DNum,bufferToken.toString(),this.lineNumber));
+                    }else{
+                        tokens.add( new Token(TokenKind.Num,bufferToken.toString(),this.lineNumber));
+                        rollback();
+
+                    }
+                    initDFAState(bufferToken);
+                    break;
+                case ASSIGN:
+                    c = getChar();
+                    if( c == '=' ){
+                        tokens.add( new Token(TokenKind.EQ,bufferToken.toString(),this.lineNumber));
+                    }else{
+                        tokens.add(new Token(TokenKind.Assign,bufferToken.toString(),this.lineNumber));
+                        rollback();
+                    }
+                    initDFAState(bufferToken);
+                    break;
+                case GREATER_THAN:
+                    c = getChar();
+                    if( c == '=' ){
+                        tokens.add( new Token(TokenKind.GTE,bufferToken.toString(),this.lineNumber));
+                    }else{
+                        tokens.add(new Token(TokenKind.GT,bufferToken.toString(),this.lineNumber));
+                        rollback();
+                    }
+                    initDFAState(bufferToken);
+                    break;
+                case LESS_THAN:
+                    c = getChar();
+                    if( c == '=' ){
+                        tokens.add( new Token(TokenKind.LTE,bufferToken.toString(),this.lineNumber));
+                    }else{
+                        tokens.add(new Token(TokenKind.LT,bufferToken.toString(),this.lineNumber));
+                        rollback();
+                    }
+                    initDFAState(bufferToken);
+                    break;
+                case NOT:
+                    c = getChar();
+                    if( c == '=' ){
+                        tokens.add( new Token(TokenKind.NEQ,bufferToken.toString(),this.lineNumber));
+                    }else{
+                        tokens.add(new Token(TokenKind.Not,bufferToken.toString(),this.lineNumber));
+                        rollback();
+                    }
+                    initDFAState(bufferToken);
+                    break;
+
+                case OR:
+                    c = getChar();
+                    bufferToken.append((char)c);
+                    if( c == '|' ){
+                        tokens.add( new Token(TokenKind.Or,bufferToken.toString(),this.lineNumber));
+                    }
+                    initDFAState(bufferToken);
+                    break;
+                case AND:
+                    c = getChar();
+                    bufferToken.append((char)c);
+                    if( c == '&' ){
+                        tokens.add( new Token(TokenKind.And,bufferToken.toString(),this.lineNumber));
+                    }
+                    initDFAState(bufferToken);
+                    break;
+                case ARITH_OPERATION:
+                    switch ( bufferToken.toString()){
+                        case "+":
+                            tokens.add( new Token(TokenKind.Add,bufferToken.toString(),this.lineNumber));
+                            break;
+                        case "-":
+                            tokens.add( new Token(TokenKind.Sub,bufferToken.toString(),this.lineNumber));
+                            break;
+                        case "*":
+                            tokens.add( new Token(TokenKind.Mul,bufferToken.toString(),this.lineNumber));
+                            break;
+                        case "/":
+                            tokens.add( new Token(TokenKind.Div,bufferToken.toString(),this.lineNumber));
+                            break;
+                    }
+                    initDFAState(bufferToken);
+                    break;
+                case LEFT_PAREN:
+                    tokens.add( new Token(TokenKind.Lparen,bufferToken.toString(),this.lineNumber));
+                    initDFAState(bufferToken);
+                    break;
+                case RIGHT_PAREN:
+                    tokens.add( new Token(TokenKind.Rparen,bufferToken.toString(),this.lineNumber));
+                    initDFAState(bufferToken);
+                    break;
+                case SEMICOLON:
+                    tokens.add( new Token(TokenKind.Semicolon,bufferToken.toString(),this.lineNumber));
+                    initDFAState(bufferToken);
+                    break;
+                case COMMA:
+                    tokens.add( new Token(TokenKind.Commer,bufferToken.toString(),this.lineNumber));
+                    initDFAState(bufferToken);
+                    break;
+                case LEFT_BRACE:
+                    tokens.add( new Token(TokenKind.Lbrace,bufferToken.toString(),this.lineNumber));
+                    initDFAState(bufferToken);
+                    break;
+                case RIGHT_BRACE:
+                    tokens.add( new Token(TokenKind.Rbrace,bufferToken.toString(),this.lineNumber));
+                    initDFAState(bufferToken);
+                    break;
+                case DOUBLE_QUOTATION:
+                    c = getChar();
+                    while( c != '"'){
+                        bufferToken.append((char)c);
+                        c = getChar();
+                    }
+                    tokens.add( new Token(TokenKind.String,bufferToken.toString(),this.lineNumber));
+                    initDFAState(bufferToken);
+                    break;
+
+                default:
+                    error(bufferToken.toString());
+                    break;
+            }
+
+        }
+        tokens.add( new Token(TokenKind.EOF,"EOF",this.lineNumber));
+    }
+
+    private void initDFAState(StringBuffer bufferToken) {
+        state = DFAState.INITIAL;
+        bufferToken.delete(0,bufferToken.length());
+    }
+
+
+
+    /**
+     * 读入输入流中下一字符到currChar，并将index++
+     * @return {@link Character}
+     */
+    private char getChar() {
+        if( index < source.length()) {
+            currChar = source.charAt(index++);
+        } else {
+            currChar = (char)-1;
+        }
+        return currChar;
+    }
+
+
+
+    private void error(String token){
+        System.out.println("错误的Token"+token+" 在行："+this.lineNumber);
+    }
+
+    public static void main(String[] args)  {
+        try {
+            Lexer lexer=new Lexer(new File("examples/HelloWorld.lemon"));
+            for(Token t : lexer.tokens){
+                System.out.println(t);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

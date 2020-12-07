@@ -16,8 +16,7 @@ public class LexerTest {
             //Lexer lexer=new Lexer(new File("examples/If01.lemon"));
             //Lexer lexer=new Lexer(new File("examples/If13.lemon"));
             Lexer lexer=new Lexer(new File("examples/FloatTest01.lemon"));
-            lexer.lexicalAnalysis();
-            System.out.println(lexer.tokens);
+            System.out.println(lexer.getTokens());
         } catch (IOException e) {
             e.printStackTrace();
         }

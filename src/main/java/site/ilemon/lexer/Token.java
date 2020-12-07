@@ -20,6 +20,10 @@ public class Token {
 		this.lexeme = lexeme;
 	}
 
+	public Token(TokenKind tokenKind) {
+		this.kind = tokenKind;
+	}
+
 	public TokenKind getKind() {
 		return kind;
 	}

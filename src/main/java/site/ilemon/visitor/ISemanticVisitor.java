@@ -5,7 +5,7 @@ import site.ilemon.ast.Ast;
 
 /**
  * 语义分析访问者接口
- * @author andy
+ * @author Andy.Yan
  *
  */
 public interface ISemanticVisitor {
