@@ -73,40 +73,50 @@ public class ByteCodeGenerator implements Visitor {
 
     @Override
     public void visit(Ast.Method.MethodSingle methodSingle) {
-        if( methodSingle.id.equals("main")){
+        // 计算所需的局部变量槽位数，至少为 index + 10，再加一些余量
+        // double类型占用2个槽位，所以需要更多空间
+        int localsLimit = Math.max(methodSingle.index * 2 + 10, 16);
+        // 栈深度估算：基于语句数量，但至少 16
+        int stackLimit = Math.max(methodSingle.stms.size() * 4, 16);
+        
+        if (methodSingle.id.equals("main")) {
             this.writeln(".method public static main([Ljava/lang/String;)V");
-            this.writeln(".limit stack 4096");
-            this.writeln(".limit locals 2000");
-            for( int i = 0; i < methodSingle.stms.size(); i++ ){
+            this.writeln(".limit stack " + stackLimit);
+            this.writeln(".limit locals " + localsLimit);
+            for (int i = 0; i < methodSingle.stms.size(); i++) {
                 this.visit(methodSingle.stms.get(i));
             }
             this.writeln("return");
-        }else{
-            if( methodSingle.formals !=null && methodSingle.formals.size() > 0 ){
+        } else {
+            if (methodSingle.formals != null && methodSingle.formals.size() > 0) {
                 this.write(".method static " + methodSingle.id + "(");
-                for( int i = 0; i< methodSingle.formals.size(); i++){
-                    //if( methodSingle.formals.get(i).type instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
-                    if( methodSingle.formals.get(i).type instanceof Ast.Type.Int || methodSingle.formals.get(i).type instanceof Ast.Type.Bool)
+                for (int i = 0; i < methodSingle.formals.size(); i++) {
+                    if (methodSingle.formals.get(i).type instanceof Ast.Type.Int 
+                            || methodSingle.formals.get(i).type instanceof Ast.Type.Bool)
                         this.write("I");
-                    else if(methodSingle.formals.get(i).type instanceof Ast.Type.Float)
+                    else if (methodSingle.formals.get(i).type instanceof Ast.Type.Float)
                         this.write("F");
-                    //else
+                    else if (methodSingle.formals.get(i).type instanceof Ast.Type.Double)
+                        this.write("D");
                 }
-                if(methodSingle.retType instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
+                if (methodSingle.retType instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
                     this.write(")I");
+                else if (methodSingle.retType instanceof Ast.Type.Double)
+                    this.write(")D");
                 else
                     this.write(")F");
-            }else{
-                if(methodSingle.retType instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
+            } else {
+                if (methodSingle.retType instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
                     this.write(".method static " + methodSingle.id + "()I");
+                else if (methodSingle.retType instanceof Ast.Type.Double)
+                    this.write(".method static " + methodSingle.id + "()D");
                 else
                     this.write(".method static " + methodSingle.id + "()F");
-
             }
             this.writeln("");
-            this.writeln(".limit stack 4096");
-            this.writeln(".limit locals 1000");// 暂时写成1000
-            for( int i = 0; i < methodSingle.stms.size(); i++ ){
+            this.writeln(".limit stack " + stackLimit);
+            this.writeln(".limit locals " + localsLimit);
+            for (int i = 0; i < methodSingle.stms.size(); i++) {
                 this.visit(methodSingle.stms.get(i));
             }
         }
@@ -154,25 +164,44 @@ public class ByteCodeGenerator implements Visitor {
             this.visit((Ast.Stmt.Fdiv)stmt);
         else if( stmt instanceof Ast.Stmt.Fload )
             this.visit((Ast.Stmt.Fload)stmt);
-        else if( stmt instanceof Ast.Stmt.Fdiv)
-            this.visit((Ast.Stmt.Fdiv)stmt);
-        else if( stmt instanceof Ast.Stmt.Fadd )
-            this.visit((Ast.Stmt.Fadd)stmt);
         else if( stmt instanceof Ast.Stmt.Freturn )
             this.visit((Ast.Stmt.Freturn)stmt);
         else if( stmt instanceof Ast.Stmt.Fstore )
             this.visit((Ast.Stmt.Fstore)stmt);
 
+        else if( stmt instanceof Ast.Stmt.Dadd )
+            this.visit((Ast.Stmt.Dadd)stmt);
+        else if( stmt instanceof Ast.Stmt.Dsub )
+            this.visit((Ast.Stmt.Dsub)stmt);
+        else if( stmt instanceof Ast.Stmt.Dmul )
+            this.visit((Ast.Stmt.Dmul)stmt);
+        else if( stmt instanceof Ast.Stmt.Ddiv )
+            this.visit((Ast.Stmt.Ddiv)stmt);
+        else if( stmt instanceof Ast.Stmt.Dload )
+            this.visit((Ast.Stmt.Dload)stmt);
+        else if( stmt instanceof Ast.Stmt.Dreturn )
+            this.visit((Ast.Stmt.Dreturn)stmt);
+        else if( stmt instanceof Ast.Stmt.Dstore )
+            this.visit((Ast.Stmt.Dstore)stmt);
+        else if( stmt instanceof Ast.Stmt.Dcmpl )
+            this.visit((Ast.Stmt.Dcmpl)stmt);
+        else if( stmt instanceof Ast.Stmt.F2d )
+            this.visit((Ast.Stmt.F2d)stmt);
+
         else if( stmt instanceof Ast.Stmt.Ificmpgt )
             this.visit((Ast.Stmt.Ificmpgt)stmt);
         else if( stmt instanceof Ast.Stmt.Ificmplt )
             this.visit((Ast.Stmt.Ificmplt)stmt);
-        else if( stmt instanceof Ast.Stmt.Fcmpl )
-            this.visit((Ast.Stmt.Fcmpl)stmt);
         else if( stmt instanceof Ast.Stmt.Ificmpget )
             this.visit((Ast.Stmt.Ificmpget)stmt);
         else if( stmt instanceof Ast.Stmt.Ificmplet )
             this.visit((Ast.Stmt.Ificmplet)stmt);
+        else if( stmt instanceof Ast.Stmt.Ificmpeq )
+            this.visit((Ast.Stmt.Ificmpeq)stmt);
+        else if( stmt instanceof Ast.Stmt.Ificmpne )
+            this.visit((Ast.Stmt.Ificmpne)stmt);
+        else if( stmt instanceof Ast.Stmt.Fcmpl )
+            this.visit((Ast.Stmt.Fcmpl)stmt);
         else if( stmt instanceof Ast.Stmt.Ifgt )
             this.visit((Ast.Stmt.Ifgt)stmt);
 
@@ -196,6 +225,27 @@ public class ByteCodeGenerator implements Visitor {
         else if( stmt instanceof Ast.Stmt.Invokevirtual )
             this.visit((Ast.Stmt.Invokevirtual)stmt);
 
+        // 数组相关指令
+        else if( stmt instanceof Ast.Stmt.Newarray )
+            this.visit((Ast.Stmt.Newarray)stmt);
+        else if( stmt instanceof Ast.Stmt.Iaload )
+            this.visit((Ast.Stmt.Iaload)stmt);
+        else if( stmt instanceof Ast.Stmt.Iastore )
+            this.visit((Ast.Stmt.Iastore)stmt);
+        else if( stmt instanceof Ast.Stmt.Faload )
+            this.visit((Ast.Stmt.Faload)stmt);
+        else if( stmt instanceof Ast.Stmt.Fastore )
+            this.visit((Ast.Stmt.Fastore)stmt);
+        else if( stmt instanceof Ast.Stmt.Daload )
+            this.visit((Ast.Stmt.Daload)stmt);
+        else if( stmt instanceof Ast.Stmt.Dastore )
+            this.visit((Ast.Stmt.Dastore)stmt);
+        else if( stmt instanceof Ast.Stmt.Baload )
+            this.visit((Ast.Stmt.Baload)stmt);
+        else if( stmt instanceof Ast.Stmt.Bastore )
+            this.visit((Ast.Stmt.Bastore)stmt);
+        else if( stmt instanceof Ast.Stmt.Arraylength )
+            this.visit((Ast.Stmt.Arraylength)stmt);
 
     }
 
@@ -294,6 +344,16 @@ public class ByteCodeGenerator implements Visitor {
     }
 
     @Override
+    public void visit(Ast.Stmt.Ificmpeq s) {
+        this.iwriteln("if_icmpeq " + s.l.toString());
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Ificmpne s) {
+        this.iwriteln("if_icmpne " + s.l.toString());
+    }
+
+    @Override
     public void visit(Ast.Stmt.Iload s) {
         this.iwriteln("iload " + s.index);
     }
@@ -307,10 +367,14 @@ public class ByteCodeGenerator implements Visitor {
                 this.write("I");
             }else if(t instanceof Ast.Type.Float){
                 this.write("F");
+            }else if(t instanceof Ast.Type.Double){
+                this.write("D");
             }
         }
         if( s.rt != null && s.rt.toString().equals("@float"))
             this.write(")F");
+        else if( s.rt != null && s.rt.toString().equals("@double"))
+            this.write(")D");
         else
             this.write(")I");
 
@@ -334,7 +398,13 @@ public class ByteCodeGenerator implements Visitor {
 
     @Override
     public void visit(Ast.Stmt.Ldc s) {
-        this.iwriteln("ldc " + s.i);
+        // double类型需要使用ldc2_w指令
+        if (s.i instanceof java.lang.Double) {
+            // 添加d后缀明确指定double类型
+            this.iwriteln("ldc2_w " + s.i + "d");
+        } else {
+            this.iwriteln("ldc " + s.i);
+        }
     }
 
     @Override
@@ -348,6 +418,12 @@ public class ByteCodeGenerator implements Visitor {
             this.iwriteln("getstatic java/lang/System/out Ljava/io/PrintStream;");
             this.iwriteln("swap");
             this.iwriteln("invokevirtual java/io/PrintStream/print(F)V");
+        }
+        else if( obj.exprType.toString().equals("@double")){
+            this.iwriteln("getstatic java/lang/System/out Ljava/io/PrintStream;");
+            this.iwriteln("dup_x2");
+            this.iwriteln("pop");
+            this.iwriteln("invokevirtual java/io/PrintStream/print(D)V");
         }
         else if( obj.exprType.toString().equals("@string")){
             this.iwriteln("getstatic java/lang/System/out Ljava/io/PrintStream;");
@@ -381,12 +457,48 @@ public class ByteCodeGenerator implements Visitor {
         this.iwriteln("fload " + s.index);
     }
 
+    public void visit(Ast.Stmt.Dadd s) {
+        this.iwriteln("dadd");
+    }
+
+    public void visit(Ast.Stmt.Dsub s) {
+        this.iwriteln("dsub");
+    }
+
+    public void visit(Ast.Stmt.Dmul s) {
+        this.iwriteln("dmul");
+    }
+
+    public void visit(Ast.Stmt.Ddiv s) {
+        this.iwriteln("ddiv");
+    }
+
+    public void visit(Ast.Stmt.Dload s) {
+        this.iwriteln("dload " + s.index);
+    }
+
+    public void visit(Ast.Stmt.Dstore s) {
+        this.iwriteln("dstore " + s.index);
+    }
+
+    public void visit(Ast.Stmt.Dreturn s) {
+        this.iwriteln("dreturn");
+    }
+
+    public void visit(Ast.Stmt.Dcmpl s) {
+        this.iwriteln("dcmpl");
+    }
+
+    public void visit(Ast.Stmt.F2d s) {
+        this.iwriteln("f2d");
+    }
+
     @Override
     public void visit(Ast.Type.T obj) {
         if( obj instanceof Ast.Type.Int)
             this.visit((Ast.Type.Int)obj);
         else if( obj instanceof Ast.Type.Float)
-            this.visit((Ast.Type.Int)obj);
+            this.visit((Ast.Type.Float)obj);
         else if( obj instanceof Ast.Type.Bool)
             this.visit((Ast.Type.Bool)obj);
     }
@@ -401,6 +513,10 @@ public class ByteCodeGenerator implements Visitor {
         this.write("F");
     }
 
+    public void visit(Ast.Type.Double obj) {
+        this.write("D");
+    }
+
     @Override
     public void visit(Ast.Type.Str obj) {
 
@@ -409,5 +525,59 @@ public class ByteCodeGenerator implements Visitor {
     @Override
     public void visit(Ast.Type.Bool obj) {
 
+    }
+
+    // ========== 数组相关指令 ==========
+
+    public void visit(Ast.Stmt.Newarray s) {
+        String type;
+        if (s.elementType instanceof Ast.Type.Int) {
+            type = "int";
+        } else if (s.elementType instanceof Ast.Type.Float) {
+            type = "float";
+        } else if (s.elementType instanceof Ast.Type.Double) {
+            type = "double";
+        } else if (s.elementType instanceof Ast.Type.Bool) {
+            type = "boolean";
+        } else {
+            type = "int"; // 默认
+        }
+        this.iwriteln("newarray " + type);
+    }
+
+    public void visit(Ast.Stmt.Iaload s) {
+        this.iwriteln("iaload");
+    }
+
+    public void visit(Ast.Stmt.Iastore s) {
+        this.iwriteln("iastore");
+    }
+
+    public void visit(Ast.Stmt.Faload s) {
+        this.iwriteln("faload");
+    }
+
+    public void visit(Ast.Stmt.Fastore s) {
+        this.iwriteln("fastore");
+    }
+
+    public void visit(Ast.Stmt.Daload s) {
+        this.iwriteln("daload");
+    }
+
+    public void visit(Ast.Stmt.Dastore s) {
+        this.iwriteln("dastore");
+    }
+
+    public void visit(Ast.Stmt.Baload s) {
+        this.iwriteln("baload");
+    }
+
+    public void visit(Ast.Stmt.Bastore s) {
+        this.iwriteln("bastore");
+    }
+
+    public void visit(Ast.Stmt.Arraylength s) {
+        this.iwriteln("arraylength");
     }
 }

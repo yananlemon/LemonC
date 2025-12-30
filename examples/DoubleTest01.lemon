@@ -1,0 +1,10 @@
+// 测试 double 类型
+class DoubleTest01 {
+    void main() {
+        double num1;
+        double num2;
+        num1 = 19.0;
+        num2 = 1.9;
+        printf("num1=%f,num2=%f\n", num1, num2);
+    }
+}

@@ -12,6 +12,7 @@ public enum TokenKind {
 		String,
 		Int,
 		Float,
+		Double,
 		Bool,
 		While,
 		True,
@@ -47,6 +48,8 @@ public enum TokenKind {
 		Rbrace,				// }
 		Lparen,				// (
 		Rparen,				// )
+		Lbracket,			// [
+		Rbracket,			// ]
 		Semicolon,			// ;
 		Commer,				// ,
 

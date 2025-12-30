@@ -80,6 +80,14 @@ public class Ast {
             }
         }
 
+        public static class Double extends T {
+            @Override
+            public String toString()
+            {
+                return "@double";
+            }
+        }
+
         public static class Str extends T {
             @Override
             public String toString()
@@ -94,6 +102,27 @@ public class Ast {
             {
                 return "@void";
             }
+        }
+
+        // 数组类型
+        public static class IntArray extends T {
+            @Override
+            public String toString() { return "@int[]"; }
+        }
+
+        public static class FloatArray extends T {
+            @Override
+            public String toString() { return "@float[]"; }
+        }
+
+        public static class DoubleArray extends T {
+            @Override
+            public String toString() { return "@double[]"; }
+        }
+
+        public static class BoolArray extends T {
+            @Override
+            public String toString() { return "@bool[]"; }
         }
     }
 
@@ -181,6 +210,22 @@ public class Ast {
 
         }
 
+        public static class Dadd extends T {
+
+        }
+
+        public static class Dsub extends T {
+
+        }
+
+        public static class Dmul extends T {
+
+        }
+
+        public static class Ddiv extends T {
+
+        }
+
         public static class Ificmplt extends T {
             public Label l;
 
@@ -238,6 +283,22 @@ public class Ast {
             }
         }
 
+        public static class Ificmpeq extends T {
+            public Label l;
+
+            public Ificmpeq(Label l) {
+                this.l = l;
+            }
+        }
+
+        public static class Ificmpne extends T {
+            public Label l;
+
+            public Ificmpne(Label l) {
+                this.l = l;
+            }
+        }
+
         public static class Iload extends T {
             public int index;
 
@@ -251,6 +312,15 @@ public class Ast {
             public int index;
 
             public Fload(int index)
+            {
+                this.index = index;
+            }
+        }
+
+        public static class Dload extends T {
+            public int index;
+
+            public Dload(int index)
             {
                 this.index = index;
             }
@@ -290,6 +360,26 @@ public class Ast {
             }
         }
 
+        public static class Dreturn extends T {}
+
+        public static class Dstore extends T {
+            public int index;
+
+            public Dstore(int index) {
+                this.index = index;
+            }
+        }
+
+        public static class Dcmpl extends T {
+            public Dcmpl() {
+            }
+        }
+
+        public static class F2d extends T {
+            public F2d() {
+            }
+        }
+
 
         public static class LabelJ extends T {
             public Label label;
@@ -326,6 +416,42 @@ public class Ast {
 
         }
 
+        // ========== 数组相关指令 ==========
+
+        // 创建数组: newarray int/float/double/boolean
+        public static class Newarray extends T {
+            public Type.T elementType;
+            public Newarray(Type.T elementType) {
+                this.elementType = elementType;
+            }
+        }
+
+        // int数组加载: iaload
+        public static class Iaload extends T {}
+
+        // int数组存储: iastore
+        public static class Iastore extends T {}
+
+        // float数组加载: faload
+        public static class Faload extends T {}
+
+        // float数组存储: fastore
+        public static class Fastore extends T {}
+
+        // double数组加载: daload
+        public static class Daload extends T {}
+
+        // double数组存储: dastore
+        public static class Dastore extends T {}
+
+        // boolean数组加载: baload
+        public static class Baload extends T {}
+
+        // boolean数组存储: bastore
+        public static class Bastore extends T {}
+
+        // 数组长度: arraylength
+        public static class Arraylength extends T {}
 
     }
 

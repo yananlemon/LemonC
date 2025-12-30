@@ -141,6 +141,11 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     @Override
+    public void visit(Ast.Type.Double obj) {
+
+    }
+
+    @Override
     public void visit(Ast.Expr obj) {
 
     }
@@ -150,7 +155,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T t = this.currType;
         this.visit(obj.right);
-        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float");
+        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float") || this.currType.toString().equals("@double");
         if( !isMatch(t,this.currType) || !numberType){
             error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 > 。",t.toString(),this.currType.toString()));
         }
@@ -193,7 +198,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T t = this.currType;
         this.visit(obj.right);
-        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float");
+        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float") || this.currType.toString().equals("@double");
         if( !isMatch(t,this.currType) || !numberType){
             error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 > 。",t.toString(),this.currType.toString()));
         }
@@ -202,12 +207,48 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.LET obj) {
-
+        this.visit(obj.left);
+        Ast.Type.T t = this.currType;
+        this.visit(obj.right);
+        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float") || this.currType.toString().equals("@double");
+        if( !isMatch(t,this.currType) || !numberType){
+            error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 <= 。",t.toString(),this.currType.toString()));
+        }
+        this.currType = new Ast.Type.Bool();
     }
 
     @Override
     public void visit(Ast.Expr.GET obj) {
+        this.visit(obj.left);
+        Ast.Type.T t = this.currType;
+        this.visit(obj.right);
+        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float") || this.currType.toString().equals("@double");
+        if( !isMatch(t,this.currType) || !numberType){
+            error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 >= 。",t.toString(),this.currType.toString()));
+        }
+        this.currType = new Ast.Type.Bool();
+    }
 
+    @Override
+    public void visit(Ast.Expr.EQ obj) {
+        this.visit(obj.left);
+        Ast.Type.T t = this.currType;
+        this.visit(obj.right);
+        if( !isMatch(t,this.currType)){
+            error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 == 。",t.toString(),this.currType.toString()));
+        }
+        this.currType = new Ast.Type.Bool();
+    }
+
+    @Override
+    public void visit(Ast.Expr.NEQ obj) {
+        this.visit(obj.left);
+        Ast.Type.T t = this.currType;
+        this.visit(obj.right);
+        if( !isMatch(t,this.currType)){
+            error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 != 。",t.toString(),this.currType.toString()));
+        }
+        this.currType = new Ast.Type.Bool();
     }
 
     @Override
@@ -289,6 +330,8 @@ public class SemanticVisitor implements ISemanticVisitor {
             this.currType = new Ast.Type.Int();
         }else if(obj.type instanceof Ast.Type.Float){
             this.currType = new Ast.Type.Float();
+        }else if(obj.type instanceof Ast.Type.Double){
+            this.currType = new Ast.Type.Double();
         }else{
             // 不支持的数字类型
             error(obj.lineNum,"不支持的数字类型："+obj.type.toString());
@@ -340,6 +383,8 @@ public class SemanticVisitor implements ISemanticVisitor {
             this.visit((Ast.Stmt.Return)obj);
         else if(obj instanceof Ast.Stmt.Assign)
             this.visit((Ast.Stmt.Assign)obj);
+        else if(obj instanceof Ast.Stmt.ArrayAssign)
+            this.visit((Ast.Stmt.ArrayAssign)obj);
         else if(obj instanceof Ast.Stmt.If)
             this.visit((Ast.Stmt.If)obj);
         else if(obj instanceof Ast.Stmt.Block)
@@ -366,8 +411,8 @@ public class SemanticVisitor implements ISemanticVisitor {
         for( int i = 1; i < obj.exprs.size(); i++ ){
             Ast.Expr.T expr = obj.exprs.get(i);
             this.visit(expr);
-            if(!isMatch(new Ast.Type.Str(),this.currType) &&!isMatch(new Ast.Type.Int(),this.currType) && !isMatch(new Ast.Type.Float(),this.currType))
-                error(expr.lineNum,String.format("表达式%s的类型需要是int或float",expr.toString()));
+            if(!isMatch(new Ast.Type.Str(),this.currType) &&!isMatch(new Ast.Type.Int(),this.currType) && !isMatch(new Ast.Type.Float(),this.currType) && !isMatch(new Ast.Type.Double(),this.currType))
+                error(expr.lineNum,String.format("表达式%s的类型需要是int、float或double",expr.toString()));
         }
 
     }
@@ -420,6 +465,24 @@ public class SemanticVisitor implements ISemanticVisitor {
         }
         else if(obj instanceof Ast.Expr.GT){
             this.visit((Ast.Expr.GT)obj);
+        }
+        else if(obj instanceof Ast.Expr.LET){
+            this.visit((Ast.Expr.LET)obj);
+        }
+        else if(obj instanceof Ast.Expr.GET){
+            this.visit((Ast.Expr.GET)obj);
+        }
+        else if(obj instanceof Ast.Expr.EQ){
+            this.visit((Ast.Expr.EQ)obj);
+        }
+        else if(obj instanceof Ast.Expr.NEQ){
+            this.visit((Ast.Expr.NEQ)obj);
+        }
+        else if(obj instanceof Ast.Expr.ArrayAccess){
+            this.visit((Ast.Expr.ArrayAccess)obj);
+        }
+        else if(obj instanceof Ast.Expr.ArrayLength){
+            this.visit((Ast.Expr.ArrayLength)obj);
         }
 
 
@@ -505,7 +568,97 @@ public class SemanticVisitor implements ISemanticVisitor {
     private boolean isMatch(Ast.Type.T target,Ast.Type.T curr){
         if(target.toString().equals(curr.toString()))
             return true;
-        else
-            return false;
+        // 允许float隐式转换为double
+        if(target.toString().equals("@double") && curr.toString().equals("@float"))
+            return true;
+        return false;
+    }
+
+    // ========== 数组相关的 visit 方法 ==========
+
+    @Override
+    public void visit(Ast.Type.IntArray obj) {
+        this.currType = obj;
+    }
+
+    @Override
+    public void visit(Ast.Type.FloatArray obj) {
+        this.currType = obj;
+    }
+
+    @Override
+    public void visit(Ast.Type.DoubleArray obj) {
+        this.currType = obj;
+    }
+
+    @Override
+    public void visit(Ast.Type.BoolArray obj) {
+        this.currType = obj;
+    }
+
+    @Override
+    public void visit(Ast.Expr.ArrayAccess obj) {
+        // 检查数组是否已声明
+        MethodVarTable mTable = this.methodVarTable.get(currMethodName);
+        Ast.Type.T arrayType = mTable.get(obj.arrayName);
+        if (arrayType == null) {
+            error(obj.lineNum, "未定义的数组: " + obj.arrayName);
+        }
+        // 检查下标类型必须是int
+        this.visit(obj.index);
+        if (!this.currType.toString().equals("@int")) {
+            error(obj.lineNum, "数组下标必须是int类型");
+        }
+        // 设置元素类型
+        obj.elementType = getElementType(arrayType);
+        this.currType = obj.elementType;
+    }
+
+    @Override
+    public void visit(Ast.Expr.ArrayLength obj) {
+        MethodVarTable mTable = this.methodVarTable.get(currMethodName);
+        Ast.Type.T arrayType = mTable.get(obj.arrayName);
+        if (arrayType == null) {
+            error(obj.lineNum, "未定义的数组: " + obj.arrayName);
+        }
+        this.currType = new Ast.Type.Int();
+    }
+
+    @Override
+    public void visit(Ast.Stmt.ArrayAssign obj) {
+        // 检查数组是否已声明
+        MethodVarTable mTable = this.methodVarTable.get(currMethodName);
+        Ast.Type.T arrayType = mTable.get(obj.arrayName);
+        if (arrayType == null) {
+            error(obj.lineNum, "未定义的数组: " + obj.arrayName);
+        }
+        // 设置元素类型
+        Ast.Type.T elementType = getElementType(arrayType);
+        obj.elementType = elementType;
+        // 检查下标类型
+        this.visit(obj.index);
+        if (!this.currType.toString().equals("@int")) {
+            error(obj.lineNum, "数组下标必须是int类型");
+        }
+        // 检查赋值类型
+        this.visit(obj.expr);
+        if (!isMatch(elementType, this.currType)) {
+            error(obj.lineNum, String.format("不能将类型%s赋值给%s数组元素",
+                    this.currType.toString(), elementType.toString()));
+        }
+    }
+
+    // 获取数组元素类型
+    private Ast.Type.T getElementType(Ast.Type.T arrayType) {
+        if (arrayType instanceof Ast.Type.IntArray) {
+            return new Ast.Type.Int();
+        } else if (arrayType instanceof Ast.Type.FloatArray) {
+            return new Ast.Type.Float();
+        } else if (arrayType instanceof Ast.Type.DoubleArray) {
+            return new Ast.Type.Double();
+        } else if (arrayType instanceof Ast.Type.BoolArray) {
+            return new Ast.Type.Bool();
+        }
+        return null;
     }
 }

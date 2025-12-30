@@ -106,6 +106,7 @@ public class Parser {
 		while( look.kind == TokenKind.Void ||
 				look.kind == TokenKind.Int ||
 				look.kind == TokenKind.Float||
+				look.kind == TokenKind.Double||
 				look.kind == TokenKind.Bool) {
 			methods.add(parseMethod());
 		}
@@ -143,6 +144,7 @@ public class Parser {
 		ArrayList<Ast.Declare.T> rs = new ArrayList<Ast.Declare.T>();
 		while(look.kind == TokenKind.Int || 
 				look.kind == TokenKind.Float||
+				look.kind == TokenKind.Double||
 				look.kind == TokenKind.Bool){
 			String id = look.lexeme;
 			Ast.Declare.T d = parseDeclare();
@@ -160,7 +162,7 @@ public class Parser {
 
 	}
 
-	// // <declare> -> type id;
+	// // <declare> -> type id; | type id[size];
 	private Ast.Declare.T parseDeclare() throws IOException {
 		Token t = lexer.lookahead(2);
 		if( t !=null && t.kind == TokenKind.Lparen){
@@ -179,8 +181,20 @@ public class Parser {
 		}else if( look.kind == TokenKind.Id ){
 			String id = look.lexeme;
 			move();
+			// type id[size]; - 数组声明
+			if( look.kind == TokenKind.Lbracket) {
+				match("[");
+				int size = Integer.parseInt(look.lexeme);
+				match(new Token(TokenKind.Num));
+				match("]");
+				match(";");
+				isValDecl = true;
+				// 根据基础类型创建数组类型
+				Ast.Type.T arrayType = createArrayType(type, size);
+				return new Ast.Declare.DeclareSingle(arrayType, id, look.lineNumber);
+			}
 			// type id;
-			if( look.kind == TokenKind.Semicolon) {
+			else if( look.kind == TokenKind.Semicolon) {
 				isValDecl = true;
 				Ast.Declare.DeclareSingle d = new Ast.Declare.DeclareSingle(type,id,look.lineNumber);
 				match(";");
@@ -198,6 +212,20 @@ public class Parser {
 			error(look.lexeme);
 			return null;
 		}
+	}
+
+	// 根据基础类型创建对应的数组类型
+	private Ast.Type.T createArrayType(Ast.Type.T baseType, int size) {
+		if (baseType instanceof Ast.Type.Int) {
+			return new Ast.Type.IntArray(size);
+		} else if (baseType instanceof Ast.Type.Float) {
+			return new Ast.Type.FloatArray(size);
+		} else if (baseType instanceof Ast.Type.Double) {
+			return new Ast.Type.DoubleArray(size);
+		} else if (baseType instanceof Ast.Type.Bool) {
+			return new Ast.Type.BoolArray(size);
+		}
+		return null;
 	}
 
 	// <inputparams> -> type id,
@@ -235,6 +263,22 @@ public class Parser {
 				match(new Token(TokenKind.Id));
 				this.varTable.put(id,new Ast.Type.Float());
 			}
+		}else if( look.kind == TokenKind.Double){
+			Ast.Type.T t = parseType();
+			String id = look.lexeme;
+			int lineNumber = look.lineNumber;
+			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
+			match(new Token(TokenKind.Id));
+			this.varTable.put(id,new Ast.Type.Double());
+			while(look.kind == TokenKind.Commer ){
+				move();
+				t = parseType();
+				id = look.lexeme;
+				lineNumber = look.lineNumber;
+				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
+				match(new Token(TokenKind.Id));
+				this.varTable.put(id,new Ast.Type.Double());
+			}
 		}else if( look.kind == TokenKind.Bool){
 			Ast.Type.T t = parseType();
 			String id = look.lexeme;
@@ -270,7 +314,12 @@ public class Parser {
 			//varTable.put(look.lexeme, new Ast.Type.Float());
 			move();
 			return new Ast.Type.Float();
-		}else if(look.kind == TokenKind.Bool){
+		}
+		else if(look.kind == TokenKind.Double){
+			move();
+			return new Ast.Type.Double();
+		}
+		else if(look.kind == TokenKind.Bool){
 			//varTable.put(look.lexeme, new Ast.Type.Bool());
 			move();
 			return new Ast.Type.Bool();
@@ -349,7 +398,21 @@ public class Parser {
 					move();
 				}
 
-			}else{
+			}
+			// 数组赋值: arr[i] = expr;
+			else if( ahead.kind == TokenKind.Lbracket ){
+				String arrayName = look.lexeme;
+				int lineNum = look.lineNumber;
+				match( new Token(TokenKind.Id) );
+				match( "[" );
+				Ast.Expr.T index = parseExpr();
+				match( "]" );
+				match( new Token(TokenKind.Assign) );
+				Ast.Expr.T expr = parseExpr();
+				match( new Token(TokenKind.Semicolon) );
+				stmt = new Ast.Stmt.ArrayAssign(arrayName, index, expr, lineNum);
+			}
+			else{
 				String id = look.lexeme;
 				int lineNum = look.lineNumber;
 				match( new Token(TokenKind.Id) );
@@ -435,14 +498,27 @@ public class Parser {
 				look.kind == TokenKind.NEQ ||
 				look.kind == TokenKind.EQ ) {
 			String operator = look.lexeme;
+			int lineNumber = look.lineNumber;
 			move();
-			Ast.Expr.T expr1 = parseAdditiveExpr();
+			Ast.Expr.T right = parseAdditiveExpr();
 			switch (operator) {
 			case ">":
-				expr = new Ast.Expr.GT(expr, expr1, look.lineNumber);
+				expr = new Ast.Expr.GT(expr, right, lineNumber);
 				break;
 			case "<":
-				expr = new Ast.Expr.LT(expr, expr1, look.lineNumber);
+				expr = new Ast.Expr.LT(expr, right, lineNumber);
+				break;
+			case ">=":
+				expr = new Ast.Expr.GET(expr, right, lineNumber);
+				break;
+			case "<=":
+				expr = new Ast.Expr.LET(expr, right, lineNumber);
+				break;
+			case "==":
+				expr = new Ast.Expr.EQ(expr, right, lineNumber);
+				break;
+			case "!=":
+				expr = new Ast.Expr.NEQ(expr, right, lineNumber);
 				break;
 			default:
 				break;
@@ -503,6 +579,7 @@ public class Parser {
 			move();
 			return expr;
 		}else if(look.kind==TokenKind.DNum){
+			// 浮点数字面量默认为float类型（保持向后兼容）
 			expr = new Ast.Expr.Number(new Ast.Type.Float(),look.lexeme,look.lineNumber);
 			move();
 			return expr;
@@ -511,7 +588,18 @@ public class Parser {
 			Token ahead = lexer.lookahead(1);
 			if( ahead.kind == TokenKind.Lparen){
 				expr = parseMethodCall();
-			}else{
+			}
+			// 数组访问: arr[i]
+			else if( ahead.kind == TokenKind.Lbracket){
+				String arrayName = look.lexeme;
+				int lineNum = look.lineNumber;
+				move(); // consume id
+				match("[");
+				Ast.Expr.T index = parseExpr();
+				match("]");
+				expr = new Ast.Expr.ArrayAccess(arrayName, index, lineNum);
+			}
+			else{
 				expr = new Ast.Expr.Id(look.lexeme,this.varTable.get(look.lexeme),look.lineNumber);
 				move();
 			}

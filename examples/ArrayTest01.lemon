@@ -1,0 +1,21 @@
+// 测试数组基本功能
+class ArrayTest01 {
+    void main() {
+        int arr[5];
+        int i;
+        
+        // 初始化数组
+        arr[0] = 1;
+        arr[1] = 2;
+        arr[2] = 3;
+        arr[3] = 4;
+        arr[4] = 5;
+        
+        // 打印数组
+        i = 0;
+        while (i < 5) {
+            printf("arr[%d] = %d\n", i, arr[i]);
+            i = i + 1;
+        }
+    }
+}

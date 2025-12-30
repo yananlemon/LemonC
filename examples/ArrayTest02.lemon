@@ -1,0 +1,34 @@
+// 测试 float 和 double 数组
+class ArrayTest02 {
+    void main() {
+        float farr[3];
+        double darr[3];
+        int i;
+        
+        // float 数组
+        farr[0] = 1.1;
+        farr[1] = 2.2;
+        farr[2] = 3.3;
+        
+        // double 数组
+        darr[0] = 10.01;
+        darr[1] = 20.02;
+        darr[2] = 30.03;
+        
+        printf("Float array: %d\n", 0);
+        i = 0;
+        while (i < 3) {
+            printf("%f ", farr[i]);
+            i = i + 1;
+        }
+        printLine();
+        
+        printf("Double array: %d\n", 0);
+        i = 0;
+        while (i < 3) {
+            printf("%f ", darr[i]);
+            i = i + 1;
+        }
+        printLine();
+    }
+}

@@ -1,0 +1,14 @@
+// 测试 double 类型运算
+class DoubleTest02 {
+    void main() {
+        double a;
+        double b;
+        double c;
+        a = 3.14159265358979;
+        b = 2.71828182845904;
+        c = a + b;
+        printf("a=%f\n", a);
+        printf("b=%f\n", b);
+        printf("c=%f\n", c);
+    }
+}
