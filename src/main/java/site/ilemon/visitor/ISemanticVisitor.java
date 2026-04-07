@@ -17,8 +17,8 @@ public interface ISemanticVisitor {
 	void visit(Ast.Expr obj);
 	void visit(Ast.Expr.GT obj);
 	void visit(Ast.Expr.LT obj);
-	void visit(Ast.Expr.LET obj);
-	void visit(Ast.Expr.GET obj);
+	void visit(Ast.Expr.LTE obj);
+	void visit(Ast.Expr.GTE obj);
 	void visit(Ast.Expr.EQ obj);
 	void visit(Ast.Expr.NEQ obj);
 	void visit(Ast.Expr.Id obj);

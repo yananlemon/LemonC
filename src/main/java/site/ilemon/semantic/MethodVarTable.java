@@ -4,6 +4,7 @@ import site.ilemon.ast.Ast;
 
 import java.util.Hashtable;
 import java.util.List;
+import site.ilemon.exception.SemanticException;
 
 /**
  * 方法局部变量表
@@ -22,18 +23,16 @@ public class MethodVarTable{
         for (Ast.Declare.T dec : formals){
             Ast.Declare.DeclareSingle declareSingle = (Ast.Declare.DeclareSingle) dec;
             if (this.table.get(declareSingle.id) != null){
-                System.out.println("重复的参数: " + declareSingle.id +
+                throw new SemanticException("重复的参数: " + declareSingle.id +
                         " 在行 " + dec.lineNum);
-                System.exit(1);
             } else this.table.put(declareSingle.id, declareSingle.type);
         }
 
         for (Ast.Declare.T dec : locals){
             Ast.Declare.DeclareSingle declareSingle = (Ast.Declare.DeclareSingle) dec;
             if (this.table.get(declareSingle.id) != null){
-                System.out.println("重复的变量: " + declareSingle.id +
+                throw new SemanticException("重复的变量: " + declareSingle.id +
                         " 在行 " + dec.lineNum);
-                System.exit(1);
             } else
                 this.table.put(declareSingle.id, declareSingle.type);
         }

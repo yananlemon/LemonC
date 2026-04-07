@@ -3,6 +3,7 @@ package site.ilemon.compiler;
 import site.ilemon.ast.Ast;
 import site.ilemon.codegen.ByteCodeGenerator;
 import site.ilemon.codegen.TranslatorVisitor;
+import site.ilemon.exception.CompilerException;
 import site.ilemon.lexer.Lexer;
 import site.ilemon.parser.Parser;
 import site.ilemon.semantic.SemanticVisitor;
@@ -44,8 +45,13 @@ public class LemonC {
 			generator.visit(translator.prog);
 			jasmin.Main.main(new String[]{translator.prog.mainClass.id + ".il"});
 			
+			
+		} catch (CompilerException e) {
+			System.err.println("编译失败: " + e.getMessage());
+			System.exit(1);
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.exit(1);
 		}
 	}
 

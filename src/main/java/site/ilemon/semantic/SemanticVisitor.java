@@ -1,6 +1,8 @@
 package site.ilemon.semantic;
 
 import site.ilemon.ast.Ast;
+import site.ilemon.ast.Ast.Type.TypeKind;
+import site.ilemon.exception.SemanticException;
 import site.ilemon.visitor.ISemanticVisitor;
 
 import java.util.ArrayList;
@@ -57,7 +59,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T leftType = this.currType;
         this.visit(obj.right);
-        if( !leftType.toString().equals("@bool") || !this.currType.toString().equals("@bool"))
+        if( leftType.getKind() != TypeKind.BOOL || this.currType.getKind() != TypeKind.BOOL)
             error(obj.lineNum,String.format("&& 运算符要求左右表达式必须是bool",
                     leftType.toString(),this.currType.toString()));
     }
@@ -155,7 +157,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T t = this.currType;
         this.visit(obj.right);
-        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float") || this.currType.toString().equals("@double");
+        boolean numberType = this.currType.getKind() == TypeKind.INT || this.currType.getKind() == TypeKind.FLOAT || this.currType.getKind() == TypeKind.DOUBLE;
         if( !isMatch(t,this.currType) || !numberType){
             error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 > 。",t.toString(),this.currType.toString()));
         }
@@ -175,12 +177,13 @@ public class SemanticVisitor implements ISemanticVisitor {
     @Override
     public void visit(Ast.Stmt.If obj) {
         this.visit(obj.condition);
-        if (!this.currType.toString().equals(new Ast.Type.Bool().toString()))
+        if (this.currType.getKind() != TypeKind.BOOL)
             error(obj.condition.lineNum,
                     "条件表达式的类型应该是Bool。");
 
         this.visit(obj.thenStmt);
-        this.visit(obj.elseStmt);
+        if (obj.elseStmt != null)
+            this.visit(obj.elseStmt);
     }
 
     @Override
@@ -198,7 +201,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T t = this.currType;
         this.visit(obj.right);
-        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float") || this.currType.toString().equals("@double");
+        boolean numberType = this.currType.getKind() == TypeKind.INT || this.currType.getKind() == TypeKind.FLOAT || this.currType.getKind() == TypeKind.DOUBLE;
         if( !isMatch(t,this.currType) || !numberType){
             error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 > 。",t.toString(),this.currType.toString()));
         }
@@ -206,11 +209,11 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     @Override
-    public void visit(Ast.Expr.LET obj) {
+    public void visit(Ast.Expr.LTE obj) {
         this.visit(obj.left);
         Ast.Type.T t = this.currType;
         this.visit(obj.right);
-        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float") || this.currType.toString().equals("@double");
+        boolean numberType = this.currType.getKind() == TypeKind.INT || this.currType.getKind() == TypeKind.FLOAT || this.currType.getKind() == TypeKind.DOUBLE;
         if( !isMatch(t,this.currType) || !numberType){
             error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 <= 。",t.toString(),this.currType.toString()));
         }
@@ -218,11 +221,11 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     @Override
-    public void visit(Ast.Expr.GET obj) {
+    public void visit(Ast.Expr.GTE obj) {
         this.visit(obj.left);
         Ast.Type.T t = this.currType;
         this.visit(obj.right);
-        boolean numberType = this.currType.toString().equals("@int") || this.currType.toString().equals("@float") || this.currType.toString().equals("@double");
+        boolean numberType = this.currType.getKind() == TypeKind.INT || this.currType.getKind() == TypeKind.FLOAT || this.currType.getKind() == TypeKind.DOUBLE;
         if( !isMatch(t,this.currType) || !numberType){
             error(obj.lineNum, String.format("类型%s和类型%s之间不能应用比较运算符 >= 。",t.toString(),this.currType.toString()));
         }
@@ -288,7 +291,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         boolean flag = true;
         Ast.Stmt.T lastStmt  = obj.stms.get(obj.stms.size()-1);;
         if( obj.id.equals("main")){
-            if( !obj.retType.toString().equals("@void"))
+            if( obj.retType.getKind() != TypeKind.VOID)
                 error(obj.lineNum, "main方法的返回类型不能是： " + obj.retType);
 
             if(lastStmt instanceof Ast.Stmt.Return)
@@ -343,7 +346,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T leftType = this.currType;
         this.visit(obj.right);
-        if( !leftType.toString().equals("@bool") && !isMatch(leftType,this.currType))
+        if( leftType.getKind() != TypeKind.BOOL || this.currType.getKind() != TypeKind.BOOL)
             error(obj.lineNum,String.format("|| 运算符要求左右表达式必须是bool",
                     leftType.toString(),this.currType.toString()));
     }
@@ -387,8 +390,7 @@ public class SemanticVisitor implements ISemanticVisitor {
             this.visit((Ast.Stmt.ArrayAssign)obj);
         else if(obj instanceof Ast.Stmt.If)
             this.visit((Ast.Stmt.If)obj);
-        else if(obj instanceof Ast.Stmt.Block)
-            this.visit((Ast.Stmt.Block)obj);
+
         else if(obj instanceof Ast.Stmt.While)
             this.visit((Ast.Stmt.While)obj);
         else if(obj instanceof Ast.Stmt.Call)
@@ -466,11 +468,11 @@ public class SemanticVisitor implements ISemanticVisitor {
         else if(obj instanceof Ast.Expr.GT){
             this.visit((Ast.Expr.GT)obj);
         }
-        else if(obj instanceof Ast.Expr.LET){
-            this.visit((Ast.Expr.LET)obj);
+        else if(obj instanceof Ast.Expr.LTE){
+            this.visit((Ast.Expr.LTE)obj);
         }
-        else if(obj instanceof Ast.Expr.GET){
-            this.visit((Ast.Expr.GET)obj);
+        else if(obj instanceof Ast.Expr.GTE){
+            this.visit((Ast.Expr.GTE)obj);
         }
         else if(obj instanceof Ast.Expr.EQ){
             this.visit((Ast.Expr.EQ)obj);
@@ -501,7 +503,7 @@ public class SemanticVisitor implements ISemanticVisitor {
     @Override
     public void visit(Ast.Expr.Not obj) {
         this.visit(obj.expr);
-        if( !this.currType.toString().equals("@bool"))
+        if( this.currType.getKind() != TypeKind.BOOL)
             error(obj.lineNum,"表达式的类型似乎不是Bool。");
         this.currType = new Ast.Type.Bool();
     }
@@ -527,7 +529,7 @@ public class SemanticVisitor implements ISemanticVisitor {
     @Override
     public void visit(Ast.Stmt.While obj) {
         this.visit(obj.condition);
-        if( !this.currType.toString().equals("@bool") )
+        if( this.currType.getKind() != TypeKind.BOOL )
             error(obj.condition.lineNum, "while语句的条件表达式的类型应该是bool。");
         this.visit(obj.body);
 
@@ -561,15 +563,14 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     private void error(int lineNum, String msg){
         this.pass = false;
-        System.out.println("错误: 行 " + lineNum + " " + msg);
-        System.exit(1);
+        throw new SemanticException("错误: 行 " + lineNum + " " + msg);
     }
 
     private boolean isMatch(Ast.Type.T target,Ast.Type.T curr){
-        if(target.toString().equals(curr.toString()))
+        if(target.getKind() == curr.getKind())
             return true;
         // 允许float隐式转换为double
-        if(target.toString().equals("@double") && curr.toString().equals("@float"))
+        if(target.getKind() == TypeKind.DOUBLE && curr.getKind() == TypeKind.FLOAT)
             return true;
         return false;
     }
@@ -606,7 +607,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         }
         // 检查下标类型必须是int
         this.visit(obj.index);
-        if (!this.currType.toString().equals("@int")) {
+        if (this.currType.getKind() != TypeKind.INT) {
             error(obj.lineNum, "数组下标必须是int类型");
         }
         // 设置元素类型
@@ -637,7 +638,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         obj.elementType = elementType;
         // 检查下标类型
         this.visit(obj.index);
-        if (!this.currType.toString().equals("@int")) {
+        if (this.currType.getKind() != TypeKind.INT) {
             error(obj.lineNum, "数组下标必须是int类型");
         }
         // 检查赋值类型

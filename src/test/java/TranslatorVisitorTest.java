@@ -52,8 +52,8 @@ public class TranslatorVisitorTest {
         for (site.ilemon.codegen.ast.Ast.Stmt.T s : method.stms) {
             if (s instanceof site.ilemon.codegen.ast.Ast.Stmt.Ificmpgt ||
                 s instanceof site.ilemon.codegen.ast.Ast.Stmt.Ificmplt ||
-                s instanceof site.ilemon.codegen.ast.Ast.Stmt.Ificmpget ||
-                s instanceof site.ilemon.codegen.ast.Ast.Stmt.Ificmplet ||
+                s instanceof site.ilemon.codegen.ast.Ast.Stmt.Ificmpge ||
+                s instanceof site.ilemon.codegen.ast.Ast.Stmt.Ificmple ||
                 s instanceof site.ilemon.codegen.ast.Ast.Stmt.Ificmpeq ||
                 s instanceof site.ilemon.codegen.ast.Ast.Stmt.Ificmpne) {
                 hasCompare = true;
@@ -109,15 +109,15 @@ public class TranslatorVisitorTest {
         Ast.Expr.Number num = new Ast.Expr.Number(new Ast.Type.Int(), 1, 1);
         Ast.Expr.GT gt = new Ast.Expr.GT(num, num, 1);
         Ast.Expr.LT lt = new Ast.Expr.LT(num, num, 1);
-        Ast.Expr.GET get = new Ast.Expr.GET(num, num, 1);
-        Ast.Expr.LET let = new Ast.Expr.LET(num, num, 1);
+        Ast.Expr.GTE gte = new Ast.Expr.GTE(num, num, 1);
+        Ast.Expr.LTE lte = new Ast.Expr.LTE(num, num, 1);
         Ast.Expr.EQ eq = new Ast.Expr.EQ(num, num, 1);
         Ast.Expr.NEQ neq = new Ast.Expr.NEQ(num, num, 1);
         
         assertNotNull(gt);
         assertNotNull(lt);
-        assertNotNull(get);
-        assertNotNull(let);
+        assertNotNull(gte);
+        assertNotNull(lte);
         assertNotNull(eq);
         assertNotNull(neq);
     }

@@ -51,11 +51,11 @@ public enum TokenKind {
 		Lbracket,			// [
 		Rbracket,			// ]
 		Semicolon,			// ;
-		Commer,				// ,
+		Comma,				// ,
 
 		Id,
 		Num,
-		DNum,
+		FloatLiteral,
 		Assign,
 		Unknown, PrintLine,
 

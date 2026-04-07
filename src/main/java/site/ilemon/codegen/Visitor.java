@@ -30,15 +30,15 @@ public interface Visitor {
 
     void visit(Ast.Stmt.Ificmplt s);
     void visit(Ast.Stmt.Ificmpgt s);
-    void visit(Ast.Stmt.Ificmpget s);
-    void visit(Ast.Stmt.Ificmplet s);
+    void visit(Ast.Stmt.Ificmpge s);
+    void visit(Ast.Stmt.Ificmple s);
     void visit(Ast.Stmt.Ificmpeq s);
     void visit(Ast.Stmt.Ificmpne s);
     void visit(Ast.Stmt.Ifgt s);
     void visit(Ast.Stmt.Fcmpl s);
 
     void visit(Ast.Stmt.Iload s);
-    void visit(Ast.Stmt.Invokevirtual s);
+    void visit(Ast.Stmt.Invokestatic s);
     void visit(Ast.Stmt.Ireturn s);
     void visit(Ast.Stmt.Istore s);
     void visit(Ast.Stmt.LabelJ s);

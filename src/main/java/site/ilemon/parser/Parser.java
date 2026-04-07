@@ -4,6 +4,7 @@ import site.ilemon.ast.Ast;
 import site.ilemon.lexer.Lexer;
 import site.ilemon.lexer.Token;
 import site.ilemon.lexer.TokenKind;
+import site.ilemon.exception.ParseException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,7 +67,7 @@ public class Parser {
 	}
 
 	private void error(String s) { 
-		throw new Error("near line : "+look.lineNumber+" syntax error,excepted get '"+s+"',but got "+look.lexeme);
+		throw new ParseException("near line : "+look.lineNumber+" syntax error,excepted get '"+s+"',but got "+look.lexeme);
 	}
 
 	/**
@@ -231,73 +232,34 @@ public class Parser {
 	// <inputparams> -> type id,
 	private ArrayList<Ast.Declare.T> parseInputParams() throws IOException {
 		ArrayList<Ast.Declare.T> rs = new ArrayList<Ast.Declare.T>();
-		if( look.kind == TokenKind.Int){
+		if( isTypeToken(look.kind) ){
 			Ast.Type.T t = parseType();
 			String id = look.lexeme;
 			int lineNumber = look.lineNumber;
 			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 			match(new Token(TokenKind.Id));
-			this.varTable.put(id,new Ast.Type.Int());
-			while(look.kind == TokenKind.Commer ){
+			this.varTable.put(id, t);
+			while(look.kind == TokenKind.Comma ){
 				move();
 				t = parseType();
 				id = look.lexeme;
 				lineNumber = look.lineNumber;
 				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 				match(new Token(TokenKind.Id));
-				this.varTable.put(id,new Ast.Type.Int());
-			}
-		}else if( look.kind == TokenKind.Float){
-			Ast.Type.T t = parseType();
-			String id = look.lexeme;
-			int lineNumber = look.lineNumber;
-			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
-			match(new Token(TokenKind.Id));
-			this.varTable.put(id,new Ast.Type.Float());
-			while(look.kind == TokenKind.Commer ){
-				move();
-				t = parseType();
-				id = look.lexeme;
-				lineNumber = look.lineNumber;
-				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
-				match(new Token(TokenKind.Id));
-				this.varTable.put(id,new Ast.Type.Float());
-			}
-		}else if( look.kind == TokenKind.Double){
-			Ast.Type.T t = parseType();
-			String id = look.lexeme;
-			int lineNumber = look.lineNumber;
-			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
-			match(new Token(TokenKind.Id));
-			this.varTable.put(id,new Ast.Type.Double());
-			while(look.kind == TokenKind.Commer ){
-				move();
-				t = parseType();
-				id = look.lexeme;
-				lineNumber = look.lineNumber;
-				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
-				match(new Token(TokenKind.Id));
-				this.varTable.put(id,new Ast.Type.Double());
-			}
-		}else if( look.kind == TokenKind.Bool){
-			Ast.Type.T t = parseType();
-			String id = look.lexeme;
-			int lineNumber = look.lineNumber;
-			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
-			match(new Token(TokenKind.Id));
-			this.varTable.put(id,new Ast.Type.Bool());
-			while(look.kind == TokenKind.Commer ){
-				move();
-				t = parseType();
-				id = look.lexeme;
-				lineNumber = look.lineNumber;
-				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
-				match(new Token(TokenKind.Id));
-				this.varTable.put(id,new Ast.Type.Bool());
+				this.varTable.put(id, t);
 			}
 		}
 		return rs;
 	}
+
+	/**
+	 * 判断当前 token 是否为类型关键字
+	 */
+	private boolean isTypeToken(TokenKind kind) {
+		return kind == TokenKind.Int || kind == TokenKind.Float
+				|| kind == TokenKind.Double || kind == TokenKind.Bool;
+	}
+
 
 	private Ast.Type.T parseType() {
 		if( look.kind == TokenKind.Int ){
@@ -353,10 +315,10 @@ public class Parser {
 			int lineNumber = look.lineNumber;
 			Token ahead = lexer.lookahead(1);
 			ArrayList<Ast.Expr.T> exprs = null;
-			if( ahead.kind == TokenKind.Commer ){
+			if( ahead.kind == TokenKind.Comma ){
 				exprs = new ArrayList<Ast.Expr.T>();
 				while( look.kind != TokenKind.Rparen ){
-					if( look.kind == TokenKind.Commer )
+					if( look.kind == TokenKind.Comma )
 						move();
 					exprs.add(parseExpr());
 				}
@@ -456,10 +418,7 @@ public class Parser {
 		return stmt;
 	}
 
-	// bool_expr ->
-	private Ast.Expr.T parseBoolExpr() throws IOException {
-		return null;
-	}
+
 
 
 	// Exp -> AndExp || AndExp
@@ -509,10 +468,10 @@ public class Parser {
 				expr = new Ast.Expr.LT(expr, right, lineNumber);
 				break;
 			case ">=":
-				expr = new Ast.Expr.GET(expr, right, lineNumber);
+				expr = new Ast.Expr.GTE(expr, right, lineNumber);
 				break;
 			case "<=":
-				expr = new Ast.Expr.LET(expr, right, lineNumber);
+				expr = new Ast.Expr.LTE(expr, right, lineNumber);
 				break;
 			case "==":
 				expr = new Ast.Expr.EQ(expr, right, lineNumber);
@@ -578,7 +537,7 @@ public class Parser {
 			expr = new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber);
 			move();
 			return expr;
-		}else if(look.kind==TokenKind.DNum){
+		}else if(look.kind==TokenKind.FloatLiteral){
 			// 浮点数字面量默认为float类型（保持向后兼容）
 			expr = new Ast.Expr.Number(new Ast.Type.Float(),look.lexeme,look.lineNumber);
 			move();
@@ -628,55 +587,11 @@ public class Parser {
 			return expr;
 		}
 		else{
-			System.out.println("near line : "+look.lineNumber+" syntax error: "+"excepted get identifier or expression or number or String, but got "+look.lexeme);
-			System.exit(1);
+			throw new ParseException("near line : "+look.lineNumber+" syntax error: "+"excepted get identifier or expression or number or String, but got "+look.lexeme);
 		}
-		return expr;
 	}
 
-	private Ast.Expr.T parseMethodCall2() throws IOException {
-		Token ahead;
-		Ast.Expr.T expr;
-		String methodName = look.lexeme;
-		int lineNumber = look.lineNumber;
-		move();
-		match("(");
-		ArrayList<Ast.Expr.T> args = null;
-		args = new ArrayList<Ast.Expr.T>();
-		ahead = lexer.lookahead(1);
-		if( ahead.kind == TokenKind.Add || ahead.kind == TokenKind.Sub){
-            args.add(parseAdditiveExpr()); //2019/8/27 测试BoolTest11时注释掉
-        }else{
-            while( look.kind == TokenKind.Id || look.kind == TokenKind.Num  || look.kind == TokenKind.DNum
-            || look.kind == TokenKind.True || look.kind == TokenKind.False){
-                if( look.kind == TokenKind.Id)
-                    args.add(parseFactor());
-                else if( look.kind == TokenKind.Num ){
-					args.add(new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber));
-					move();
-				}
 
-                else if( look.kind == TokenKind.DNum ) {
-					args.add(new Ast.Expr.Number(new Ast.Type.Float(), look.lexeme, look.lineNumber));
-					move();
-				}
-                else if( look.kind == TokenKind.True ){
-                    args.add(new Ast.Expr.True(look.lineNumber));
-                    move();
-                }
-
-                else if( look.kind == TokenKind.False ){
-                    args.add(new Ast.Expr.False(look.lineNumber));
-                    move();
-                }
-                if( look.kind == TokenKind.Commer)
-                    move();
-            }
-        }
-		match(")");
-		expr = new Ast.Expr.Call(methodName, args, lineNumber);
-		return expr;
-	}
 
 	// methodCall->methodCall(Expr,Expr)
 	private Ast.Expr.T parseMethodCall() throws IOException {
@@ -694,7 +609,7 @@ public class Parser {
 		}else{
 			Ast.Expr.T e = parseExpr();
 			args.add(e);
-			while( look.kind == TokenKind.Commer){
+			while( look.kind == TokenKind.Comma){
 				match(",");
 				args.add(parseExpr());
 			}

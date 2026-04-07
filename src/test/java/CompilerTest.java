@@ -2,6 +2,7 @@ import org.junit.Test;
 import site.ilemon.ast.Ast;
 import site.ilemon.codegen.ByteCodeGenerator;
 import site.ilemon.codegen.TranslatorVisitor;
+import site.ilemon.exception.CompilerException;
 import site.ilemon.lexer.Lexer;
 import site.ilemon.parser.Parser;
 import site.ilemon.semantic.SemanticVisitor;
@@ -93,8 +94,7 @@ public class CompilerTest {
         SemanticVisitor semanticVisitor = new SemanticVisitor();
         semanticVisitor.visit(programSingle);
         if (!semanticVisitor.passOrNot()) {
-            System.out.println("语义分析有错");
-            System.exit(1);
+            throw new CompilerException("语义分析有错");
         }
         TranslatorVisitor translatorVisitor = new TranslatorVisitor();
         translatorVisitor.visit(programSingle);

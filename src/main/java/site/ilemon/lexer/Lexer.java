@@ -27,7 +27,7 @@ public class Lexer {
     public List<Token> tokens = new ArrayList<>();  // public for test compatibility
     private int tokenIndex = 0;
     private String className;
-    private String lineSeparator = System.getProperty("line.separator");
+
     
     // 关键字表
     private static final Map<String, TokenKind> KEYWORDS = new HashMap<>();
@@ -259,7 +259,7 @@ public class Lexer {
             case '[': return TokenKind.Lbracket;
             case ']': return TokenKind.Rbracket;
             case ';': return TokenKind.Semicolon;
-            case ',': return TokenKind.Commer;
+            case ',': return TokenKind.Comma;
             default: return TokenKind.Unknown;
         }
     }
@@ -371,7 +371,7 @@ public class Lexer {
                 return new Token(TokenKind.Num, lexeme, line);
 
             case IN_FLOAT:
-                return new Token(TokenKind.DNum, lexeme, line);
+                return new Token(TokenKind.FloatLiteral, lexeme, line);
 
             case IN_STRING:
                 // 去掉首尾引号

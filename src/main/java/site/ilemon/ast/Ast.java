@@ -239,10 +239,21 @@ public class Ast {
      * Type
      */
     public static class Type{
+        /**
+         * 类型枚举，用于类型安全的比较（替代 toString().equals() 方式）
+         */
+        public enum TypeKind {
+            INT, FLOAT, DOUBLE, BOOL, STRING, VOID,
+            INT_ARRAY, FLOAT_ARRAY, DOUBLE_ARRAY, BOOL_ARRAY
+        }
+
         public static abstract class T{
             public abstract void accept(ISemanticVisitor v);
+            public abstract TypeKind getKind();
         }
         public static class Void extends T {
+            @Override
+            public TypeKind getKind() { return TypeKind.VOID; }
             @Override
             public String toString() {
                 return "@void";
@@ -254,6 +265,8 @@ public class Ast {
             }
         }
         public static class Int extends T {
+            @Override
+            public TypeKind getKind() { return TypeKind.INT; }
             @Override
             public String toString() {
                 return "@int";
@@ -267,6 +280,8 @@ public class Ast {
 
         public static class Float extends T {
             @Override
+            public TypeKind getKind() { return TypeKind.FLOAT; }
+            @Override
             public String toString() {
                 return "@float";
             }
@@ -278,6 +293,8 @@ public class Ast {
         }
 
         public static class Double extends T {
+            @Override
+            public TypeKind getKind() { return TypeKind.DOUBLE; }
             @Override
             public String toString() {
                 return "@double";
@@ -291,6 +308,8 @@ public class Ast {
 
         public static class Str extends T {
             @Override
+            public TypeKind getKind() { return TypeKind.STRING; }
+            @Override
             public String toString() {
                 return "@str";
             }
@@ -302,6 +321,8 @@ public class Ast {
         }
 
         public static class Bool extends T {
+            @Override
+            public TypeKind getKind() { return TypeKind.BOOL; }
             @Override
             public String toString() {
                 return "@bool";
@@ -319,6 +340,8 @@ public class Ast {
             public IntArray() { this.size = -1; }
             public IntArray(int size) { this.size = size; }
             @Override
+            public TypeKind getKind() { return TypeKind.INT_ARRAY; }
+            @Override
             public String toString() { return "@int[]"; }
             @Override
             public void accept(ISemanticVisitor v) { v.visit(this); }
@@ -328,6 +351,8 @@ public class Ast {
             public int size;
             public FloatArray() { this.size = -1; }
             public FloatArray(int size) { this.size = size; }
+            @Override
+            public TypeKind getKind() { return TypeKind.FLOAT_ARRAY; }
             @Override
             public String toString() { return "@float[]"; }
             @Override
@@ -339,6 +364,8 @@ public class Ast {
             public DoubleArray() { this.size = -1; }
             public DoubleArray(int size) { this.size = size; }
             @Override
+            public TypeKind getKind() { return TypeKind.DOUBLE_ARRAY; }
+            @Override
             public String toString() { return "@double[]"; }
             @Override
             public void accept(ISemanticVisitor v) { v.visit(this); }
@@ -349,11 +376,14 @@ public class Ast {
             public BoolArray() { this.size = -1; }
             public BoolArray(int size) { this.size = size; }
             @Override
+            public TypeKind getKind() { return TypeKind.BOOL_ARRAY; }
+            @Override
             public String toString() { return "@bool[]"; }
             @Override
             public void accept(ISemanticVisitor v) { v.visit(this); }
         }
     }
+
 
     /**
      * Expression
@@ -537,10 +567,10 @@ public class Ast {
         }
 
         // >=
-        public static class GET extends T{
+        public static class GTE extends T{
             public Ast.Expr.T left,right;
 
-            public GET(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
+            public GTE(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
                 this.left = left;
                 this.right = right;
                 this.lineNum = lineNum;
@@ -553,10 +583,10 @@ public class Ast {
         }
 
         // <=
-        public static class LET extends T{
+        public static class LTE extends T{
             public Ast.Expr.T left,right;
 
-            public LET(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
+            public LTE(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
                 this.left = left;
                 this.right = right;
                 this.lineNum = lineNum;

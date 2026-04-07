@@ -2,6 +2,7 @@ package site.ilemon.codegen;
 
 
 import site.ilemon.ast.Ast.*;
+import site.ilemon.ast.Ast.Type.TypeKind;
 import site.ilemon.codegen.ast.Ast;
 import site.ilemon.codegen.ast.Label;
 import site.ilemon.visitor.ISemanticVisitor;
@@ -53,11 +54,11 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T t = this.type;
         this.visit(obj.right);
-        if (t.toString().equals("@int")) {
+        if (t.getKind() == TypeKind.INT) {
             emit(new Ast.Stmt.Iadd());
-        } else if (t.toString().equals("@float")) {
+        } else if (t.getKind() == TypeKind.FLOAT) {
             emit(new Ast.Stmt.Fadd());
-        } else if (t.toString().equals("@double")) {
+        } else if (t.getKind() == TypeKind.DOUBLE) {
             emit(new Ast.Stmt.Dadd());
         } else {
             // error
@@ -225,7 +226,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
     }
 
     @Override
-    public void visit(Expr.LET obj) {
+    public void visit(Expr.LTE obj) {
         this.visit(obj.left);
         this.visit(obj.right);
         if (this.type instanceof Ast.Type.Float) {
@@ -233,16 +234,16 @@ public class TranslatorVisitor implements ISemanticVisitor {
             emit(new Ast.Stmt.Istore(++index));
             emit(new Ast.Stmt.Iload(index));
             emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmplet(obj.trueList.get(0)));
+            emit(new Ast.Stmt.Ificmple(obj.trueList.get(0)));
             emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
         } else {
-            emit(new Ast.Stmt.Ificmplet(obj.trueList.get(0)));
+            emit(new Ast.Stmt.Ificmple(obj.trueList.get(0)));
             emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
         }
     }
 
     @Override
-    public void visit(Expr.GET obj) {
+    public void visit(Expr.GTE obj) {
         this.visit(obj.left);
         this.visit(obj.right);
         if (this.type instanceof Ast.Type.Float) {
@@ -250,10 +251,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
             emit(new Ast.Stmt.Istore(++index));
             emit(new Ast.Stmt.Iload(index));
             emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmpget(obj.trueList.get(0)));
+            emit(new Ast.Stmt.Ificmpge(obj.trueList.get(0)));
             emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
         } else {
-            emit(new Ast.Stmt.Ificmpget(obj.trueList.get(0)));
+            emit(new Ast.Stmt.Ificmpge(obj.trueList.get(0)));
             emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
         }
     }
@@ -302,7 +303,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
             processExpression(obj, expr);
             at.add(this.type);
         }
-        emit(new Ast.Stmt.Invokevirtual(obj.name, at, returnType));
+        emit(new Ast.Stmt.Invokestatic(obj.name, at, returnType));
 
         // 这里似乎不应该保存到局部，再load到操作栈
         //emit(new Ast.Stmt.Istore(++index));
@@ -425,11 +426,11 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T t = this.type;
         this.visit(obj.right);
-        if (t.toString().equals("@int")) {
+        if (t.getKind() == TypeKind.INT) {
             emit(new Ast.Stmt.Idiv());
-        } else if (t.toString().equals("@float")) {
+        } else if (t.getKind() == TypeKind.FLOAT) {
             emit(new Ast.Stmt.Fdiv());
-        } else if (t.toString().equals("@double")) {
+        } else if (t.getKind() == TypeKind.DOUBLE) {
             emit(new Ast.Stmt.Ddiv());
         } else {
             // error
@@ -441,11 +442,11 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T t = this.type;
         this.visit(obj.right);
-        if (t.toString().equals("@int")) {
+        if (t.getKind() == TypeKind.INT) {
             emit(new Ast.Stmt.Imul());
-        } else if (t.toString().equals("@float")) {
+        } else if (t.getKind() == TypeKind.FLOAT) {
             emit(new Ast.Stmt.Fmul());
-        } else if (t.toString().equals("@double")) {
+        } else if (t.getKind() == TypeKind.DOUBLE) {
             emit(new Ast.Stmt.Dmul());
         } else {
             // error
@@ -473,11 +474,11 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.left);
         Ast.Type.T t = this.type;
         this.visit(obj.right);
-        if (t.toString().equals("@int")) {
+        if (t.getKind() == TypeKind.INT) {
             emit(new Ast.Stmt.Isub());
-        } else if (t.toString().equals("@float")) {
+        } else if (t.getKind() == TypeKind.FLOAT) {
             emit(new Ast.Stmt.Fsub());
-        } else if (t.toString().equals("@double")) {
+        } else if (t.getKind() == TypeKind.DOUBLE) {
             emit(new Ast.Stmt.Dsub());
         } else {
             // error
@@ -693,7 +694,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
      */
     private boolean checkWhetherBoolExpression(Expr.T expr){
         return expr instanceof Expr.GT || expr instanceof Expr.LT
-                || expr instanceof Expr.LET || expr instanceof Expr.GET
+                || expr instanceof Expr.LTE || expr instanceof Expr.GTE
                 || expr instanceof Expr.EQ || expr instanceof Expr.NEQ
                 || expr instanceof Expr.Not || expr instanceof Expr.And
                 || expr instanceof Expr.Or || expr instanceof Expr.True
@@ -728,11 +729,11 @@ public class TranslatorVisitor implements ISemanticVisitor {
             // 设置当前类型
             this.type = new Ast.Type.Int();
         }
-        if (this.type.toString().equals("@int") || this.type.toString().equals("@bool"))
+        if (this.type.getKind() == TypeKind.INT || this.type.getKind() == TypeKind.BOOL)
             emit(new Ast.Stmt.Ireturn());
-        else if (this.type.toString().equals("@float"))
+        else if (this.type.getKind() == TypeKind.FLOAT)
             emit(new Ast.Stmt.Freturn());
-        else if (this.type.toString().equals("@double"))
+        else if (this.type.getKind() == TypeKind.DOUBLE)
             emit(new Ast.Stmt.Dreturn());
 
     }
@@ -789,7 +790,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
             processExpression(targetObj,obj.inputParams.get(i));
             at.add(this.type);
         }
-        emit(new Ast.Stmt.Invokevirtual(obj.name, at, returnType));
+        emit(new Ast.Stmt.Invokestatic(obj.name, at, returnType));
     }
 
     // ========== 数组相关的 visit 方法 ==========

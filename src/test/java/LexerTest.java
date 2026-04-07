@@ -88,7 +88,7 @@ public class LexerTest {
         
         boolean hasDNum = false;
         for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.DNum) {
+            if (t.kind == TokenKind.FloatLiteral) {
                 hasDNum = true;
                 // 验证浮点数格式
                 assertTrue("浮点数应包含小数点", t.lexeme.contains("."));

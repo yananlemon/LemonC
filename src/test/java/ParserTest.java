@@ -77,8 +77,8 @@ public class ParserTest {
         assertNotNull(prog);
         
         // 验证AST中包含GET节点 (>=)
-        boolean hasGET = containsExprType(prog, Ast.Expr.GET.class);
-        assertTrue("应包含大于等于运算符", hasGET);
+        boolean hasGTE = containsExprType(prog, Ast.Expr.GTE.class);
+        assertTrue("应包含大于等于运算符", hasGTE);
     }
 
     @Test
@@ -88,8 +88,8 @@ public class ParserTest {
         assertNotNull(prog);
         
         // 验证AST中包含LET节点 (<=)
-        boolean hasLET = containsExprType(prog, Ast.Expr.LET.class);
-        assertTrue("应包含小于等于运算符", hasLET);
+        boolean hasLTE = containsExprType(prog, Ast.Expr.LTE.class);
+        assertTrue("应包含小于等于运算符", hasLTE);
     }
 
     @Test
@@ -271,12 +271,12 @@ public class ParserTest {
         } else if (expr instanceof Ast.Expr.LT) {
             Ast.Expr.LT lt = (Ast.Expr.LT) expr;
             return containsExprInExpr(lt.left, exprType) || containsExprInExpr(lt.right, exprType);
-        } else if (expr instanceof Ast.Expr.GET) {
-            Ast.Expr.GET get = (Ast.Expr.GET) expr;
-            return containsExprInExpr(get.left, exprType) || containsExprInExpr(get.right, exprType);
-        } else if (expr instanceof Ast.Expr.LET) {
-            Ast.Expr.LET let = (Ast.Expr.LET) expr;
-            return containsExprInExpr(let.left, exprType) || containsExprInExpr(let.right, exprType);
+        } else if (expr instanceof Ast.Expr.GTE) {
+            Ast.Expr.GTE gte = (Ast.Expr.GTE) expr;
+            return containsExprInExpr(gte.left, exprType) || containsExprInExpr(gte.right, exprType);
+        } else if (expr instanceof Ast.Expr.LTE) {
+            Ast.Expr.LTE lte = (Ast.Expr.LTE) expr;
+            return containsExprInExpr(lte.left, exprType) || containsExprInExpr(lte.right, exprType);
         } else if (expr instanceof Ast.Expr.EQ) {
             Ast.Expr.EQ eq = (Ast.Expr.EQ) expr;
             return containsExprInExpr(eq.left, exprType) || containsExprInExpr(eq.right, exprType);
