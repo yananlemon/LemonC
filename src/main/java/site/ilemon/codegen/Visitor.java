@@ -48,11 +48,33 @@ public interface Visitor {
     void visit(Ast.Stmt.Freturn s);
     void visit(Ast.Stmt.Fstore s);
     void visit(Ast.Stmt.Fload s);
+    
+    void visit(Ast.Stmt.Dadd s);
+    void visit(Ast.Stmt.Dsub s);
+    void visit(Ast.Stmt.Dmul s);
+    void visit(Ast.Stmt.Ddiv s);
+    void visit(Ast.Stmt.Dload s);
+    void visit(Ast.Stmt.Dstore s);
+    void visit(Ast.Stmt.Dreturn s);
+    void visit(Ast.Stmt.Dcmpl s);
+    void visit(Ast.Stmt.F2d s);
+
+    void visit(Ast.Stmt.Newarray s);
+    void visit(Ast.Stmt.Iaload s);
+    void visit(Ast.Stmt.Iastore s);
+    void visit(Ast.Stmt.Faload s);
+    void visit(Ast.Stmt.Fastore s);
+    void visit(Ast.Stmt.Daload s);
+    void visit(Ast.Stmt.Dastore s);
+    void visit(Ast.Stmt.Baload s);
+    void visit(Ast.Stmt.Bastore s);
+    void visit(Ast.Stmt.Arraylength s);
 
     // Type
     void visit(Ast.Type.T obj);
     void visit(Ast.Type.Int obj);
     void visit(Ast.Type.Float obj);
+    void visit(Ast.Type.Double obj);
     void visit(Ast.Type.Str obj);
     void visit(Ast.Type.Bool obj);
 
