@@ -103,7 +103,7 @@ public class DoublyLinkedList<T> {
 	 */
 	public T deleteFromTail(){
 		if(!isEmpty()){
-			T value=head.info;
+			T value=tail.info;
 			if(size==1){
 				head=tail=new DNode<T>(null, null, null);
 			}else{

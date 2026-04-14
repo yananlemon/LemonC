@@ -14,9 +14,30 @@ import static site.ilemon.lexer.TokenKind.Num;
 
 
 /**
- * 语法分析
- * @author andy
+ * 递归下降语法分析器。
  *
+ * <p>将 {@link Lexer} 产生的 Token 流按照 Lemon 语言的 BNF 文法进行分析，
+ * 构建出抽象语法树（AST）。采用自顶向下的 LL(2) 分析策略，通过
+ * {@code lookahead(1)} / {@code lookahead(2)} 处理文法歧义。</p>
+ *
+ * <h3>核心文法规则</h3>
+ * <pre>
+ * program    ::= "class" id "{" method* "}"
+ * method     ::= type id "(" params? ")" "{" varDecl* stmt* "}"
+ * stmt       ::= assign | if | while | block | return | printf | call
+ * expr       ::= andExpr ("||" andExpr)*    -- 运算符优先级从低到高
+ * </pre>
+ *
+ * <h3>使用示例</h3>
+ * <pre>
+ * Lexer lexer = new Lexer(new File("Hello.lemon"));
+ * Parser parser = new Parser(lexer);
+ * Ast.Program.T ast = parser.parse();
+ * </pre>
+ *
+ * @author andy
+ * @see Lexer
+ * @see Ast.Program
  */
 public class Parser {
 
@@ -67,7 +88,17 @@ public class Parser {
 	}
 
 	private void error(String s) { 
-		throw new ParseException("near line : "+look.lineNumber+" syntax error,excepted get '"+s+"',but got "+look.lexeme);
+		throw new ParseException(String.format(
+			"[语法分析] 行 %d: 语法错误，期望 '%s'，实际得到 '%s'",
+			look.lineNumber, s, look.lexeme));
+	}
+
+	/**
+	 * 从变量表中查找变量类型，未找到时返回 null（Parser 阶段尚不做未声明变量的错误检查，
+	 * 由 SemanticVisitor 负责）。
+	 */
+	private Ast.Type.T lookupVarType(String id) {
+		return this.varTable.get(id);
 	}
 
 	/**
@@ -132,6 +163,9 @@ public class Parser {
 		match("}");
 		table.put(this.currMethod,this.varTable);
 		if( !methodName.equals("main")){
+			if( stmts.isEmpty() ){
+				error(String.format("方法 '%s' 体内没有语句", methodName));
+			}
 			Ast.Stmt.T stmt = stmts.get(stmts.size()-1);
 			return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,stmt,lineNumber);
 		}else{
@@ -152,7 +186,7 @@ public class Parser {
 			if( d != null ){
 				if( d instanceof  Ast.Declare.DeclareSingle){
 					Ast.Declare.DeclareSingle declareSingle = (Ast.Declare.DeclareSingle)d;
-					varTable.put(declareSingle.id,declareSingle.type);
+					varTable.put(declareSingle.getId(),declareSingle.getType());
 				}
 				rs.add(d);
 			}
@@ -185,13 +219,27 @@ public class Parser {
 			// type id[size]; - 数组声明
 			if( look.kind == TokenKind.Lbracket) {
 				match("[");
-				int size = Integer.parseInt(look.lexeme);
+				int size;
+				try {
+					size = Integer.parseInt(look.lexeme);
+				} catch (NumberFormatException e) {
+					error(String.format("数组大小必须是整数，但得到: '%s'", look.lexeme));
+					return null;
+				}
+				if( size <= 0 ){
+					error(String.format("数组大小必须为正整数，但得到: %d", size));
+					return null;
+				}
 				match(new Token(TokenKind.Num));
 				match("]");
 				match(";");
 				isValDecl = true;
 				// 根据基础类型创建数组类型
 				Ast.Type.T arrayType = createArrayType(type, size);
+				if( arrayType == null ){
+					error(String.format("不支持的数组基础类型: %s", type));
+					return null;
+				}
 				return new Ast.Declare.DeclareSingle(arrayType, id, look.lineNumber);
 			}
 			// type id;
@@ -330,12 +378,11 @@ public class Parser {
 			}
 		}
 		else if( look.kind == TokenKind.PrintLine ){
+			int lineNumber = look.lineNumber;
 			match(new Token(TokenKind.PrintLine));
 			match(new Token(TokenKind.Lparen));
 			match(new Token(TokenKind.Rparen));
 			match( new Token(TokenKind.Semicolon) );
-			String format = look.lexeme;
-			int lineNumber = look.lineNumber;
 			stmt = new Ast.Stmt.PrintLine();
 		}
 		else if( look.kind == TokenKind.While ){
@@ -356,7 +403,7 @@ public class Parser {
 				int lineNumber = look.lineNumber;
 				Ast.Expr.T expr =  parseMethodCall();
 				if( expr instanceof Ast.Expr.Call){
-					stmt = new Ast.Stmt.Call(mthName,((Ast.Expr.Call)expr).inputParams,lineNumber);
+					stmt = new Ast.Stmt.Call(mthName,((Ast.Expr.Call)expr).getInputParams(),lineNumber);
 					move();
 				}
 
@@ -381,7 +428,7 @@ public class Parser {
 				match( new Token(TokenKind.Assign) );
 				Ast.Expr.T expr = parseExpr();
 				match( new Token(TokenKind.Semicolon) );
-				stmt = new Ast.Stmt.Assign(new Ast.Expr.Id(id,this.varTable.get(id),lineNum), expr, lineNum);
+				stmt = new Ast.Stmt.Assign(new Ast.Expr.Id(id,lookupVarType(id),lineNum), expr, lineNum);
 				
 			}
 		}
@@ -428,7 +475,7 @@ public class Parser {
 		while( look.kind == TokenKind.Or ) {
 			move();
 			Ast.Expr.T right = parseAndExpr();
-			expr = new Ast.Expr.Or(expr, right, expr.lineNum);
+			expr = new Ast.Expr.Or(expr, right, expr.getLineNum());
 		}
 		return expr;
 	}
@@ -442,7 +489,7 @@ public class Parser {
 		while( look.kind == TokenKind.And) {
 			move();
 			Ast.Expr.T right = parseRelationExpr();
-			expr = new Ast.Expr.And(expr, right, expr.lineNum);
+			expr = new Ast.Expr.And(expr, right, expr.getLineNum());
 		}
 		return expr;
 	}
@@ -559,7 +606,7 @@ public class Parser {
 				expr = new Ast.Expr.ArrayAccess(arrayName, index, lineNum);
 			}
 			else{
-				expr = new Ast.Expr.Id(look.lexeme,this.varTable.get(look.lexeme),look.lineNumber);
+				expr = new Ast.Expr.Id(look.lexeme,lookupVarType(look.lexeme),look.lineNumber);
 				move();
 			}
 			return expr;
@@ -587,7 +634,9 @@ public class Parser {
 			return expr;
 		}
 		else{
-			throw new ParseException("near line : "+look.lineNumber+" syntax error: "+"excepted get identifier or expression or number or String, but got "+look.lexeme);
+			throw new ParseException(String.format(
+				"[语法分析] 行 %d: 语法错误，期望标识符、表达式、数字或字符串，实际得到 '%s'",
+				look.lineNumber, look.lexeme));
 		}
 	}
 

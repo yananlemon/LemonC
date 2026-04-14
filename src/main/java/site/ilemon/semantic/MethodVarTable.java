@@ -2,7 +2,7 @@ package site.ilemon.semantic;
 
 import site.ilemon.ast.Ast;
 
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
 import site.ilemon.exception.SemanticException;
 
@@ -11,30 +11,30 @@ import site.ilemon.exception.SemanticException;
  * @author andy
  */
 public class MethodVarTable{
-    private Hashtable<String, Ast.Type.T> table;
+    private HashMap<String, Ast.Type.T> table;
 
     public MethodVarTable()
     {
-        this.table = new Hashtable<>();
+        this.table = new HashMap<>();
     }
 
     public void put(List<Ast.Declare.T> formals, List<Ast.Declare.T> locals){
 
         for (Ast.Declare.T dec : formals){
             Ast.Declare.DeclareSingle declareSingle = (Ast.Declare.DeclareSingle) dec;
-            if (this.table.get(declareSingle.id) != null){
-                throw new SemanticException("重复的参数: " + declareSingle.id +
-                        " 在行 " + dec.lineNum);
-            } else this.table.put(declareSingle.id, declareSingle.type);
+            if (this.table.get(declareSingle.getId()) != null){
+                throw new SemanticException("重复的参数: " + declareSingle.getId() +
+                        " 在行 " + dec.getLineNum());
+            } else this.table.put(declareSingle.getId(), declareSingle.getType());
         }
 
         for (Ast.Declare.T dec : locals){
             Ast.Declare.DeclareSingle declareSingle = (Ast.Declare.DeclareSingle) dec;
-            if (this.table.get(declareSingle.id) != null){
-                throw new SemanticException("重复的变量: " + declareSingle.id +
-                        " 在行 " + dec.lineNum);
+            if (this.table.get(declareSingle.getId()) != null){
+                throw new SemanticException("重复的变量: " + declareSingle.getId() +
+                        " 在行 " + dec.getLineNum());
             } else
-                this.table.put(declareSingle.id, declareSingle.type);
+                this.table.put(declareSingle.getId(), declareSingle.getType());
         }
     }
 

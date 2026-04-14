@@ -1,9 +1,20 @@
-/bin/
-/.settings/
-.classpath
-.project
-/target/
-.DS_Store
+# 编译产物
 *.class
 *.il
-.idea/*
+target/
+bin/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# 日志
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

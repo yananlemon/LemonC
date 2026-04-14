@@ -53,14 +53,14 @@ public class Lexer {
 
     public Lexer(File f) throws IOException {
         this.className = f.getName().substring(0, f.getName().lastIndexOf("."));
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"));
-        StringBuilder sb = new StringBuilder();
-        int c;
-        while ((c = reader.read()) != -1) {
-            sb.append((char) c);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"))) {
+            StringBuilder sb = new StringBuilder();
+            int c;
+            while ((c = reader.read()) != -1) {
+                sb.append((char) c);
+            }
+            this.source = sb.toString();
         }
-        reader.close();
-        this.source = sb.toString();
     }
 
     public String getClassName() {

@@ -210,12 +210,12 @@ public class ParserTest {
     private boolean containsExprType(Ast.Program.T prog, Class<?> exprType) {
         if (prog instanceof Ast.Program.ProgramSingle) {
             Ast.Program.ProgramSingle ps = (Ast.Program.ProgramSingle) prog;
-            if (ps.mainClass instanceof Ast.MainClass.MainClassSingle) {
-                Ast.MainClass.MainClassSingle mc = (Ast.MainClass.MainClassSingle) ps.mainClass;
-                for (Ast.Method.T method : mc.methods) {
+            if (ps.getMainClass() instanceof Ast.MainClass.MainClassSingle) {
+                Ast.MainClass.MainClassSingle mc = (Ast.MainClass.MainClassSingle) ps.getMainClass();
+                for (Ast.Method.T method : mc.getMethods()) {
                     if (method instanceof Ast.Method.MethodSingle) {
                         Ast.Method.MethodSingle ms = (Ast.Method.MethodSingle) method;
-                        for (Ast.Stmt.T stmt : ms.stms) {
+                        for (Ast.Stmt.T stmt : ms.getStms()) {
                             if (containsExprInStmt(stmt, exprType)) {
                                 return true;
                             }
@@ -230,24 +230,24 @@ public class ParserTest {
     private boolean containsExprInStmt(Ast.Stmt.T stmt, Class<?> exprType) {
         if (stmt instanceof Ast.Stmt.If) {
             Ast.Stmt.If ifStmt = (Ast.Stmt.If) stmt;
-            if (containsExprInExpr(ifStmt.condition, exprType)) return true;
-            if (ifStmt.thenStmt != null && containsExprInStmt(ifStmt.thenStmt, exprType)) return true;
-            if (ifStmt.elseStmt != null && containsExprInStmt(ifStmt.elseStmt, exprType)) return true;
+            if (containsExprInExpr(ifStmt.getCondition(), exprType)) return true;
+            if (ifStmt.getThenStmt() != null && containsExprInStmt(ifStmt.getThenStmt(), exprType)) return true;
+            if (ifStmt.getElseStmt() != null && containsExprInStmt(ifStmt.getElseStmt(), exprType)) return true;
         } else if (stmt instanceof Ast.Stmt.While) {
             Ast.Stmt.While whileStmt = (Ast.Stmt.While) stmt;
-            if (containsExprInExpr(whileStmt.condition, exprType)) return true;
-            if (whileStmt.body != null && containsExprInStmt(whileStmt.body, exprType)) return true;
+            if (containsExprInExpr(whileStmt.getCondition(), exprType)) return true;
+            if (whileStmt.getBody() != null && containsExprInStmt(whileStmt.getBody(), exprType)) return true;
         } else if (stmt instanceof Ast.Stmt.Assign) {
             Ast.Stmt.Assign assign = (Ast.Stmt.Assign) stmt;
-            if (containsExprInExpr(assign.expr, exprType)) return true;
+            if (containsExprInExpr(assign.getExpr(), exprType)) return true;
         } else if (stmt instanceof Ast.Stmt.Block) {
             Ast.Stmt.Block block = (Ast.Stmt.Block) stmt;
-            for (Ast.Stmt.T s : block.stmts) {
+            for (Ast.Stmt.T s : block.getStmts()) {
                 if (containsExprInStmt(s, exprType)) return true;
             }
         } else if (stmt instanceof Ast.Stmt.Return) {
             Ast.Stmt.Return ret = (Ast.Stmt.Return) stmt;
-            if (containsExprInExpr(ret.expr, exprType)) return true;
+            if (containsExprInExpr(ret.getExpr(), exprType)) return true;
         }
         return false;
     }
@@ -259,45 +259,45 @@ public class ParserTest {
         // 递归检查子表达式
         if (expr instanceof Ast.Expr.And) {
             Ast.Expr.And and = (Ast.Expr.And) expr;
-            return containsExprInExpr(and.left, exprType) || containsExprInExpr(and.right, exprType);
+            return containsExprInExpr(and.getLeft(), exprType) || containsExprInExpr(and.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.Or) {
             Ast.Expr.Or or = (Ast.Expr.Or) expr;
-            return containsExprInExpr(or.left, exprType) || containsExprInExpr(or.right, exprType);
+            return containsExprInExpr(or.getLeft(), exprType) || containsExprInExpr(or.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.Not) {
-            return containsExprInExpr(((Ast.Expr.Not) expr).expr, exprType);
+            return containsExprInExpr(((Ast.Expr.Not) expr).getExpr(), exprType);
         } else if (expr instanceof Ast.Expr.GT) {
             Ast.Expr.GT gt = (Ast.Expr.GT) expr;
-            return containsExprInExpr(gt.left, exprType) || containsExprInExpr(gt.right, exprType);
+            return containsExprInExpr(gt.getLeft(), exprType) || containsExprInExpr(gt.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.LT) {
             Ast.Expr.LT lt = (Ast.Expr.LT) expr;
-            return containsExprInExpr(lt.left, exprType) || containsExprInExpr(lt.right, exprType);
+            return containsExprInExpr(lt.getLeft(), exprType) || containsExprInExpr(lt.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.GTE) {
             Ast.Expr.GTE gte = (Ast.Expr.GTE) expr;
-            return containsExprInExpr(gte.left, exprType) || containsExprInExpr(gte.right, exprType);
+            return containsExprInExpr(gte.getLeft(), exprType) || containsExprInExpr(gte.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.LTE) {
             Ast.Expr.LTE lte = (Ast.Expr.LTE) expr;
-            return containsExprInExpr(lte.left, exprType) || containsExprInExpr(lte.right, exprType);
+            return containsExprInExpr(lte.getLeft(), exprType) || containsExprInExpr(lte.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.EQ) {
             Ast.Expr.EQ eq = (Ast.Expr.EQ) expr;
-            return containsExprInExpr(eq.left, exprType) || containsExprInExpr(eq.right, exprType);
+            return containsExprInExpr(eq.getLeft(), exprType) || containsExprInExpr(eq.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.NEQ) {
             Ast.Expr.NEQ neq = (Ast.Expr.NEQ) expr;
-            return containsExprInExpr(neq.left, exprType) || containsExprInExpr(neq.right, exprType);
+            return containsExprInExpr(neq.getLeft(), exprType) || containsExprInExpr(neq.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.Add) {
             Ast.Expr.Add add = (Ast.Expr.Add) expr;
-            return containsExprInExpr(add.left, exprType) || containsExprInExpr(add.right, exprType);
+            return containsExprInExpr(add.getLeft(), exprType) || containsExprInExpr(add.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.Sub) {
             Ast.Expr.Sub sub = (Ast.Expr.Sub) expr;
-            return containsExprInExpr(sub.left, exprType) || containsExprInExpr(sub.right, exprType);
+            return containsExprInExpr(sub.getLeft(), exprType) || containsExprInExpr(sub.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.Mul) {
             Ast.Expr.Mul mul = (Ast.Expr.Mul) expr;
-            return containsExprInExpr(mul.left, exprType) || containsExprInExpr(mul.right, exprType);
+            return containsExprInExpr(mul.getLeft(), exprType) || containsExprInExpr(mul.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.Div) {
             Ast.Expr.Div div = (Ast.Expr.Div) expr;
-            return containsExprInExpr(div.left, exprType) || containsExprInExpr(div.right, exprType);
+            return containsExprInExpr(div.getLeft(), exprType) || containsExprInExpr(div.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.Call) {
             Ast.Expr.Call call = (Ast.Expr.Call) expr;
-            for (Ast.Expr.T arg : call.inputParams) {
+            for (Ast.Expr.T arg : call.getInputParams()) {
                 if (containsExprInExpr(arg, exprType)) return true;
             }
         }
@@ -310,12 +310,12 @@ public class ParserTest {
     private boolean containsStmtType(Ast.Program.T prog, Class<?> stmtType) {
         if (prog instanceof Ast.Program.ProgramSingle) {
             Ast.Program.ProgramSingle ps = (Ast.Program.ProgramSingle) prog;
-            if (ps.mainClass instanceof Ast.MainClass.MainClassSingle) {
-                Ast.MainClass.MainClassSingle mc = (Ast.MainClass.MainClassSingle) ps.mainClass;
-                for (Ast.Method.T method : mc.methods) {
+            if (ps.getMainClass() instanceof Ast.MainClass.MainClassSingle) {
+                Ast.MainClass.MainClassSingle mc = (Ast.MainClass.MainClassSingle) ps.getMainClass();
+                for (Ast.Method.T method : mc.getMethods()) {
                     if (method instanceof Ast.Method.MethodSingle) {
                         Ast.Method.MethodSingle ms = (Ast.Method.MethodSingle) method;
-                        for (Ast.Stmt.T stmt : ms.stms) {
+                        for (Ast.Stmt.T stmt : ms.getStms()) {
                             if (containsStmtInStmt(stmt, stmtType)) {
                                 return true;
                             }
@@ -333,12 +333,12 @@ public class ParserTest {
         
         if (stmt instanceof Ast.Stmt.If) {
             Ast.Stmt.If ifStmt = (Ast.Stmt.If) stmt;
-            if (containsStmtInStmt(ifStmt.thenStmt, stmtType)) return true;
-            if (containsStmtInStmt(ifStmt.elseStmt, stmtType)) return true;
+            if (containsStmtInStmt(ifStmt.getThenStmt(), stmtType)) return true;
+            if (containsStmtInStmt(ifStmt.getElseStmt(), stmtType)) return true;
         } else if (stmt instanceof Ast.Stmt.While) {
-            return containsStmtInStmt(((Ast.Stmt.While) stmt).body, stmtType);
+            return containsStmtInStmt(((Ast.Stmt.While) stmt).getBody(), stmtType);
         } else if (stmt instanceof Ast.Stmt.Block) {
-            for (Ast.Stmt.T s : ((Ast.Stmt.Block) stmt).stmts) {
+            for (Ast.Stmt.T s : ((Ast.Stmt.Block) stmt).getStmts()) {
                 if (containsStmtInStmt(s, stmtType)) return true;
             }
         }
