@@ -1,4 +1,4 @@
-class TestMain{
+class Example03{
 	// 程序入口:打印九九乘法表
 	void main(){
 		int k;
@@ -12,7 +12,7 @@ class TestMain{
 				t = t + 1;
 			}
 			k = k+1;
-			printNewLine();
+			printLine();
 		}
 		
 	}

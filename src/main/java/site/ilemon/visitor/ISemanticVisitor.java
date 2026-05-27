@@ -23,6 +23,7 @@ public interface ISemanticVisitor {
 	void visit(Ast.Expr.NEQ obj);
 	void visit(Ast.Expr.Id obj);
 	void visit(Ast.Expr.Div obj);
+	void visit(Ast.Expr.Mod obj);
 	void visit(Ast.Expr.Mul obj);
 	void visit(Ast.Expr.Number obj);
 
@@ -61,6 +62,9 @@ public interface ISemanticVisitor {
 	void visit(Ast.Stmt.PrintLine obj);
 	void visit(Ast.Stmt.Return obj);
 	void visit(Ast.Stmt.While obj);
+	void visit(Ast.Stmt.For obj);
+	void visit(Ast.Stmt.Break obj);
+	void visit(Ast.Stmt.Continue obj);
 	void visit(Ast.Stmt.Call obj);
 	void visit(Ast.Stmt.ArrayAssign obj);
 

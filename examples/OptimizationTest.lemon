@@ -1,0 +1,18 @@
+class OptimizationTest {
+    void main() {
+        int a;
+        int b;
+        bool c;
+        a = (2 + 3) * 4;
+        b = (a * 1) + 0;
+        c = (1 < 2) && true;
+        if (c) {
+            printf("a=%d,b=%d\n", a, b);
+        } else {
+            printf("bad\n");
+        }
+        while (false) {
+            printf("dead\n");
+        }
+    }
+}

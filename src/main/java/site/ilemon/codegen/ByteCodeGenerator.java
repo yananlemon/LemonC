@@ -8,9 +8,35 @@ import site.ilemon.exception.CompilerException;
 
 public class ByteCodeGenerator implements Visitor {
 
+    public static final String DEFAULT_OUTPUT_DIR = "target/lemonc";
+
     private String currClassId;
 
     private java.io.BufferedWriter writer;
+
+    private final java.io.File outputDir;
+
+    private java.io.File outputFile;
+
+    public ByteCodeGenerator() {
+        this(new java.io.File(DEFAULT_OUTPUT_DIR));
+    }
+
+    public ByteCodeGenerator(java.io.File outputDir) {
+        this.outputDir = outputDir;
+    }
+
+    public java.io.File getOutputDir() {
+        return this.outputDir;
+    }
+
+    public java.io.File getOutputFile() {
+        return this.outputFile;
+    }
+
+    public java.io.File getClassFile(String classId) {
+        return new java.io.File(this.outputDir, classId + ".class");
+    }
 
     private void writeln(String s)
     {
@@ -43,8 +69,15 @@ public class ByteCodeGenerator implements Visitor {
     public void visit(Ast.MainClass.MainClassSingle mainClassSingle) {
         this.currClassId = mainClassSingle.id;
         try {
+            if (!this.outputDir.exists() && !this.outputDir.mkdirs()) {
+                throw new IOException("Failed to create output directory: " + this.outputDir.getPath());
+            }
+            if (!this.outputDir.isDirectory()) {
+                throw new IOException("Output path is not a directory: " + this.outputDir.getPath());
+            }
+            this.outputFile = new java.io.File(this.outputDir, mainClassSingle.id + ".il");
             this.writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(
-                    new java.io.FileOutputStream(mainClassSingle.id + ".il")));
+                    new java.io.FileOutputStream(this.outputFile), "UTF-8"));
         } catch (Exception e)
         {
             throw new CompilerException("Failed to open output file for " + mainClassSingle.id + ": " + e.getMessage());
@@ -70,50 +103,295 @@ public class ByteCodeGenerator implements Visitor {
         }
     }
 
-    private int calcMaxStack(java.util.List<Ast.Stmt.T> stmts) {
-        int max = 0;
-        int current = 0;
-        for (Ast.Stmt.T s : stmts) {
-            if (s == null) continue;
-            String c = s.getClass().getSimpleName();
-            switch (c) {
-                case "Ldc": case "Iload": case "Fload": case "Aload": case "Baload":
-                case "Iaload": case "Faload":
-                    current++; break;
-                case "Dload": case "Daload":
-                    current += 2; break;
-                case "Iadd": case "Isub": case "Imul": case "Idiv": 
-                case "Fadd": case "Fsub": case "Fmul": case "Fdiv":
-                case "Fcmpl": case "Ificmplt": case "Ificmpgt": case "Ificmpge": 
-                case "Ificmple": case "Ificmpeq": case "Ificmpne":
-                case "Iastore": case "Fastore": case "Bastore":
-                    current -= 1; break;
-                case "Dadd": case "Dsub": case "Dmul": case "Ddiv":
-                    current -= 2; break;
-                case "Dcmpl": case "Dastore":
-                    current -= 3; break;
-                case "Istore": case "Fstore": case "Astore": case "Ifgt":
-                case "Ireturn": case "Freturn": case "Areturn": case "PrintLine":
-                    current -= 1; break;
-                case "Dreturn": case "F2d":
-                    current -= 2; break;
-                case "Invokestatic":
-                    // Invokestatic in this compiler usually returns to top of stack or assigns, 
-                    // a full robust implementation would parse method sig.
-                    break;
-                default:
-                    break;
-            }
-            if (current > max) max = current;
-            if (current < 0) current = 0; // fallback reset at boundaries
+    public static int calculateMaxStack(java.util.List<Ast.Stmt.T> stmts) {
+        if (stmts == null || stmts.isEmpty()) {
+            return 0;
         }
-        return Math.max(max, 16);
+
+        java.util.Map<String, Integer> labels = new java.util.HashMap<String, Integer>();
+        for (int i = 0; i < stmts.size(); i++) {
+            Ast.Stmt.T stmt = stmts.get(i);
+            if (stmt instanceof Ast.Stmt.LabelJ) {
+                Ast.Stmt.LabelJ label = (Ast.Stmt.LabelJ) stmt;
+                labels.put(label.label.toString(), i);
+            }
+        }
+
+        int[] inHeights = new int[stmts.size()];
+        java.util.Arrays.fill(inHeights, -1);
+        java.util.ArrayDeque<Integer> worklist = new java.util.ArrayDeque<Integer>();
+        inHeights[0] = 0;
+        worklist.add(0);
+
+        int max = 0;
+        while (!worklist.isEmpty()) {
+            int index = worklist.removeFirst();
+            Ast.Stmt.T stmt = stmts.get(index);
+            int current = inHeights[index];
+            int localMax = current;
+            int[] deltas = stackDeltas(stmt);
+
+            for (int delta : deltas) {
+                current += delta;
+                if (current < 0) {
+                    throw new CompilerException("Operand stack underflow after "
+                            + stmt.getClass().getSimpleName() + " at IR index " + index);
+                }
+                if (current > localMax) {
+                    localMax = current;
+                }
+            }
+            if (localMax > max) {
+                max = localMax;
+            }
+
+            for (Integer successor : successors(stmt, index, stmts.size(), labels)) {
+                if (successor == null || successor < 0 || successor >= stmts.size()) {
+                    continue;
+                }
+                int oldHeight = inHeights[successor];
+                if (oldHeight == -1) {
+                    inHeights[successor] = current;
+                    worklist.add(successor);
+                } else if (oldHeight != current) {
+                    throw new CompilerException("Inconsistent operand stack height at IR index "
+                            + successor + ": expected " + oldHeight + ", got " + current);
+                }
+            }
+        }
+
+        return max;
+    }
+
+    public static int calculateMaxLocals(Ast.Method.MethodSingle methodSingle) {
+        if (methodSingle == null) {
+            return 0;
+        }
+
+        int max = "main".equals(methodSingle.id) ? 1 : formalSlots(methodSingle.formals);
+        if (methodSingle.stms != null) {
+            for (Ast.Stmt.T stmt : methodSingle.stms) {
+                int limit = localLimit(stmt);
+                if (limit > max) {
+                    max = limit;
+                }
+            }
+        }
+        return max;
+    }
+
+    private static java.util.List<Integer> successors(Ast.Stmt.T stmt, int index, int size,
+                                                      java.util.Map<String, Integer> labels) {
+        java.util.ArrayList<Integer> result = new java.util.ArrayList<Integer>(2);
+        if (stmt instanceof Ast.Stmt.Goto) {
+            result.add(labelIndex(((Ast.Stmt.Goto) stmt).l, labels));
+            return result;
+        }
+        if (isReturn(stmt)) {
+            return result;
+        }
+        if (isConditionalBranch(stmt)) {
+            result.add(labelIndex(branchLabel(stmt), labels));
+        }
+        if (index + 1 < size) {
+            result.add(index + 1);
+        }
+        return result;
+    }
+
+    private static Integer labelIndex(site.ilemon.codegen.ast.Label label,
+                                      java.util.Map<String, Integer> labels) {
+        Integer target = labels.get(label.toString());
+        if (target == null) {
+            throw new CompilerException("Missing label target: " + label);
+        }
+        return target;
+    }
+
+    private static boolean isConditionalBranch(Ast.Stmt.T stmt) {
+        return stmt instanceof Ast.Stmt.Ifgt
+                || stmt instanceof Ast.Stmt.Ificmplt
+                || stmt instanceof Ast.Stmt.Ificmpgt
+                || stmt instanceof Ast.Stmt.Ificmpge
+                || stmt instanceof Ast.Stmt.Ificmple
+                || stmt instanceof Ast.Stmt.Ificmpeq
+                || stmt instanceof Ast.Stmt.Ificmpne;
+    }
+
+    private static site.ilemon.codegen.ast.Label branchLabel(Ast.Stmt.T stmt) {
+        if (stmt instanceof Ast.Stmt.Ifgt) return ((Ast.Stmt.Ifgt) stmt).l;
+        if (stmt instanceof Ast.Stmt.Ificmplt) return ((Ast.Stmt.Ificmplt) stmt).l;
+        if (stmt instanceof Ast.Stmt.Ificmpgt) return ((Ast.Stmt.Ificmpgt) stmt).l;
+        if (stmt instanceof Ast.Stmt.Ificmpge) return ((Ast.Stmt.Ificmpge) stmt).l;
+        if (stmt instanceof Ast.Stmt.Ificmple) return ((Ast.Stmt.Ificmple) stmt).l;
+        if (stmt instanceof Ast.Stmt.Ificmpeq) return ((Ast.Stmt.Ificmpeq) stmt).l;
+        if (stmt instanceof Ast.Stmt.Ificmpne) return ((Ast.Stmt.Ificmpne) stmt).l;
+        throw new CompilerException("Internal error: not a conditional branch "
+                + stmt.getClass().getSimpleName());
+    }
+
+    private static boolean isReturn(Ast.Stmt.T stmt) {
+        return stmt instanceof Ast.Stmt.Ireturn
+                || stmt instanceof Ast.Stmt.Freturn
+                || stmt instanceof Ast.Stmt.Dreturn
+                || stmt instanceof Ast.Stmt.Areturn;
+    }
+
+    private static int[] stackDeltas(Ast.Stmt.T stmt) {
+        if (stmt instanceof Ast.Stmt.LabelJ || stmt instanceof Ast.Stmt.Goto) return deltas();
+        if (stmt instanceof Ast.Stmt.Ldc) return deltas(valueSlots(((Ast.Stmt.Ldc) stmt).i));
+        if (stmt instanceof Ast.Stmt.Iload || stmt instanceof Ast.Stmt.Fload
+                || stmt instanceof Ast.Stmt.Aload) return deltas(1);
+        if (stmt instanceof Ast.Stmt.Dload) return deltas(2);
+        if (stmt instanceof Ast.Stmt.Istore || stmt instanceof Ast.Stmt.Fstore
+                || stmt instanceof Ast.Stmt.Astore) return deltas(-1);
+        if (stmt instanceof Ast.Stmt.Dstore) return deltas(-2);
+
+        if (stmt instanceof Ast.Stmt.Iadd || stmt instanceof Ast.Stmt.Isub
+                || stmt instanceof Ast.Stmt.Imul || stmt instanceof Ast.Stmt.Idiv
+                || stmt instanceof Ast.Stmt.Irem
+                || stmt instanceof Ast.Stmt.Fadd || stmt instanceof Ast.Stmt.Fsub
+                || stmt instanceof Ast.Stmt.Fmul || stmt instanceof Ast.Stmt.Fdiv
+                || stmt instanceof Ast.Stmt.Fcmpl || stmt instanceof Ast.Stmt.Fcmpg) return deltas(-2, 1);
+        if (stmt instanceof Ast.Stmt.Dadd || stmt instanceof Ast.Stmt.Dsub
+                || stmt instanceof Ast.Stmt.Dmul || stmt instanceof Ast.Stmt.Ddiv) return deltas(-4, 2);
+        if (stmt instanceof Ast.Stmt.Dcmpl || stmt instanceof Ast.Stmt.Dcmpg) return deltas(-4, 1);
+        if (stmt instanceof Ast.Stmt.F2d) return deltas(-1, 2);
+        if (stmt instanceof Ast.Stmt.I2f) return deltas();
+        if (stmt instanceof Ast.Stmt.I2d) return deltas(-1, 2);
+
+        if (stmt instanceof Ast.Stmt.Ifgt) return deltas(-1);
+        if (stmt instanceof Ast.Stmt.Ificmplt || stmt instanceof Ast.Stmt.Ificmpgt
+                || stmt instanceof Ast.Stmt.Ificmpge || stmt instanceof Ast.Stmt.Ificmple
+                || stmt instanceof Ast.Stmt.Ificmpeq || stmt instanceof Ast.Stmt.Ificmpne) return deltas(-2);
+
+        if (stmt instanceof Ast.Stmt.Ireturn || stmt instanceof Ast.Stmt.Freturn
+                || stmt instanceof Ast.Stmt.Areturn) return deltas(-1);
+        if (stmt instanceof Ast.Stmt.Dreturn) return deltas(-2);
+
+        if (stmt instanceof Ast.Stmt.Invokestatic) {
+            Ast.Stmt.Invokestatic call = (Ast.Stmt.Invokestatic) stmt;
+            return deltas(-argumentTypeSlots(call.at), emittedReturnSlots(call.rt));
+        }
+        if (stmt instanceof Ast.Stmt.Printf) {
+            return printfDeltas(((Ast.Stmt.Printf) stmt).exprType);
+        }
+        if (stmt instanceof Ast.Stmt.PrintLine) return deltas(1, -2);
+        if (stmt instanceof Ast.Stmt.Pop) return deltas(-1);
+        if (stmt instanceof Ast.Stmt.Pop2) return deltas(-2);
+
+        if (stmt instanceof Ast.Stmt.Newarray) return deltas(-1, 1);
+        if (stmt instanceof Ast.Stmt.Iaload || stmt instanceof Ast.Stmt.Faload
+                || stmt instanceof Ast.Stmt.Baload) return deltas(-2, 1);
+        if (stmt instanceof Ast.Stmt.Daload) return deltas(-2, 2);
+        if (stmt instanceof Ast.Stmt.Iastore || stmt instanceof Ast.Stmt.Fastore
+                || stmt instanceof Ast.Stmt.Bastore) return deltas(-3);
+        if (stmt instanceof Ast.Stmt.Dastore) return deltas(-4);
+        if (stmt instanceof Ast.Stmt.Arraylength) return deltas(-1, 1);
+
+        throw new CompilerException("Missing stack effect for IR statement: "
+                + stmt.getClass().getName());
+    }
+
+    private static int[] printfDeltas(Ast.Type.T type) {
+        if (type != null && type.getKind() == TypeKind.DOUBLE) {
+            return deltas(1, 1, -1, -3);
+        }
+        return deltas(1, -2);
+    }
+
+    private static int argumentTypeSlots(java.util.List<Ast.Type.T> types) {
+        int slots = 0;
+        if (types != null) {
+            for (Ast.Type.T type : types) {
+                slots += typeSlots(type);
+            }
+        }
+        return slots;
+    }
+
+    private static int formalSlots(java.util.List<Ast.Declare.DeclareSingle> declares) {
+        int slots = 0;
+        if (declares != null) {
+            for (Ast.Declare.DeclareSingle declare : declares) {
+                slots += typeSlots(declare.type);
+            }
+        }
+        return slots;
+    }
+
+    private static int localLimit(Ast.Stmt.T stmt) {
+        if (stmt instanceof Ast.Stmt.Iload) return localLimit(((Ast.Stmt.Iload) stmt).index, 1);
+        if (stmt instanceof Ast.Stmt.Fload) return localLimit(((Ast.Stmt.Fload) stmt).index, 1);
+        if (stmt instanceof Ast.Stmt.Aload) return localLimit(((Ast.Stmt.Aload) stmt).index, 1);
+        if (stmt instanceof Ast.Stmt.Dload) return localLimit(((Ast.Stmt.Dload) stmt).index, 2);
+        if (stmt instanceof Ast.Stmt.Istore) return localLimit(((Ast.Stmt.Istore) stmt).index, 1);
+        if (stmt instanceof Ast.Stmt.Fstore) return localLimit(((Ast.Stmt.Fstore) stmt).index, 1);
+        if (stmt instanceof Ast.Stmt.Astore) return localLimit(((Ast.Stmt.Astore) stmt).index, 1);
+        if (stmt instanceof Ast.Stmt.Dstore) return localLimit(((Ast.Stmt.Dstore) stmt).index, 2);
+        return 0;
+    }
+
+    private static int localLimit(int index, int slots) {
+        if (index < 0) {
+            throw new CompilerException("Negative local variable index: " + index);
+        }
+        return index + slots;
+    }
+
+    private static int emittedReturnSlots(Ast.Type.T type) {
+        if (type == null || type.getKind() == TypeKind.VOID) return 0;
+        if (type != null && type.getKind() == TypeKind.DOUBLE) return 2;
+        return 1;
+    }
+
+    private static int typeSlots(Ast.Type.T type) {
+        if (type == null || type.getKind() == TypeKind.VOID) return 0;
+        if (type != null && type.getKind() == TypeKind.DOUBLE) return 2;
+        return 1;
+    }
+
+    private static String typeDescriptor(Ast.Type.T type) {
+        if (type == null) {
+            throw new CompilerException("Missing JVM type descriptor for null type");
+        }
+        switch (type.getKind()) {
+            case INT:
+            case BOOL:
+                return "I";
+            case FLOAT:
+                return "F";
+            case DOUBLE:
+                return "D";
+            case VOID:
+                return "V";
+            case STRING:
+                return "Ljava/lang/String;";
+            case INT_ARRAY:
+                return "[I";
+            case FLOAT_ARRAY:
+                return "[F";
+            case DOUBLE_ARRAY:
+                return "[D";
+            case BOOL_ARRAY:
+                return "[Z";
+            default:
+                throw new CompilerException("Unsupported JVM type descriptor: " + type);
+        }
+    }
+
+    private static int valueSlots(Object value) {
+        return value instanceof java.lang.Double ? 2 : 1;
+    }
+
+    private static int[] deltas(int... values) {
+        return values;
     }
 
     @Override
     public void visit(Ast.Method.MethodSingle methodSingle) {
-        int localsLimit = Math.max((methodSingle.id.equals("main") ? 1 : 0) + methodSingle.index, 16);
-        int stackLimit = calcMaxStack(methodSingle.stms);
+        int localsLimit = calculateMaxLocals(methodSingle);
+        int stackLimit = calculateMaxStack(methodSingle.stms);
         
         if (methodSingle.id.equals("main")) {
             this.writeln(".method public static main([Ljava/lang/String;)V");
@@ -124,36 +402,21 @@ public class ByteCodeGenerator implements Visitor {
             }
             this.writeln("return");
         } else {
-            if (methodSingle.formals != null && methodSingle.formals.size() > 0) {
-                this.write(".method static " + methodSingle.id + "(");
+            this.write(".method static " + methodSingle.id + "(");
+            if (methodSingle.formals != null) {
                 for (int i = 0; i < methodSingle.formals.size(); i++) {
-                    if (methodSingle.formals.get(i).type instanceof Ast.Type.Int 
-                            || methodSingle.formals.get(i).type instanceof Ast.Type.Bool)
-                        this.write("I");
-                    else if (methodSingle.formals.get(i).type instanceof Ast.Type.Float)
-                        this.write("F");
-                    else if (methodSingle.formals.get(i).type instanceof Ast.Type.Double)
-                        this.write("D");
+                    this.write(typeDescriptor(methodSingle.formals.get(i).type));
                 }
-                if (methodSingle.retType instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
-                    this.write(")I");
-                else if (methodSingle.retType instanceof Ast.Type.Double)
-                    this.write(")D");
-                else
-                    this.write(")F");
-            } else {
-                if (methodSingle.retType instanceof Ast.Type.Int || methodSingle.retType instanceof Ast.Type.Bool)
-                    this.write(".method static " + methodSingle.id + "()I");
-                else if (methodSingle.retType instanceof Ast.Type.Double)
-                    this.write(".method static " + methodSingle.id + "()D");
-                else
-                    this.write(".method static " + methodSingle.id + "()F");
             }
+            this.write(")" + typeDescriptor(methodSingle.retType));
             this.writeln("");
             this.writeln(".limit stack " + stackLimit);
             this.writeln(".limit locals " + localsLimit);
             for (int i = 0; i < methodSingle.stms.size(); i++) {
                 this.visit(methodSingle.stms.get(i));
+            }
+            if (methodSingle.retType != null && methodSingle.retType.getKind() == TypeKind.VOID) {
+                this.writeln("return");
             }
         }
         this.writeln(".end method");
@@ -217,6 +480,11 @@ public class ByteCodeGenerator implements Visitor {
     }
 
     @Override
+    public void visit(Ast.Stmt.Irem s) {
+        this.iwriteln("irem");
+    }
+
+    @Override
     public void visit(Ast.Stmt.Fadd s) {
         this.iwriteln("fadd");
     }
@@ -255,6 +523,11 @@ public class ByteCodeGenerator implements Visitor {
     }
 
     @Override
+    public void visit(Ast.Stmt.Fcmpg s) {
+        this.iwriteln("fcmpg ");
+    }
+
+    @Override
     public void visit(Ast.Stmt.Ificmpgt s) {
 
         this.iwriteln("if_icmpgt " + s.l.toString());
@@ -289,21 +562,9 @@ public class ByteCodeGenerator implements Visitor {
     public void visit(Ast.Stmt.Invokestatic s) {
         this.write("    invokestatic " + currClassId + "/" + s.name + "(");
         for( int i = 0; i< s.at.size(); i++){
-            Ast.Type.T t = s.at.get(i);
-            if( t instanceof Ast.Type.Int ||  t instanceof Ast.Type.Bool){
-                this.write("I");
-            }else if(t instanceof Ast.Type.Float){
-                this.write("F");
-            }else if(t instanceof Ast.Type.Double){
-                this.write("D");
-            }
+            this.write(typeDescriptor(s.at.get(i)));
         }
-        if( s.rt != null && s.rt.getKind() == TypeKind.FLOAT)
-            this.write(")F");
-        else if( s.rt != null && s.rt.getKind() == TypeKind.DOUBLE)
-            this.write(")D");
-        else
-            this.write(")I");
+        this.write(")" + typeDescriptor(s.rt));
 
         this.writeln("");
     }
@@ -370,6 +631,16 @@ public class ByteCodeGenerator implements Visitor {
     }
 
     @Override
+    public void visit(Ast.Stmt.Pop s) {
+        this.iwriteln("pop");
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Pop2 s) {
+        this.iwriteln("pop2");
+    }
+
+    @Override
     public void visit(Ast.Stmt.Freturn s) {
         this.iwriteln("freturn");
     }
@@ -416,8 +687,20 @@ public class ByteCodeGenerator implements Visitor {
         this.iwriteln("dcmpl");
     }
 
+    public void visit(Ast.Stmt.Dcmpg s) {
+        this.iwriteln("dcmpg");
+    }
+
     public void visit(Ast.Stmt.F2d s) {
         this.iwriteln("f2d");
+    }
+
+    public void visit(Ast.Stmt.I2f s) {
+        this.iwriteln("i2f");
+    }
+
+    public void visit(Ast.Stmt.I2d s) {
+        this.iwriteln("i2d");
     }
 
     @Override

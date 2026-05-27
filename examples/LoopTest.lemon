@@ -1,0 +1,23 @@
+class LoopTest {
+    void main() {
+        int i;
+        i = 0;
+
+        // Loop to 10
+        while(i < 10) {
+            i = i + 1;
+            
+            // continue on 5
+            if(i == 5) {
+                continue;
+            }
+            
+            // break on 8
+            if(i == 8) {
+                break;
+            }
+            
+            printf("%d\n", i);
+        }
+    }
+}

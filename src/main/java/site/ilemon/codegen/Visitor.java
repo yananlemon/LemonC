@@ -23,6 +23,7 @@ public interface Visitor {
     void visit(Ast.Stmt.Isub s);
     void visit(Ast.Stmt.Imul s);
     void visit(Ast.Stmt.Idiv s);
+    void visit(Ast.Stmt.Irem s);
     void visit(Ast.Stmt.Fadd s);
     void visit(Ast.Stmt.Fsub s);
     void visit(Ast.Stmt.Fmul s);
@@ -36,6 +37,7 @@ public interface Visitor {
     void visit(Ast.Stmt.Ificmpne s);
     void visit(Ast.Stmt.Ifgt s);
     void visit(Ast.Stmt.Fcmpl s);
+    void visit(Ast.Stmt.Fcmpg s);
 
     void visit(Ast.Stmt.Iload s);
     void visit(Ast.Stmt.Invokestatic s);
@@ -45,6 +47,8 @@ public interface Visitor {
     void visit(Ast.Stmt.Ldc s);
     void visit(Ast.Stmt.Printf s);
     void visit(Ast.Stmt.PrintLine s);
+    void visit(Ast.Stmt.Pop s);
+    void visit(Ast.Stmt.Pop2 s);
     void visit(Ast.Stmt.Freturn s);
     void visit(Ast.Stmt.Fstore s);
     void visit(Ast.Stmt.Fload s);
@@ -57,7 +61,10 @@ public interface Visitor {
     void visit(Ast.Stmt.Dstore s);
     void visit(Ast.Stmt.Dreturn s);
     void visit(Ast.Stmt.Dcmpl s);
+    void visit(Ast.Stmt.Dcmpg s);
     void visit(Ast.Stmt.F2d s);
+    void visit(Ast.Stmt.I2f s);
+    void visit(Ast.Stmt.I2d s);
 
     void visit(Ast.Stmt.Newarray s);
     void visit(Ast.Stmt.Iaload s);

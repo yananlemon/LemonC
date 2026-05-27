@@ -25,7 +25,7 @@ class MethodCallTest04{
 
     // false
 	bool cal(float a){
-	    printf("进入cal方法，参数=%d\n",a);
+	    printf("进入cal方法，参数=%f\n",a);
 	    return a > 10.0 || true && getIntNum() > 19;
 	}
 

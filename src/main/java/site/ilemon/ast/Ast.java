@@ -70,10 +70,26 @@ public class Ast {
      */
     public static class Stmt{
         public static abstract class T{
+            private DoublyLinkedList<Label> breakList = new DoublyLinkedList<>();
+            public DoublyLinkedList<Label> getBreakList() { return this.breakList; }
+            private DoublyLinkedList<Label> continueList = new DoublyLinkedList<>();
+            public DoublyLinkedList<Label> getContinueList() { return this.continueList; }
             private int lineNum;
             public int getLineNum() { return this.lineNum; }
             public void setLineNum(int lineNum) { this.lineNum = lineNum; }
             public abstract void accept(ISemanticVisitor v);
+        }
+
+        public static class Break extends T {
+            public Break(int lineNum) { this.setLineNum(lineNum); }
+            @Override
+            public void accept(ISemanticVisitor v) { v.visit(this); }
+        }
+
+        public static class Continue extends T {
+            public Continue(int lineNum) { this.setLineNum(lineNum); }
+            @Override
+            public void accept(ISemanticVisitor v) { v.visit(this); }
         }
         public static class Assign extends T {
             private Ast.Expr.Id id;
@@ -211,6 +227,31 @@ public class Ast {
             public While(Ast.Expr.T condition, Ast.Stmt.T body, int lineNum)
             {
                 this.condition = condition;
+                this.body = body;
+                this.setLineNum(lineNum);
+            }
+
+            @Override
+            public void accept(ISemanticVisitor v) {
+                v.visit(this);
+            }
+        }
+
+        public static class For extends T {
+            private Ast.Stmt.T init;
+            public Ast.Stmt.T getInit() { return this.init; }
+            private Ast.Expr.T condition;
+            public Ast.Expr.T getCondition() { return this.condition; }
+            private Ast.Stmt.T update;
+            public Ast.Stmt.T getUpdate() { return this.update; }
+            private Ast.Stmt.T body;
+            public Ast.Stmt.T getBody() { return this.body; }
+
+            public For(Ast.Stmt.T init, Ast.Expr.T condition, Ast.Stmt.T update,
+                       Ast.Stmt.T body, int lineNum) {
+                this.init = init;
+                this.condition = condition;
+                this.update = update;
                 this.body = body;
                 this.setLineNum(lineNum);
             }
@@ -451,10 +492,6 @@ public class Ast {
      */
     public static class Expr {
         public static abstract class T {
-
-            // 维护关系运算的真链,假链
-            public DoublyLinkedList<Label> trueList = new DoublyLinkedList<>();
-            public DoublyLinkedList<Label> falseList = new DoublyLinkedList<>();
             private int lineNum;
             public int getLineNum() { return this.lineNum; }
             public void setLineNum(int lineNum) { this.lineNum = lineNum; }
@@ -543,6 +580,26 @@ public class Ast {
             }
         }
 
+        public static class Mod extends T{
+            private Expr.T left;
+            private Expr.T right;
+            public Expr.T getLeft() { return this.left; }
+            public void setLeft(Expr.T left) { this.left = left; }
+            public Expr.T getRight() { return this.right; }
+            public void setRight(Expr.T right) { this.right = right; }
+
+            public Mod(Expr.T left, Expr.T right,int lineNum) {
+                this.setLeft(left);
+                this.setRight(right);
+                this.setLineNum(lineNum);
+            }
+
+            @Override
+            public void accept(ISemanticVisitor v) {
+                v.visit(this);
+            }
+        }
+
         /** 逻辑运算表达式 **/
         public static class And extends T{
             private Expr.T left;
@@ -551,9 +608,6 @@ public class Ast {
             public void setLeft(Expr.T left) { this.left = left; }
             public Expr.T getRight() { return this.right; }
             public void setRight(Expr.T right) { this.right = right; }
-            private int lineNum;
-            public int getLineNum() { return this.lineNum; }
-            public void setLineNum(int lineNum) { this.lineNum = lineNum; }
             public And(Expr.T left, Expr.T right,int lineNum) {
                 this.setLeft(left);
                 this.setRight(right);

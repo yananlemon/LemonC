@@ -9,7 +9,7 @@ class MethodCallTest01{
         printf("sum=%d\n",sum);
 
         // 3.0
-        printf("num=%d\n",num);
+        printf("num=%f\n",num);
 	}
 
     // add method

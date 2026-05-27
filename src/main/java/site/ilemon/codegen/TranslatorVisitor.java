@@ -10,7 +10,6 @@ import site.ilemon.visitor.ISemanticVisitor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 import site.ilemon.exception.CompilerException;
 
 /**
@@ -33,6 +32,21 @@ import site.ilemon.exception.CompilerException;
  */
 public class TranslatorVisitor implements ISemanticVisitor {
 
+    @Override
+    public void visit(Stmt.Break obj) {
+        if (!obj.getBreakList().isEmpty()) {
+            emit(new Ast.Stmt.Goto(obj.getBreakList().get(0)));
+        }
+    }
+
+    @Override
+    public void visit(Stmt.Continue obj) {
+        if (!obj.getContinueList().isEmpty()) {
+            emit(new Ast.Stmt.Goto(obj.getContinueList().get(0)));
+        }
+    }
+
+
     private String classId;
     // 变量索引
     private int index;
@@ -40,26 +54,286 @@ public class TranslatorVisitor implements ISemanticVisitor {
     // 变量表[key:变量名称,value:变量索引]
     private HashMap<String, Integer> indexTable;
     private Ast.Type.T type;
+    private Ast.Type.T currentMethodReturnType;
     private Ast.Declare.DeclareSingle dec;
     private Ast.Method.MethodSingle method;
     private Ast.MainClass.MainClassSingle mainClass;
     public Ast.Program.ProgramSingle prog;
     private List<Ast.Stmt.T> stmts;
+    private HashMap<String, List<Ast.Type.T>> methodFormalTypes;
 
     public TranslatorVisitor() {
         this.stmts = new ArrayList<Ast.Stmt.T>();
         this.classId = null;
         this.indexTable = null;
         this.type = null;
+        this.currentMethodReturnType = null;
         this.dec = null;
         this.method = null;
         this.classId = null;
         this.mainClass = null;
         this.prog = null;
+        this.methodFormalTypes = new HashMap<String, List<Ast.Type.T>>();
     }
 
     private void emit(Ast.Stmt.T stmt) {
         this.stmts.add(stmt);
+    }
+
+    private int emitJump(Ast.Stmt.T stmt) {
+        emit(stmt);
+        return this.stmts.size() - 1;
+    }
+
+    private static class BoolCode {
+        final List<Integer> trueList;
+        final List<Integer> falseList;
+
+        BoolCode(List<Integer> trueList, List<Integer> falseList) {
+            this.trueList = trueList;
+            this.falseList = falseList;
+        }
+    }
+
+    private List<Integer> makelist(int index) {
+        List<Integer> list = new ArrayList<Integer>();
+        list.add(index);
+        return list;
+    }
+
+    private List<Integer> merge(List<Integer> left, List<Integer> right) {
+        List<Integer> result = new ArrayList<Integer>();
+        result.addAll(left);
+        result.addAll(right);
+        return result;
+    }
+
+    private void backpatch(List<Integer> list, Label target) {
+        for (Integer index : list) {
+            setJumpTarget(this.stmts.get(index), target);
+        }
+    }
+
+    private void setJumpTarget(Ast.Stmt.T stmt, Label target) {
+        if (stmt instanceof Ast.Stmt.Goto) {
+            ((Ast.Stmt.Goto) stmt).l = target;
+        } else if (stmt instanceof Ast.Stmt.Ifgt) {
+            ((Ast.Stmt.Ifgt) stmt).l = target;
+        } else if (stmt instanceof Ast.Stmt.Ificmplt) {
+            ((Ast.Stmt.Ificmplt) stmt).l = target;
+        } else if (stmt instanceof Ast.Stmt.Ificmpgt) {
+            ((Ast.Stmt.Ificmpgt) stmt).l = target;
+        } else if (stmt instanceof Ast.Stmt.Ificmpge) {
+            ((Ast.Stmt.Ificmpge) stmt).l = target;
+        } else if (stmt instanceof Ast.Stmt.Ificmple) {
+            ((Ast.Stmt.Ificmple) stmt).l = target;
+        } else if (stmt instanceof Ast.Stmt.Ificmpeq) {
+            ((Ast.Stmt.Ificmpeq) stmt).l = target;
+        } else if (stmt instanceof Ast.Stmt.Ificmpne) {
+            ((Ast.Stmt.Ificmpne) stmt).l = target;
+        } else {
+            throw new CompilerException("Cannot backpatch non-branch IR statement: "
+                    + stmt.getClass().getName());
+        }
+    }
+
+    private BoolCode translateCondition(Expr.T expr) {
+        if (expr instanceof Expr.And) {
+            Expr.And and = (Expr.And) expr;
+            BoolCode left = translateCondition(and.getLeft());
+            Label rightBegin = new Label();
+            emit(new Ast.Stmt.LabelJ(rightBegin));
+            backpatch(left.trueList, rightBegin);
+            BoolCode right = translateCondition(and.getRight());
+            return new BoolCode(right.trueList, merge(left.falseList, right.falseList));
+        }
+        if (expr instanceof Expr.Or) {
+            Expr.Or or = (Expr.Or) expr;
+            BoolCode left = translateCondition(or.getLeft());
+            Label rightBegin = new Label();
+            emit(new Ast.Stmt.LabelJ(rightBegin));
+            backpatch(left.falseList, rightBegin);
+            BoolCode right = translateCondition(or.getRight());
+            return new BoolCode(merge(left.trueList, right.trueList), right.falseList);
+        }
+        if (expr instanceof Expr.Not) {
+            BoolCode inner = translateCondition(((Expr.Not) expr).getExpr());
+            return new BoolCode(inner.falseList, inner.trueList);
+        }
+        if (expr instanceof Expr.True) {
+            return new BoolCode(makelist(emitJump(new Ast.Stmt.Goto(null))), new ArrayList<Integer>());
+        }
+        if (expr instanceof Expr.False) {
+            return new BoolCode(new ArrayList<Integer>(), makelist(emitJump(new Ast.Stmt.Goto(null))));
+        }
+        if (expr instanceof Expr.GT) return translateComparison((Expr.GT) expr, ">");
+        if (expr instanceof Expr.LT) return translateComparison((Expr.LT) expr, "<");
+        if (expr instanceof Expr.LTE) return translateComparison((Expr.LTE) expr, "<=");
+        if (expr instanceof Expr.GTE) return translateComparison((Expr.GTE) expr, ">=");
+        if (expr instanceof Expr.EQ) return translateComparison((Expr.EQ) expr, "==");
+        if (expr instanceof Expr.NEQ) return translateComparison((Expr.NEQ) expr, "!=");
+
+        this.visit(expr);
+        int trueJump = emitJump(new Ast.Stmt.Ifgt(null));
+        int falseJump = emitJump(new Ast.Stmt.Goto(null));
+        return new BoolCode(makelist(trueJump), makelist(falseJump));
+    }
+
+    private BoolCode translateComparison(Expr.GT expr, String op) {
+        Ast.Type.T type = emitNumericOperands(expr.getLeft(), expr.getRight());
+        return comparisonJumps(op, type);
+    }
+
+    private BoolCode translateComparison(Expr.LT expr, String op) {
+        Ast.Type.T type = emitNumericOperands(expr.getLeft(), expr.getRight());
+        return comparisonJumps(op, type);
+    }
+
+    private BoolCode translateComparison(Expr.LTE expr, String op) {
+        Ast.Type.T type = emitNumericOperands(expr.getLeft(), expr.getRight());
+        return comparisonJumps(op, type);
+    }
+
+    private BoolCode translateComparison(Expr.GTE expr, String op) {
+        Ast.Type.T type = emitNumericOperands(expr.getLeft(), expr.getRight());
+        return comparisonJumps(op, type);
+    }
+
+    private BoolCode translateComparison(Expr.EQ expr, String op) {
+        Ast.Type.T type = emitNumericOperands(expr.getLeft(), expr.getRight());
+        return comparisonJumps(op, type);
+    }
+
+    private BoolCode translateComparison(Expr.NEQ expr, String op) {
+        Ast.Type.T type = emitNumericOperands(expr.getLeft(), expr.getRight());
+        return comparisonJumps(op, type);
+    }
+
+    private BoolCode comparisonJumps(String op, Ast.Type.T operandType) {
+        if (operandType instanceof Ast.Type.Float) {
+            emit(usesCompareGreaterOnNaN(op) ? new Ast.Stmt.Fcmpg() : new Ast.Stmt.Fcmpl());
+            emit(new Ast.Stmt.Istore(++index));
+            emit(new Ast.Stmt.Iload(index));
+            emit(new Ast.Stmt.Ldc(0));
+        } else if (operandType instanceof Ast.Type.Double) {
+            emit(usesCompareGreaterOnNaN(op) ? new Ast.Stmt.Dcmpg() : new Ast.Stmt.Dcmpl());
+            emit(new Ast.Stmt.Istore(++index));
+            emit(new Ast.Stmt.Iload(index));
+            emit(new Ast.Stmt.Ldc(0));
+        }
+
+        int trueJump;
+        if (">".equals(op)) {
+            trueJump = emitJump(new Ast.Stmt.Ificmpgt(null));
+        } else if ("<".equals(op)) {
+            trueJump = emitJump(new Ast.Stmt.Ificmplt(null));
+        } else if (">=".equals(op)) {
+            trueJump = emitJump(new Ast.Stmt.Ificmpge(null));
+        } else if ("<=".equals(op)) {
+            trueJump = emitJump(new Ast.Stmt.Ificmple(null));
+        } else if ("==".equals(op)) {
+            trueJump = emitJump(new Ast.Stmt.Ificmpeq(null));
+        } else if ("!=".equals(op)) {
+            trueJump = emitJump(new Ast.Stmt.Ificmpne(null));
+        } else {
+            throw new CompilerException("Unsupported comparison operator: " + op);
+        }
+        int falseJump = emitJump(new Ast.Stmt.Goto(null));
+        return new BoolCode(makelist(trueJump), makelist(falseJump));
+    }
+
+    private boolean usesCompareGreaterOnNaN(String op) {
+        return "<".equals(op) || "<=".equals(op);
+    }
+
+    private void emitBooleanValue(Expr.T expr) {
+        BoolCode code = translateCondition(expr);
+        Label trueLabel = new Label();
+        Label falseLabel = new Label();
+        Label nextLabel = new Label();
+        backpatch(code.trueList, trueLabel);
+        backpatch(code.falseList, falseLabel);
+        emit(new Ast.Stmt.LabelJ(trueLabel));
+        emit(new Ast.Stmt.Ldc(1));
+        emit(new Ast.Stmt.Goto(nextLabel));
+        emit(new Ast.Stmt.LabelJ(falseLabel));
+        emit(new Ast.Stmt.Ldc(0));
+        emit(new Ast.Stmt.Goto(nextLabel));
+        emit(new Ast.Stmt.LabelJ(nextLabel));
+        this.type = new Ast.Type.Int();
+    }
+
+    private int allocateTemp(Ast.Type.T type) {
+        int temp = ++index;
+        if (type instanceof Ast.Type.Double) {
+            index++;
+        }
+        return temp;
+    }
+
+    private void emitStore(Ast.Type.T type, int localIndex) {
+        if (type instanceof Ast.Type.Double) emit(new Ast.Stmt.Dstore(localIndex));
+        else if (type instanceof Ast.Type.Float) emit(new Ast.Stmt.Fstore(localIndex));
+        else emit(new Ast.Stmt.Istore(localIndex));
+    }
+
+    private void emitLoad(Ast.Type.T type, int localIndex) {
+        if (type instanceof Ast.Type.Double) emit(new Ast.Stmt.Dload(localIndex));
+        else if (type instanceof Ast.Type.Float) emit(new Ast.Stmt.Fload(localIndex));
+        else emit(new Ast.Stmt.Iload(localIndex));
+    }
+
+    private boolean isNumeric(Ast.Type.T type) {
+        return type instanceof Ast.Type.Int || type instanceof Ast.Type.Float || type instanceof Ast.Type.Double;
+    }
+
+    private Ast.Type.T promotedNumericType(Ast.Type.T left, Ast.Type.T right) {
+        if (!isNumeric(left) || !isNumeric(right)) {
+            return left;
+        }
+        if (left instanceof Ast.Type.Double || right instanceof Ast.Type.Double) return new Ast.Type.Double();
+        if (left instanceof Ast.Type.Float || right instanceof Ast.Type.Float) return new Ast.Type.Float();
+        return new Ast.Type.Int();
+    }
+
+    private void emitConversion(Ast.Type.T from, Ast.Type.T to) {
+        if (from instanceof Ast.Type.Int && to instanceof Ast.Type.Float) {
+            emit(new Ast.Stmt.I2f());
+            this.type = new Ast.Type.Float();
+        } else if (from instanceof Ast.Type.Int && to instanceof Ast.Type.Double) {
+            emit(new Ast.Stmt.I2d());
+            this.type = new Ast.Type.Double();
+        } else if (from instanceof Ast.Type.Float && to instanceof Ast.Type.Double) {
+            emit(new Ast.Stmt.F2d());
+            this.type = new Ast.Type.Double();
+        } else {
+            this.type = from;
+        }
+    }
+
+    private void emitWideningConversion(Ast.Type.T expectedType) {
+        if (expectedType == null) {
+            return;
+        }
+        emitConversion(this.type, expectedType);
+    }
+
+    private Ast.Type.T emitNumericOperands(Expr.T left, Expr.T right) {
+        this.visit(left);
+        Ast.Type.T leftType = this.type;
+        int leftTemp = allocateTemp(leftType);
+        emitStore(leftType, leftTemp);
+        this.visit(right);
+        Ast.Type.T rightType = this.type;
+        int rightTemp = allocateTemp(rightType);
+        emitStore(rightType, rightTemp);
+        Ast.Type.T resultType = promotedNumericType(leftType, rightType);
+        emitLoad(leftType, leftTemp);
+        emitConversion(leftType, resultType);
+        emitLoad(rightType, rightTemp);
+        emitConversion(rightType, resultType);
+        this.type = resultType;
+        return resultType;
     }
 
     /**
@@ -74,6 +348,39 @@ public class TranslatorVisitor implements ISemanticVisitor {
         return idx;
     }
 
+    private String typeName(Ast.Type.T type) {
+        if (type == null) {
+            return "未知";
+        }
+        String name = type.toString();
+        return name.startsWith("@") ? name.substring(1) : name;
+    }
+
+    private void unsupportedArithmetic(String operator, Ast.Type.T type, int lineNum) {
+        throw new CompilerException(String.format(
+                "[代码生成] 行 %d: 运算符 '%s' 不支持类型 %s",
+                lineNum, operator, typeName(type)));
+    }
+
+    private Ast.Type.T toCodegenType(Type.T type) {
+        if (type instanceof Type.Int) return new Ast.Type.Int();
+        if (type instanceof Type.Float) return new Ast.Type.Float();
+        if (type instanceof Type.Double) return new Ast.Type.Double();
+        if (type instanceof Type.Bool) return new Ast.Type.Bool();
+        if (type instanceof Type.Str) return new Ast.Type.Str();
+        if (type instanceof Type.Void) return new Ast.Type.Void();
+        if (type instanceof Type.IntArray) return new Ast.Type.IntArray();
+        if (type instanceof Type.FloatArray) return new Ast.Type.FloatArray();
+        if (type instanceof Type.DoubleArray) return new Ast.Type.DoubleArray();
+        if (type instanceof Type.BoolArray) return new Ast.Type.BoolArray();
+        throw new CompilerException("[代码生成] 不支持的类型: " + type);
+    }
+
+    private void processCallArgument(Expr.T expr, Ast.Type.T expectedType) {
+        processExpression(expr);
+        emitWideningConversion(expectedType);
+    }
+
 
     @Override
     public void visit(Expr.T obj) {
@@ -82,9 +389,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.Add obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T t = this.type;
-        this.visit(obj.getRight());
+        Ast.Type.T t = emitNumericOperands(obj.getLeft(), obj.getRight());
         if (t.getKind() == TypeKind.INT) {
             emit(new Ast.Stmt.Iadd());
         } else if (t.getKind() == TypeKind.FLOAT) {
@@ -92,7 +397,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         } else if (t.getKind() == TypeKind.DOUBLE) {
             emit(new Ast.Stmt.Dadd());
         } else {
-            // error
+            unsupportedArithmetic("+", t, obj.getLineNum());
         }
     }
 
@@ -113,16 +418,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
      */
     @Override
     public void visit(Expr.And obj) {
-        // 遍历左子树
-        obj.getLeft().trueList.addToTail(new Label());
-        obj.getLeft().falseList = obj.falseList;
-        this.visit(obj.getLeft());
-        emit(new Ast.Stmt.LabelJ(obj.getLeft().trueList.get(0)));
-
-        // 遍历右子树
-        obj.getRight().trueList = obj.trueList;
-        obj.getRight().falseList = obj.falseList;
-        this.visit(obj.getRight());
+        emitBooleanValue(obj);
     }
 
     /**
@@ -132,40 +428,12 @@ public class TranslatorVisitor implements ISemanticVisitor {
      */
     @Override
     public void visit(Expr.GT obj) {
-        this.visit(obj.getLeft());
-        this.visit(obj.getRight());
-
-        if( this.type instanceof Ast.Type.Float){
-            emit(new Ast.Stmt.Fcmpl());
-            emit(new Ast.Stmt.Istore(++index));
-            emit(new Ast.Stmt.Iload(index));
-            emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmpgt(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        }else{
-            // int 类型比较
-            emit(new Ast.Stmt.Ificmpgt(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        }
+        emitBooleanValue(obj);
     }
 
     @Override
     public void visit(Expr.LT obj) {
-        this.visit(obj.getLeft());
-        this.visit(obj.getRight());
-        if( this.type instanceof Ast.Type.Float){
-            emit(new Ast.Stmt.Fcmpl());
-            emit(new Ast.Stmt.Istore(++index));
-            emit(new Ast.Stmt.Iload(index));
-            emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmplt(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        }else {
-            // int 类型比较
-            emit(new Ast.Stmt.Ificmplt(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        }
-
+        emitBooleanValue(obj);
     }
 
     /**
@@ -180,17 +448,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
      */
     @Override
     public void visit(Expr.Or obj) {
-
-        // 遍历左子树
-        obj.getLeft().trueList = obj.trueList;
-        obj.getLeft().falseList.addToTail(new Label());
-        this.visit(obj.getLeft());
-        emit(new Ast.Stmt.LabelJ(obj.getLeft().falseList.get(0)));
-        // 遍历右子树
-        obj.getRight().trueList = obj.trueList;
-        obj.getRight().falseList = obj.falseList;
-        this.visit(obj.getRight());
-
+        emitBooleanValue(obj);
     }
 
     // E-> not E1
@@ -199,24 +457,19 @@ public class TranslatorVisitor implements ISemanticVisitor {
     // E.code := E1.code
     @Override
     public void visit(Expr.Not obj) {
-        obj.getExpr().trueList = obj.falseList;
-        obj.getExpr().falseList = obj.trueList;
-        this.visit(obj.getExpr());
-
+        emitBooleanValue(obj);
     }
 
     @Override
     public void visit(Expr.True obj) {
         emit(new Ast.Stmt.Ldc(1));
-        emit(new Ast.Stmt.Ifgt(obj.trueList.get(0)));
-        emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
+        this.type = new Ast.Type.Bool();
     }
 
     @Override
     public void visit(Expr.False obj) {
         emit(new Ast.Stmt.Ldc(0));
-        emit(new Ast.Stmt.Ifgt(obj.trueList.get(0)));
-        emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
+        this.type = new Ast.Type.Bool();
     }
 
     /**
@@ -234,21 +487,25 @@ public class TranslatorVisitor implements ISemanticVisitor {
         Label trueLabel = new Label();
         Label falseLabel = new Label();
         Label nextLabel = new Label();
-        obj.getCondition().trueList.addToTail(trueLabel);
-        obj.getCondition().falseList.addToTail(falseLabel);
 
-        // E.code
-        this.visit(obj.getCondition());
+        BoolCode condition = translateCondition(obj.getCondition());
+        backpatch(condition.trueList, trueLabel);
+        backpatch(condition.falseList, falseLabel);
         // gen(E.true':')
         emit(new Ast.Stmt.LabelJ(trueLabel));
         // S1.code
+        obj.getThenStmt().getBreakList().addAll(obj.getBreakList());
+        obj.getThenStmt().getContinueList().addAll(obj.getContinueList());
         this.visit(obj.getThenStmt());
+
         // goto S.next
         emit(new Ast.Stmt.Goto(nextLabel));
         // gen(E.false':')
         emit(new Ast.Stmt.LabelJ(falseLabel));
         // S2.code (可能为null)
         if (obj.getElseStmt() != null) {
+            obj.getElseStmt().getBreakList().addAll(obj.getBreakList());
+            obj.getElseStmt().getContinueList().addAll(obj.getContinueList());
             this.visit(obj.getElseStmt());
         }
         emit(new Ast.Stmt.Goto(nextLabel));
@@ -258,70 +515,22 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.LTE obj) {
-        this.visit(obj.getLeft());
-        this.visit(obj.getRight());
-        if (this.type instanceof Ast.Type.Float) {
-            emit(new Ast.Stmt.Fcmpl());
-            emit(new Ast.Stmt.Istore(++index));
-            emit(new Ast.Stmt.Iload(index));
-            emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmple(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        } else {
-            emit(new Ast.Stmt.Ificmple(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        }
+        emitBooleanValue(obj);
     }
 
     @Override
     public void visit(Expr.GTE obj) {
-        this.visit(obj.getLeft());
-        this.visit(obj.getRight());
-        if (this.type instanceof Ast.Type.Float) {
-            emit(new Ast.Stmt.Fcmpl());
-            emit(new Ast.Stmt.Istore(++index));
-            emit(new Ast.Stmt.Iload(index));
-            emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmpge(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        } else {
-            emit(new Ast.Stmt.Ificmpge(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        }
+        emitBooleanValue(obj);
     }
 
     @Override
     public void visit(Expr.EQ obj) {
-        this.visit(obj.getLeft());
-        this.visit(obj.getRight());
-        if (this.type instanceof Ast.Type.Float) {
-            emit(new Ast.Stmt.Fcmpl());
-            emit(new Ast.Stmt.Istore(++index));
-            emit(new Ast.Stmt.Iload(index));
-            emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmpeq(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        } else {
-            emit(new Ast.Stmt.Ificmpeq(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        }
+        emitBooleanValue(obj);
     }
 
     @Override
     public void visit(Expr.NEQ obj) {
-        this.visit(obj.getLeft());
-        this.visit(obj.getRight());
-        if (this.type instanceof Ast.Type.Float) {
-            emit(new Ast.Stmt.Fcmpl());
-            emit(new Ast.Stmt.Istore(++index));
-            emit(new Ast.Stmt.Iload(index));
-            emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Ificmpne(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        } else {
-            emit(new Ast.Stmt.Ificmpne(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        }
+        emitBooleanValue(obj);
     }
 
     @Override
@@ -329,21 +538,15 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.visit(obj.getReturnType());
         Ast.Type.T returnType = this.type;
         List<Ast.Type.T> at = new ArrayList<>();
+        List<Ast.Type.T> expectedTypes = this.methodFormalTypes.get(obj.getName());
         for (int i = 0; i < obj.getInputParams().size(); i++) {
             Expr.T expr = obj.getInputParams().get(i);
-            processExpression(obj, expr);
-            at.add(this.type);
+            Ast.Type.T expectedType = expectedTypes == null ? null : expectedTypes.get(i);
+            processCallArgument(expr, expectedType);
+            at.add(expectedType == null ? this.type : expectedType);
         }
         emit(new Ast.Stmt.Invokestatic(obj.getName(), at, returnType));
-
-        // 这里似乎不应该保存到局部，再load到操作栈
-        //emit(new Ast.Stmt.Istore(++index));
-        //emit(new Ast.Stmt.Iload(index));
-        // E-> call(EList)
-        if( obj.getReturnType() instanceof Type.Bool){
-            emit(new Ast.Stmt.Ifgt(obj.trueList.get(0)));
-            emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-        }
+        this.type = returnType;
 
     }
 
@@ -352,56 +555,20 @@ public class TranslatorVisitor implements ISemanticVisitor {
      * @param obj 方法调用
      * @param expr 参数
      */
-    private void processExpression(Expr.Call obj, Expr.T expr) {
-        // 如果方法参数是bool表达式
-        // 或者方法返回类型是bool
+    private void processExpression(Expr.T expr) {
         if( checkWhetherBoolExpression(expr) || ( expr instanceof Expr.Call && ((Expr.Call)expr).getReturnType() instanceof Type.Bool) ){
-            String iden = generateVarName();
-            Expr.Id id = new Expr.Id(iden, obj.getLineNum());
-            this.indexTable.put(iden, index++);
-            Stmt.Assign thenStmt = new Stmt.Assign(
-                    id,
-                    new Expr.Number(new Type.Int(), 1, obj.getLineNum()), obj.getLineNum());
-            Stmt.Assign elseStmt = new Stmt.Assign(
-                    id,
-                    new Expr.Number(new Type.Int(), 0, obj.getLineNum()), obj.getLineNum());
-            Stmt.If ifStmt = new Stmt.If(expr, thenStmt, elseStmt, obj.getLineNum());
-            this.visit(ifStmt);
-            this.type = new Ast.Type.Int();
+            emitBooleanValue(expr);
         }else{
             this.visit(expr);
         }
-    }
-
-    /**
-     * 暂时使用UUID作为临时变量名
-     * @return
-     */
-    private String generateVarName(){
-        return  UUID.randomUUID().toString();
     }
 
     @Override
     public void visit(Stmt.Assign obj) {
         int index = lookupIndex(obj.getId().getId());
 
-        // 如果赋值语句右侧是bool类型的表达式
-        // 或者是bool类型的方法调用
         if( checkWhetherBoolExpression(obj.getExpr()) || ( obj.getExpr() instanceof Expr.Call && ((Expr.Call)obj.getExpr()).getReturnType() instanceof Type.Bool) ){
-            String iden = generateVarName();
-            int tempIndex = this.index++;
-            Expr.Id id = new Expr.Id(iden,new Type.Int(), obj.getLineNum());
-            this.indexTable.put( iden, tempIndex );
-            Stmt.Assign thenStmt = new Stmt.Assign(
-                    id,
-                    new Expr.Number(new Type.Int(), 1, obj.getLineNum()), obj.getLineNum());
-            Stmt.Assign elseStmt = new Stmt.Assign(
-                    id,
-                    new Expr.Number(new Type.Int(), 0, obj.getLineNum()), obj.getLineNum());
-            Stmt.If ifStmt = new Stmt.If(obj.getExpr(), thenStmt, elseStmt, obj.getLineNum());
-            this.visit(ifStmt);
-            this.type = new Ast.Type.Int();
-            emit(new Ast.Stmt.Iload(tempIndex));
+            emitBooleanValue(obj.getExpr());
         } else if (obj.getId().getType() instanceof Type.Double && obj.getExpr() instanceof Expr.Number) {
             // 当float字面量赋值给double变量时，直接生成double常量
             Expr.Number num = (Expr.Number) obj.getExpr();
@@ -410,6 +577,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         } else{
             this.visit(obj.getExpr());
         }
+        emitWideningConversion(toCodegenType(obj.getId().getType()));
 
         // 生成 xstore index
         if (obj.getId().getType() instanceof Type.Int || obj.getId().getType() instanceof Type.Bool)
@@ -440,23 +608,14 @@ public class TranslatorVisitor implements ISemanticVisitor {
         }
         // 如果ID是bool类型
         else if( obj.getType() instanceof Type.Bool ){
-
-            if( obj.trueList.isEmpty() && obj.falseList.isEmpty() ){
-                emit(new Ast.Stmt.Iload(lookupIndex(obj.getId())));
-            }else{
-                // 先load再比较
-                emit(new Ast.Stmt.Iload(lookupIndex(obj.getId())));
-                emit(new Ast.Stmt.Ifgt(obj.trueList.get(0)));
-                emit(new Ast.Stmt.Goto(obj.falseList.get(0)));
-            }
+            emit(new Ast.Stmt.Iload(lookupIndex(obj.getId())));
+            this.type = new Ast.Type.Bool();
         }
     }
 
     @Override
     public void visit(Expr.Div obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T t = this.type;
-        this.visit(obj.getRight());
+        Ast.Type.T t = emitNumericOperands(obj.getLeft(), obj.getRight());
         if (t.getKind() == TypeKind.INT) {
             emit(new Ast.Stmt.Idiv());
         } else if (t.getKind() == TypeKind.FLOAT) {
@@ -464,15 +623,25 @@ public class TranslatorVisitor implements ISemanticVisitor {
         } else if (t.getKind() == TypeKind.DOUBLE) {
             emit(new Ast.Stmt.Ddiv());
         } else {
-            // error
+            unsupportedArithmetic("/", t, obj.getLineNum());
+        }
+    }
+
+    @Override
+    public void visit(Expr.Mod obj) {
+        this.visit(obj.getLeft());
+        Ast.Type.T t = this.type;
+        this.visit(obj.getRight());
+        if (t.getKind() == TypeKind.INT) {
+            emit(new Ast.Stmt.Irem());
+        } else {
+            unsupportedArithmetic("%", t, obj.getLineNum());
         }
     }
 
     @Override
     public void visit(Expr.Mul obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T t = this.type;
-        this.visit(obj.getRight());
+        Ast.Type.T t = emitNumericOperands(obj.getLeft(), obj.getRight());
         if (t.getKind() == TypeKind.INT) {
             emit(new Ast.Stmt.Imul());
         } else if (t.getKind() == TypeKind.FLOAT) {
@@ -480,7 +649,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         } else if (t.getKind() == TypeKind.DOUBLE) {
             emit(new Ast.Stmt.Dmul());
         } else {
-            // error
+            unsupportedArithmetic("*", t, obj.getLineNum());
         }
     }
 
@@ -495,16 +664,16 @@ public class TranslatorVisitor implements ISemanticVisitor {
         } else if (obj.getType() instanceof Type.Double) {
             emit(new Ast.Stmt.Ldc(java.lang.Double.parseDouble(obj.getValue().toString())));
             this.type = new Ast.Type.Double();
+        } else {
+            throw new CompilerException("[代码生成] 行 " + obj.getLineNum()
+                    + ": 不支持的数字字面量类型 " + obj.getType());
         }
-        //else
     }
 
 
     @Override
     public void visit(Expr.Sub obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T t = this.type;
-        this.visit(obj.getRight());
+        Ast.Type.T t = emitNumericOperands(obj.getLeft(), obj.getRight());
         if (t.getKind() == TypeKind.INT) {
             emit(new Ast.Stmt.Isub());
         } else if (t.getKind() == TypeKind.FLOAT) {
@@ -512,7 +681,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         } else if (t.getKind() == TypeKind.DOUBLE) {
             emit(new Ast.Stmt.Dsub());
         } else {
-            // error
+            unsupportedArithmetic("-", t, obj.getLineNum());
         }
     }
 
@@ -626,6 +795,16 @@ public class TranslatorVisitor implements ISemanticVisitor {
         MainClass.MainClassSingle mainClassSingle = (MainClass.MainClassSingle) obj;
         this.classId = mainClassSingle.getClassId();
         List<Ast.Method.MethodSingle> methods = new ArrayList<>();
+        this.methodFormalTypes = new HashMap<String, List<Ast.Type.T>>();
+        for (int i = 0; i < mainClassSingle.getMethods().size(); i++) {
+            Method.MethodSingle methodSingle = (Method.MethodSingle) mainClassSingle.getMethods().get(i);
+            List<Ast.Type.T> formalTypes = new ArrayList<>();
+            for (int j = 0; j < methodSingle.getFormals().size(); j++) {
+                Declare.DeclareSingle formal = (Declare.DeclareSingle) methodSingle.getFormals().get(j);
+                formalTypes.add(toCodegenType(formal.getType()));
+            }
+            this.methodFormalTypes.put(methodSingle.getId(), formalTypes);
+        }
         for (int i = 0; i < mainClassSingle.getMethods().size(); i++) {
             Method.MethodSingle methodSingle = (Method.MethodSingle) mainClassSingle.getMethods().get(i);
             this.visit(methodSingle);
@@ -641,6 +820,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         this.stmts = new ArrayList<>(); // 先初始化stmts
         this.visit(obj.getRetType());
         Ast.Type.T returnType = this.type;
+        this.currentMethodReturnType = returnType;
 
         // 遍历入参
         List<Ast.Declare.DeclareSingle> formals = new ArrayList<>();
@@ -678,35 +858,62 @@ public class TranslatorVisitor implements ISemanticVisitor {
     @Override
     public void visit(Stmt.Block obj) {
         for (int i = 0; i < obj.getStmts().size(); i++) {
-            this.visit(obj.getStmts().get(i));
+            Stmt.T stmt = obj.getStmts().get(i);
+            stmt.getBreakList().addAll(obj.getBreakList());
+            stmt.getContinueList().addAll(obj.getContinueList());
+            this.visit(stmt);
         }
 
     }
 
+    private void emitPrintfString(String text, int lineNum) {
+        if (text.length() == 0) {
+            return;
+        }
+        this.visit(new Expr.Str(text, lineNum));
+        emit(new Ast.Stmt.Aload(index - 1));
+        emit(new Ast.Stmt.Printf(new Ast.Type.Str(), text));
+    }
+
+    private void emitPrintfValue(Expr.T expr) {
+        this.visit(expr);
+        if (this.type instanceof Ast.Type.Int) {
+            emit(new Ast.Stmt.Printf(new Ast.Type.Int(), null));
+        } else if (this.type instanceof Ast.Type.Float) {
+            emit(new Ast.Stmt.Printf(new Ast.Type.Float(), null));
+        } else if (this.type instanceof Ast.Type.Double) {
+            emit(new Ast.Stmt.Printf(new Ast.Type.Double(), null));
+        } else {
+            throw new CompilerException("[代码生成] printf 不支持类型 " + typeName(this.type));
+        }
+    }
+
     @Override
     public void visit(Stmt.Printf obj) {
-        String f = obj.getFormat();
-        String[] array = f.split("%d|%f");
-        if (array.length == 0) {
-            array = new String[1];
-            array[0] = f;
-        }
-        for (int i = 0; i < array.length; i++) {
-            this.visit(new Expr.Str(array[i], obj.getLineNum()));
-            emit(new Ast.Stmt.Aload(index - 1));
-            emit(new Ast.Stmt.Printf(new Ast.Type.Str(), array[i]));
-            if (i + 1 < obj.getExprs().size()) {
-                Expr.T expr = obj.getExprs().get(i + 1);
-                this.visit(expr);
-                if (this.type instanceof Ast.Type.Int)
-                    emit(new Ast.Stmt.Printf(new Ast.Type.Int(), null));
-                else if (this.type instanceof Ast.Type.Float)
-                    emit(new Ast.Stmt.Printf(new Ast.Type.Float(), null));
-                else if (this.type instanceof Ast.Type.Double)
-                    emit(new Ast.Stmt.Printf(new Ast.Type.Double(), null));
+        String format = obj.getFormat();
+        StringBuilder literal = new StringBuilder();
+        int argIndex = 0;
+        for (int i = 0; i < format.length(); i++) {
+            char ch = format.charAt(i);
+            if (ch != '%') {
+                literal.append(ch);
+                continue;
             }
-
+            emitPrintfString(literal.toString(), obj.getLineNum());
+            literal.setLength(0);
+            if (i + 1 >= format.length()) {
+                throw new CompilerException("[代码生成] printf 格式串中的 % 缺少占位符");
+            }
+            char placeholder = format.charAt(++i);
+            if (placeholder != 'd' && placeholder != 'f') {
+                throw new CompilerException("[代码生成] printf 不支持占位符 %" + placeholder);
+            }
+            if (obj.getExprs() == null || argIndex >= obj.getExprs().size()) {
+                throw new CompilerException("[代码生成] printf 参数个数不足");
+            }
+            emitPrintfValue(obj.getExprs().get(argIndex++));
         }
+        emitPrintfString(literal.toString(), obj.getLineNum());
     }
 
     @Override
@@ -734,32 +941,12 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Stmt.Return obj) {
-        // 如果return的表达式具有bool类型
-        // 或者所返回的方法具有bool类型
         if ( checkWhetherBoolExpression(obj.getExpr()) ||  ( obj.getExpr() instanceof Expr.Call && ((Expr.Call)obj.getExpr()).getReturnType() instanceof Type.Bool)) {
-            obj.getExpr().trueList.addToTail(new Label());
-            obj.getExpr().falseList.addToTail(new Label());
+            emitBooleanValue(obj.getExpr());
+        } else {
+            this.visit(obj.getExpr());
         }
-        this.visit(obj.getExpr());
-
-        // 如果return的表达式具有bool类型
-        // 或者所返回的方法具有bool类型
-        // 需要生成跳转指令
-        if ( checkWhetherBoolExpression(obj.getExpr()) ||  ( obj.getExpr() instanceof Expr.Call && ((Expr.Call)obj.getExpr()).getReturnType() instanceof Type.Bool)) {
-            Label nextLabel = new Label();
-            // gen(E.true':')
-            emit(new Ast.Stmt.LabelJ(obj.getExpr().trueList.get(0)));;
-            emit(new Ast.Stmt.Ldc(1));
-            emit(new Ast.Stmt.Goto(nextLabel));
-            // gen(E.false':')
-            emit(new Ast.Stmt.LabelJ(obj.getExpr().falseList.get(0)));;
-            emit(new Ast.Stmt.Ldc(0));
-            emit(new Ast.Stmt.Goto(nextLabel));
-            emit(new Ast.Stmt.LabelJ(nextLabel));
-
-            // 设置当前类型
-            this.type = new Ast.Type.Int();
-        }
+        emitWideningConversion(this.currentMethodReturnType);
         if (this.type.getKind() == TypeKind.INT || this.type.getKind() == TypeKind.BOOL)
             emit(new Ast.Stmt.Ireturn());
         else if (this.type.getKind() == TypeKind.FLOAT)
@@ -784,24 +971,23 @@ public class TranslatorVisitor implements ISemanticVisitor {
         //S.begin := newlabel
         Label begin = new Label();
 
-        // E.true := newlabel
         Label trueLabel = new Label();
-        obj.getCondition().trueList.addToHead(trueLabel);
 
-        // E.false := S.next
         Label next = new Label();
-        obj.getCondition().falseList.addToHead(next);
 
         // gen(S.begin':')
         emit(new Ast.Stmt.LabelJ(begin));
 
-        // E.code
-        this.visit(obj.getCondition());
+        BoolCode condition = translateCondition(obj.getCondition());
+        backpatch(condition.trueList, trueLabel);
+        backpatch(condition.falseList, next);
 
         // gen(E.true':')
         emit(new Ast.Stmt.LabelJ(trueLabel));
 
         // S1.code
+        obj.getBody().getBreakList().addToHead(next);
+        obj.getBody().getContinueList().addToHead(begin);
         this.visit(obj.getBody());
 
         // gen('goto' S.begin)
@@ -812,16 +998,51 @@ public class TranslatorVisitor implements ISemanticVisitor {
     }
 
     @Override
+    public void visit(Stmt.For obj) {
+        if (obj.getInit() != null) {
+            this.visit(obj.getInit());
+        }
+        Label begin = new Label();
+        Label trueLabel = new Label();
+        Label updateLabel = new Label();
+        Label next = new Label();
+
+        emit(new Ast.Stmt.LabelJ(begin));
+        BoolCode condition = translateCondition(obj.getCondition());
+        backpatch(condition.trueList, trueLabel);
+        backpatch(condition.falseList, next);
+
+        emit(new Ast.Stmt.LabelJ(trueLabel));
+        obj.getBody().getBreakList().addToHead(next);
+        obj.getBody().getContinueList().addToHead(updateLabel);
+        this.visit(obj.getBody());
+
+        emit(new Ast.Stmt.LabelJ(updateLabel));
+        if (obj.getUpdate() != null) {
+            this.visit(obj.getUpdate());
+        }
+        emit(new Ast.Stmt.Goto(begin));
+        emit(new Ast.Stmt.LabelJ(next));
+    }
+
+    @Override
     public void visit(Stmt.Call obj) {
         this.visit(obj.getReturnType());
         Ast.Type.T returnType = this.type;
         List<Ast.Type.T> at = new ArrayList<>();
+        List<Ast.Type.T> expectedTypes = this.methodFormalTypes.get(obj.getName());
         for (int i = 0; i < obj.getInputParams().size(); i++) {
-            Expr.Call targetObj = new Expr.Call(obj.getName(),obj.getInputParams(),obj.getLineNum(),obj.getReturnType());
-            processExpression(targetObj,obj.getInputParams().get(i));
-            at.add(this.type);
+            Ast.Type.T expectedType = expectedTypes == null ? null : expectedTypes.get(i);
+            processCallArgument(obj.getInputParams().get(i), expectedType);
+            at.add(expectedType == null ? this.type : expectedType);
         }
         emit(new Ast.Stmt.Invokestatic(obj.getName(), at, returnType));
+        this.type = returnType;
+        if (returnType.getKind() == TypeKind.DOUBLE) {
+            emit(new Ast.Stmt.Pop2());
+        } else if (returnType.getKind() != TypeKind.VOID) {
+            emit(new Ast.Stmt.Pop());
+        }
     }
 
     // ========== 数组相关的 visit 方法 ==========
@@ -890,12 +1111,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
         if (obj.getElementType() instanceof Type.Int) {
             emit(new Ast.Stmt.Iastore());
         } else if (obj.getElementType() instanceof Type.Float) {
+            emitWideningConversion(new Ast.Type.Float());
             emit(new Ast.Stmt.Fastore());
         } else if (obj.getElementType() instanceof Type.Double) {
-            // 如果表达式是float，需要转换为double
-            if (this.type instanceof Ast.Type.Float) {
-                emit(new Ast.Stmt.F2d());
-            }
+            emitWideningConversion(new Ast.Type.Double());
             emit(new Ast.Stmt.Dastore());
         } else if (obj.getElementType() instanceof Type.Bool) {
             emit(new Ast.Stmt.Bastore());

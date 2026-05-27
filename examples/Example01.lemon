@@ -1,4 +1,4 @@
-class TestMain{
+class Example01{
 	// 程序入口
 	void main(){
 		int number;

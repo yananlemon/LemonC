@@ -1,0 +1,13 @@
+class HelloWorld {
+    void main() {
+        int a;
+        int b;
+        a = 15;
+        b = 27;
+        printf("a=%d,b=%d,add=%d", a, b, add(a, b));
+    }
+
+    int add(int x, int y) {
+        return x + y;
+    }
+}

@@ -239,6 +239,10 @@ public Label l;
             public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
 }
 
+        public static class Irem extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+}
+
 
         public static class Fadd extends T {
             public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
@@ -312,6 +316,13 @@ public Label l;
         public static class Fcmpl extends T {
             public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
 public Fcmpl() {
+
+            }
+        }
+
+        public static class Fcmpg extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+public Fcmpg() {
 
             }
         }
@@ -443,9 +454,27 @@ public Dcmpl() {
             }
         }
 
+        public static class Dcmpg extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+public Dcmpg() {
+            }
+        }
+
         public static class F2d extends T {
             public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
 public F2d() {
+            }
+        }
+
+        public static class I2f extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+public I2f() {
+            }
+        }
+
+        public static class I2d extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+public I2d() {
             }
         }
 
@@ -485,6 +514,14 @@ public Type.T exprType;
         }
 
         public static class PrintLine extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+}
+
+        public static class Pop extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+}
+
+        public static class Pop2 extends T {
             public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
 }
 

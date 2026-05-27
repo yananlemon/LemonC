@@ -58,6 +58,17 @@ public class DoublyLinkedList<T> {
 	}
 	
 	/**
+	 * 将另一个链表的所有元素追加到本链表尾部
+	 * @param list 待追加的链表
+	 */
+	public void addAll(DoublyLinkedList<T> list){
+		if (list == null || list.isEmpty()) return;
+		for(int i = 0; i < list.size(); i++) {
+			this.addToTail(list.get(i));
+		}
+	}
+
+	/**
 	 * 从链表头部删除数据并返回改数据，如果链表为空，则返回null。
 	 */
 	public T deleteFromHead(){

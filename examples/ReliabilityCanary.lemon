@@ -1,0 +1,103 @@
+class ReliabilityCanary {
+    void main() {
+        int i;
+        int sum;
+        int flag;
+        int fibResult;
+        float f;
+        double d;
+        bool b;
+        int arr[4];
+        float farr[2];
+        double darr[2];
+
+        printf("start\n");
+
+        arr[0] = 1;
+        arr[1] = 2;
+        arr[2] = 3;
+        arr[3] = 4;
+        sum = 0;
+        i = 0;
+        while (i < 4) {
+            sum = sum + arr[i];
+            i = i + 1;
+        }
+        printf("sum=%d\n", sum);
+
+        f = half(3.0);
+        d = keepDouble(2.25);
+        printf("f=%f,d=%f\n", f, d);
+
+        farr[0] = 1.25;
+        farr[1] = 2.5;
+        darr[0] = 4.5;
+        darr[1] = 3.5;
+        printf("arrays=%f,%f,%f,%f\n", farr[0], farr[1], darr[0], darr[1]);
+
+        b = check(sum);
+        if (b) {
+            flag = 1;
+        } else {
+            flag = 0;
+        }
+        printf("bool=%d\n", flag);
+
+        fibResult = fib(6);
+        printf("fib=%d\n", fibResult);
+
+        discardInt();
+        discardDouble();
+        mark();
+
+        i = 0;
+        while (i < 5) {
+            i = i + 1;
+            if (i == 2) {
+                continue;
+            }
+            if (i == 4) {
+                break;
+            }
+            printf("loop=%d\n", i);
+        }
+
+        printf("end\n");
+    }
+
+    float half(float x) {
+        return x / 2.0;
+    }
+
+    double keepDouble(double x) {
+        return x;
+    }
+
+    bool check(int value) {
+        return value == 10;
+    }
+
+    int fib(int n) {
+        int result;
+        if (n < 3) {
+            result = 1;
+        } else {
+            result = fib(n - 1) + fib(n - 2);
+        }
+        return result;
+    }
+
+    int discardInt() {
+        printf("discard-int\n");
+        return 123;
+    }
+
+    double discardDouble() {
+        printf("discard-double\n");
+        return 9.5;
+    }
+
+    void mark() {
+        printf("void-call\n");
+    }
+}

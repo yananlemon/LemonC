@@ -1,0 +1,9 @@
+class VoidEmptyMethod {
+    void main() {
+        noop();
+        printf("done\n");
+    }
+
+    void noop() {
+    }
+}

@@ -1,0 +1,50 @@
+class NaNCompareTest {
+    void main() {
+        float fzero;
+        float fnan;
+        double dzero;
+        double dnan;
+        bool result;
+        int out;
+        fzero = 0.0;
+        fnan = fzero / fzero;
+        dzero = 0.0;
+        dnan = dzero / dzero;
+        result = fnan < fzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("flt_lt=%d\n", out);
+        result = fnan <= fzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("flt_lte=%d\n", out);
+        result = fnan > fzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("flt_gt=%d\n", out);
+        result = fnan >= fzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("flt_gte=%d\n", out);
+        result = fnan == fzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("flt_eq=%d\n", out);
+        result = fnan != fzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("flt_neq=%d\n", out);
+        result = dnan < dzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("dbl_lt=%d\n", out);
+        result = dnan <= dzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("dbl_lte=%d\n", out);
+        result = dnan > dzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("dbl_gt=%d\n", out);
+        result = dnan >= dzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("dbl_gte=%d\n", out);
+        result = dnan == dzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("dbl_eq=%d\n", out);
+        result = dnan != dzero;
+        if (result) { out = 1; } else { out = 0; }
+        printf("dbl_neq=%d\n", out);
+    }
+}

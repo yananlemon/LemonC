@@ -3,6 +3,7 @@ import site.ilemon.ast.Ast;
 import site.ilemon.codegen.TranslatorVisitor;
 import site.ilemon.lexer.Lexer;
 import site.ilemon.parser.Parser;
+import site.ilemon.semantic.SemanticVisitor;
 
 import java.io.File;
 import java.io.IOException;
@@ -166,6 +167,8 @@ public class TranslatorVisitorTest {
         Lexer lexer = new Lexer(new File(filename));
         Parser parser = new Parser(lexer);
         Ast.Program.T prog = parser.parse();
+        SemanticVisitor semantic = new SemanticVisitor();
+        semantic.visit(prog);
         
         TranslatorVisitor visitor = new TranslatorVisitor();
         visitor.visit(prog);

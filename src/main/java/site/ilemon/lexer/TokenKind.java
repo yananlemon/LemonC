@@ -15,12 +15,15 @@ public enum TokenKind {
 		Double,
 		Bool,
 		While,
+		For,
 		True,
 		False,
 		If,
 		Else,
 		Printf,
 		Return,
+		Break,
+		Continue,
 
 		/***算术运算符****/
 		Add,
@@ -52,6 +55,7 @@ public enum TokenKind {
 		Rbracket,			// ]
 		Semicolon,			// ;
 		Comma,				// ,
+		Dot,				// .
 
 		Id,
 		Num,

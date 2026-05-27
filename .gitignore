@@ -1,8 +1,22 @@
-# 编译产物
+# Build artifacts
 *.class
 *.il
 target/
 bin/
+
+# Temporary compiler output and scratch files
+out.txt
+errors.txt
+auto_fix.py
+fix_*.py
+test_tmp/
+*.tmp
+*.bak
+*.orig
+
+# Native experiment outputs
+output.asm
+*.exe
 
 # IDE
 .idea/
@@ -12,7 +26,7 @@ bin/
 .project
 .settings/
 
-# 日志
+# Logs
 *.log
 
 # OS

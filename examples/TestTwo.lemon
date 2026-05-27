@@ -4,7 +4,7 @@ class TestTwo{
 		float y;
 		y = 19.0;
 		x = call(y);
-		printf("%d\n",x);
+		printf("%f\n",x);
 	}
 	
 	float call(float a){

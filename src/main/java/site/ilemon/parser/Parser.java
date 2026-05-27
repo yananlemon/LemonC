@@ -8,7 +8,6 @@ import site.ilemon.exception.ParseException;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import static site.ilemon.lexer.TokenKind.Num;
 
@@ -45,14 +44,6 @@ public class Parser {
 
 	private Token look;  // 当前token
 
-	private boolean isValDecl;
-	
-	private HashMap<String,Ast.Type.T> varTable = new HashMap<String, Ast.Type.T>();
-
-	private String currMethod;
-
-	private  HashMap<String,HashMap<String,Ast.Type.T>> table = new  HashMap<String,HashMap<String,Ast.Type.T>>();
-
 	public Parser(Lexer lexer) throws IOException{
 		this.lexer=lexer;
 		lexer.lexicalAnalysis();
@@ -76,29 +67,27 @@ public class Parser {
 		if( lexeme.equals(look.lexeme))
 			move();
 		else
-			error(lexeme);
+			expected(lexeme);
 	}
 	
 	private void match(Token token) throws IOException{
 		if( token.kind == look.kind ){
 			move();
 		}else{
-			error(token.kind.toString());
+			expected(token.kind.toString());
 		}
 	}
 
-	private void error(String s) { 
+	private void expected(String s) {
 		throw new ParseException(String.format(
 			"[语法分析] 行 %d: 语法错误，期望 '%s'，实际得到 '%s'",
 			look.lineNumber, s, look.lexeme));
 	}
 
-	/**
-	 * 从变量表中查找变量类型，未找到时返回 null（Parser 阶段尚不做未声明变量的错误检查，
-	 * 由 SemanticVisitor 负责）。
-	 */
-	private Ast.Type.T lookupVarType(String id) {
-		return this.varTable.get(id);
+	private void error(String message) {
+		throw new ParseException(String.format(
+			"[语法分析] 行 %d: %s，当前 token 为 '%s'",
+			look.lineNumber, message, look.lexeme));
 	}
 
 	/**
@@ -120,7 +109,7 @@ public class Parser {
 		String className = look.lexeme;
 		// 检查class名称是否一致
 		if( !className.equals(lexer.getClassName()) ){
-			this.error(String.format("类名%s和文件名%s不一致",className,lexer.getClassName()));
+			this.error(String.format("类名 '%s' 与文件名 '%s' 不一致", className, lexer.getClassName()));
 		}
 		move();
 		match("{");
@@ -150,8 +139,6 @@ public class Parser {
 	private Ast.Method.MethodSingle parseMethod() throws IOException {
 		Ast.Type.T t = parseType();
 		String methodName = look.lexeme;
-		this.currMethod= methodName;
-		this.varTable.clear();
 		int lineNumber = look.lineNumber;
 		move();
 		match("(");
@@ -161,12 +148,8 @@ public class Parser {
 		ArrayList<Ast.Declare.T> localParams = parseVarDeclares();
 		ArrayList<Ast.Stmt.T> stmts = parseStmts();
 		match("}");
-		table.put(this.currMethod,this.varTable);
 		if( !methodName.equals("main")){
-			if( stmts.isEmpty() ){
-				error(String.format("方法 '%s' 体内没有语句", methodName));
-			}
-			Ast.Stmt.T stmt = stmts.get(stmts.size()-1);
+			Ast.Stmt.T stmt = stmts.isEmpty() ? null : stmts.get(stmts.size()-1);
 			return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,stmt,lineNumber);
 		}else{
 			return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,null,lineNumber);
@@ -177,44 +160,30 @@ public class Parser {
 	// <varDeclares> -> <varDeclare>*
 	private ArrayList<Ast.Declare.T> parseVarDeclares() throws IOException{
 		ArrayList<Ast.Declare.T> rs = new ArrayList<Ast.Declare.T>();
-		while(look.kind == TokenKind.Int || 
-				look.kind == TokenKind.Float||
-				look.kind == TokenKind.Double||
-				look.kind == TokenKind.Bool){
-			String id = look.lexeme;
-			Ast.Declare.T d = parseDeclare();
-			if( d != null ){
-				if( d instanceof  Ast.Declare.DeclareSingle){
-					Ast.Declare.DeclareSingle declareSingle = (Ast.Declare.DeclareSingle)d;
-					varTable.put(declareSingle.getId(),declareSingle.getType());
-				}
-				rs.add(d);
-			}
-			if ( !isValDecl ) 
-				break;
+		while(isVarDeclarationStart()){
+			rs.add(parseDeclare());
 		}
 		return rs;
 
 	}
 
+	private boolean isVarDeclarationStart() {
+		if (!isTypeToken(look.kind)) {
+			return false;
+		}
+		Token id = lexer.lookahead(1);
+		Token afterId = lexer.lookahead(2);
+		return id != null && id.kind == TokenKind.Id
+				&& afterId != null
+				&& (afterId.kind == TokenKind.Semicolon || afterId.kind == TokenKind.Lbracket);
+	}
+
 	// // <declare> -> type id; | type id[size];
 	private Ast.Declare.T parseDeclare() throws IOException {
-		Token t = lexer.lookahead(2);
-		if( t !=null && t.kind == TokenKind.Lparen){
-			isValDecl = false;
-			return null;
-		}
-		t = lexer.lookahead(1);
-		if( t !=null && t.kind == TokenKind.Assign){
-			isValDecl = false;
-			return null;
-		}
 		Ast.Type.T type = parseType();
-		if( look.kind == TokenKind.Assign ) {
-			isValDecl = false;
-			return null;
-		}else if( look.kind == TokenKind.Id ){
+		if( look.kind == TokenKind.Id ){
 			String id = look.lexeme;
+			int lineNumber = look.lineNumber;
 			move();
 			// type id[size]; - 数组声明
 			if( look.kind == TokenKind.Lbracket) {
@@ -233,32 +202,27 @@ public class Parser {
 				match(new Token(TokenKind.Num));
 				match("]");
 				match(";");
-				isValDecl = true;
 				// 根据基础类型创建数组类型
 				Ast.Type.T arrayType = createArrayType(type, size);
 				if( arrayType == null ){
 					error(String.format("不支持的数组基础类型: %s", type));
 					return null;
 				}
-				return new Ast.Declare.DeclareSingle(arrayType, id, look.lineNumber);
+				return new Ast.Declare.DeclareSingle(arrayType, id, lineNumber);
 			}
 			// type id;
 			else if( look.kind == TokenKind.Semicolon) {
-				isValDecl = true;
-				Ast.Declare.DeclareSingle d = new Ast.Declare.DeclareSingle(type,id,look.lineNumber);
+				Ast.Declare.DeclareSingle d = new Ast.Declare.DeclareSingle(type,id,lineNumber);
 				match(";");
 				return d;
 			}
-			else if( look.kind == TokenKind.Lparen ) {
-				isValDecl = false;
-				return null;
-			}else {
-				error(look.lexeme);
+			else {
+				error(String.format("声明语句格式错误，变量 '%s' 后期望 ';' 或数组下标声明", id));
 				return null;
 			}
 
 		}else {
-			error(look.lexeme);
+			error("声明语句格式错误，类型后必须跟变量名");
 			return null;
 		}
 	}
@@ -286,7 +250,6 @@ public class Parser {
 			int lineNumber = look.lineNumber;
 			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 			match(new Token(TokenKind.Id));
-			this.varTable.put(id, t);
 			while(look.kind == TokenKind.Comma ){
 				move();
 				t = parseType();
@@ -294,7 +257,6 @@ public class Parser {
 				lineNumber = look.lineNumber;
 				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
 				match(new Token(TokenKind.Id));
-				this.varTable.put(id, t);
 			}
 		}
 		return rs;
@@ -311,17 +273,14 @@ public class Parser {
 
 	private Ast.Type.T parseType() {
 		if( look.kind == TokenKind.Int ){
-			//varTable.put(look.lexeme, new Ast.Type.Int());
 			move();
 			return new Ast.Type.Int();
 		}
 		else if(look.kind == TokenKind.Void){
-			//varTable.put(look.lexeme, new Ast.Type.Void());
 			move();
 			return new Ast.Type.Void();
 		}
 		else if(look.kind == TokenKind.Float){
-			//varTable.put(look.lexeme, new Ast.Type.Float());
 			move();
 			return new Ast.Type.Float();
 		}
@@ -330,12 +289,11 @@ public class Parser {
 			return new Ast.Type.Double();
 		}
 		else if(look.kind == TokenKind.Bool){
-			//varTable.put(look.lexeme, new Ast.Type.Bool());
 			move();
 			return new Ast.Type.Bool();
 		}
 		else 
-			error(look.lexeme);
+			error("期望类型关键字 int、float、double、bool 或 void");
 		return null;
 	}
 	
@@ -345,8 +303,11 @@ public class Parser {
 				look.kind == TokenKind.PrintLine ||
 				look.kind == TokenKind.If ||
 				look.kind == TokenKind.While ||
+				look.kind == TokenKind.For ||
 				look.kind == TokenKind.Lbrace ||
-				look.kind == TokenKind.Id || 
+				look.kind == TokenKind.Id ||
+				look.kind == TokenKind.Break ||
+				look.kind == TokenKind.Continue ||
 				look.kind == TokenKind.Return){
 			rs.add(parseStmt());
 		}
@@ -359,23 +320,20 @@ public class Parser {
 		if( look.kind == TokenKind.Printf ){
 			match(new Token(TokenKind.Printf));
 			match(new Token(TokenKind.Lparen));
+			if (look.kind != TokenKind.String) {
+				error("printf 的第一个参数必须是字符串格式");
+			}
 			String format = look.lexeme;
 			int lineNumber = look.lineNumber;
-			Token ahead = lexer.lookahead(1);
-			ArrayList<Ast.Expr.T> exprs = null;
-			if( ahead.kind == TokenKind.Comma ){
-				exprs = new ArrayList<Ast.Expr.T>();
-				while( look.kind != TokenKind.Rparen ){
-					if( look.kind == TokenKind.Comma )
-						move();
-					exprs.add(parseExpr());
-				}
-				match( new Token(TokenKind.Rparen) );
-				match( new Token(TokenKind.Semicolon) );
-				stmt = new Ast.Stmt.Printf(format,exprs,lineNumber);
-			}else{
-				match(new Token(TokenKind.Lparen));
+			match(new Token(TokenKind.String));
+			ArrayList<Ast.Expr.T> exprs = new ArrayList<Ast.Expr.T>();
+			while( look.kind == TokenKind.Comma ){
+				match(new Token(TokenKind.Comma));
+				exprs.add(parseExpr());
 			}
+			match( new Token(TokenKind.Rparen) );
+			match( new Token(TokenKind.Semicolon) );
+			stmt = new Ast.Stmt.Printf(format,exprs,lineNumber);
 		}
 		else if( look.kind == TokenKind.PrintLine ){
 			int lineNumber = look.lineNumber;
@@ -385,6 +343,18 @@ public class Parser {
 			match( new Token(TokenKind.Semicolon) );
 			stmt = new Ast.Stmt.PrintLine();
 		}
+		else if( look.kind == TokenKind.Break ){
+			int lineNumber = look.lineNumber;
+			match(new Token(TokenKind.Break));
+			match(new Token(TokenKind.Semicolon));
+			stmt = new Ast.Stmt.Break(lineNumber);
+		}
+		else if( look.kind == TokenKind.Continue ){
+			int lineNumber = look.lineNumber;
+			match(new Token(TokenKind.Continue));
+			match(new Token(TokenKind.Semicolon));
+			stmt = new Ast.Stmt.Continue(lineNumber);
+		}
 		else if( look.kind == TokenKind.While ){
 			match(new Token(TokenKind.While));
 			match(new Token(TokenKind.Lparen));
@@ -393,6 +363,27 @@ public class Parser {
 			match(new Token(TokenKind.Rparen));
 			Ast.Stmt.T whileStmt = parseStmt();
 			stmt = new Ast.Stmt.While(condition, whileStmt, lineNumber);
+		}
+		else if( look.kind == TokenKind.For ){
+			int lineNumber = look.lineNumber;
+			match(new Token(TokenKind.For));
+			match(new Token(TokenKind.Lparen));
+			Ast.Stmt.T init = null;
+			if (look.kind != TokenKind.Semicolon) {
+				init = parseSimpleStmtWithoutTerminator();
+			}
+			match(new Token(TokenKind.Semicolon));
+			Ast.Expr.T condition = look.kind == TokenKind.Semicolon
+					? new Ast.Expr.True(lineNumber)
+					: parseExpr();
+			match(new Token(TokenKind.Semicolon));
+			Ast.Stmt.T update = null;
+			if (look.kind != TokenKind.Rparen) {
+				update = parseSimpleStmtWithoutTerminator();
+			}
+			match(new Token(TokenKind.Rparen));
+			Ast.Stmt.T body = parseStmt();
+			stmt = new Ast.Stmt.For(init, condition, update, body, lineNumber);
 		}
 		else if ( look.kind == TokenKind.Id ) {
 			Token ahead = lexer.lookahead(1);
@@ -404,7 +395,7 @@ public class Parser {
 				Ast.Expr.T expr =  parseMethodCall();
 				if( expr instanceof Ast.Expr.Call){
 					stmt = new Ast.Stmt.Call(mthName,((Ast.Expr.Call)expr).getInputParams(),lineNumber);
-					move();
+					match(new Token(TokenKind.Semicolon));
 				}
 
 			}
@@ -428,7 +419,7 @@ public class Parser {
 				match( new Token(TokenKind.Assign) );
 				Ast.Expr.T expr = parseExpr();
 				match( new Token(TokenKind.Semicolon) );
-				stmt = new Ast.Stmt.Assign(new Ast.Expr.Id(id,lookupVarType(id),lineNum), expr, lineNum);
+				stmt = new Ast.Stmt.Assign(new Ast.Expr.Id(id,lineNum), expr, lineNum);
 				
 			}
 		}
@@ -463,6 +454,42 @@ public class Parser {
 			stmt = new Ast.Stmt.If(condition, thenStmt, elseStmt, lineNumber);
 		}
 		return stmt;
+	}
+
+	private Ast.Stmt.T parseSimpleStmtWithoutTerminator() throws IOException {
+		if (look.kind != TokenKind.Id) {
+			error("期望赋值语句或方法调用");
+		}
+		Token ahead = lexer.lookahead(1);
+		if( ahead.kind == TokenKind.Lparen ){
+			String mthName = look.lexeme;
+			int lineNumber = look.lineNumber;
+			Ast.Expr.T expr = parseMethodCall();
+			if( expr instanceof Ast.Expr.Call){
+				return new Ast.Stmt.Call(mthName,((Ast.Expr.Call)expr).getInputParams(),lineNumber);
+			}
+		}
+		else if( ahead.kind == TokenKind.Lbracket ){
+			String arrayName = look.lexeme;
+			int lineNum = look.lineNumber;
+			match( new Token(TokenKind.Id) );
+			match( "[" );
+			Ast.Expr.T index = parseExpr();
+			match( "]" );
+			match( new Token(TokenKind.Assign) );
+			Ast.Expr.T expr = parseExpr();
+			return new Ast.Stmt.ArrayAssign(arrayName, index, expr, lineNum);
+		}
+		else{
+			String id = look.lexeme;
+			int lineNum = look.lineNumber;
+			match( new Token(TokenKind.Id) );
+			match( new Token(TokenKind.Assign) );
+			Ast.Expr.T expr = parseExpr();
+			return new Ast.Stmt.Assign(new Ast.Expr.Id(id,lineNum), expr, lineNum);
+		}
+		error("无法解析简单语句");
+		return null;
 	}
 
 
@@ -555,14 +582,17 @@ public class Parser {
 	private Ast.Expr.T parseTerm() throws IOException{
 		Ast.Expr.T expr = parseFactor();
 		while(look.kind==TokenKind.Mul
-				||look.kind==TokenKind.Div) {
+				||look.kind==TokenKind.Div
+				||look.kind==TokenKind.Mod) {
 			Token temp=look;
 			move();
 			Ast.Expr.T otherExpr = parseFactor();
 			if(temp.kind == TokenKind.Mul) {
 				expr = new Ast.Expr.Mul(expr, otherExpr, look.lineNumber);
-			}else {
+			}else if(temp.kind == TokenKind.Div) {
 				expr = new Ast.Expr.Div(expr, otherExpr, look.lineNumber);
+			}else {
+				expr = new Ast.Expr.Mod(expr, otherExpr, look.lineNumber);
 			}
 		}
 		return expr;
@@ -580,6 +610,12 @@ public class Parser {
 			expr = parseExpr();
 			match(new Token(TokenKind.Rparen));
 			return expr;
+		}else if(look.kind==TokenKind.Sub){
+			int lineNumber = look.lineNumber;
+			move();
+			Ast.Expr.T operand = parseFactor();
+			return new Ast.Expr.Sub(new Ast.Expr.Number(new Ast.Type.Int(), 0, lineNumber),
+					operand, lineNumber);
 		}else if(look.kind== Num){
 			expr = new Ast.Expr.Number(new Ast.Type.Int(),look.lexeme,look.lineNumber);
 			move();
@@ -605,8 +641,19 @@ public class Parser {
 				match("]");
 				expr = new Ast.Expr.ArrayAccess(arrayName, index, lineNum);
 			}
+			else if( ahead.kind == TokenKind.Dot){
+				String arrayName = look.lexeme;
+				int lineNum = look.lineNumber;
+				move(); // consume id
+				match(".");
+				if (!"length".equals(look.lexeme)) {
+					error("数组属性只支持 length");
+				}
+				match(new Token(TokenKind.Id));
+				expr = new Ast.Expr.ArrayLength(arrayName, lineNum);
+			}
 			else{
-				expr = new Ast.Expr.Id(look.lexeme,lookupVarType(look.lexeme),look.lineNumber);
+				expr = new Ast.Expr.Id(look.lexeme,look.lineNumber);
 				move();
 			}
 			return expr;

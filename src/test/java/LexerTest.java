@@ -240,14 +240,10 @@ public class LexerTest {
         Lexer lexer = new Lexer(new File("examples/FloatTest01.lemon"));
         lexer.lexicalAnalysis();
         
-        // 打印所有token用于调试
-        System.out.println("=== FloatTest01.lemon tokens ===");
-        for (Token t : lexer.tokens) {
-            System.out.print(t);
-        }
-        
         // 验证token数量合理
         assertTrue("应产生多个token", lexer.tokens.size() > 10);
+        assertEquals(TokenKind.Class, lexer.tokens.get(0).kind);
+        assertEquals(TokenKind.EOF, lexer.tokens.get(lexer.tokens.size() - 1).kind);
     }
 
     @Test
@@ -299,6 +295,8 @@ public class LexerTest {
     public void testCal() throws IOException {
         Lexer lexer = new Lexer(new File("examples/FloatTest01.lemon"));
         lexer.lexicalAnalysis();
-        System.out.println(lexer.tokens);
+        assertTrue(lexer.tokens.size() > 10);
+        assertEquals(TokenKind.Class, lexer.tokens.get(0).kind);
+        assertEquals(TokenKind.EOF, lexer.tokens.get(lexer.tokens.size() - 1).kind);
     }
 }

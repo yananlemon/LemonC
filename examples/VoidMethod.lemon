@@ -1,0 +1,11 @@
+class VoidMethod {
+    void main() {
+        printf("before\n");
+        hello();
+        printf("after\n");
+    }
+
+    void hello() {
+        printf("hello from void\n");
+    }
+}

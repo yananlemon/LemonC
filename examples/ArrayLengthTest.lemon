@@ -1,0 +1,9 @@
+class ArrayLengthTest {
+    void main() {
+        int values[5];
+        float weights[3];
+        int total;
+        total = values.length + weights.length;
+        printf("values=%d,weights=%d,total=%d\n", values.length, weights.length, total);
+    }
+}

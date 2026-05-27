@@ -1,4 +1,4 @@
-class MulTable{
+class Example05{
 	void main(){
 		int t;
 		t = showMulTable();

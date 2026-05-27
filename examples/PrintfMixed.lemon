@@ -1,0 +1,11 @@
+class PrintfMixed {
+    void main() {
+        int i;
+        float f;
+        double d;
+        i = 7;
+        f = 1.5;
+        d = 2.25;
+        printf("i=%d, f=%f, d=%f\n", i, f, d);
+    }
+}

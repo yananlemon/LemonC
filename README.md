@@ -4,6 +4,8 @@ LemonC 是一个基于 Java 实现的编译器，将自定义的 Lemon 语言编
 
 项目包含完整的编译器前端与后端：**词法分析 → 语法分析 → 语义分析 → IR 翻译 → 字节码生成**。
 
+完整语言功能、示例源码和真实 JVM 运行输出见：[LemonC 功能手册](docs/LEMONC_FEATURES.md)。
+
 ## 快速开始
 
 ### 环境要求
@@ -22,7 +24,7 @@ mvn install:install-file \
 # 2. 构建并打包
 mvn clean package
 
-# 3. 运行测试（126 个自动化测试用例）
+# 3. 运行测试（168 个自动化测试用例）
 mvn test
 ```
 
@@ -35,6 +37,27 @@ java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/Fib.lemon
 # 运行（生成的 .class 在当前目录）
 java Fib
 ```
+
+### 教学演示：查看编译中间结果
+
+LemonC CLI 支持直接打印编译管线中的关键产物，方便课堂展示从源码到 JVM 栈机指令的降级过程：
+
+```bash
+# 打印 token 流、语义分析后的 AST、降低后的 JVM IR，并继续生成 .class
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/ModTest.lemon \
+  --dump-tokens --dump-ast --dump-ir
+
+# 也可以只看某一层
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/ArrayLengthTest.lemon --dump-ir
+```
+
+典型链路示例：
+
+| 源语言特性 | Token / AST | JVM IR |
+|---|---|---|
+| `10 % 3` | `Mod` | `Irem` |
+| `a < b` where `a,b` are `double` | `LT` | `Dcmpl` + integer branch |
+| `arr.length` | `ArrayLength` | `Arraylength` |
 
 输出：
 ```
@@ -186,12 +209,15 @@ class Fib {
 mvn test
 ```
 
-测试套件包含 **126 个自动化测试用例**：
+测试套件包含 **168 个自动化测试用例**：
 
 | 测试类 | 数量 | 说明 |
 |--------|:---:|------|
-| `CompilerTest` | 60 | 端到端集成测试，覆盖所有可编译的 .lemon 示例 |
-| `ErrorTest` | 18 | 负面测试（语义错误 12 + 语法错误 4 + 格式验证 2） |
+| `AllExamplesJvmTest` | 1 | 所有根目录示例均编译为 `.class`，并在 JVM 上对比真实输出清单 |
+| `AstOptimizerTest` | 3 | AST 优化单元测试 |
+| `ByteCodeGeneratorTest` | 13 | JVM 字节码/栈帧生成测试 |
+| `CompilerTest` | 69 | 端到端集成测试，覆盖可编译的 .lemon 示例 |
+| `ErrorTest` | 34 | 负面测试，覆盖语义错误、语法错误和格式验证 |
 | `LexerTest` | 18 | 词法分析单元测试 |
 | `ParserTest` | 18 | 语法分析单元测试 |
 | `SemanticTest` | 1 | 语义分析单元测试 |
@@ -199,7 +225,7 @@ mvn test
 
 ## 示例程序
 
-`examples/` 目录包含 66 个 Lemon 语言示例程序，覆盖：
+`examples/` 目录包含 82 个 Lemon 语言示例程序，覆盖：
 
 - 基础计算与变量声明
 - `if/else` 条件分支（13 个测试）

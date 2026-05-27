@@ -1,0 +1,27 @@
+class NestedLoops {
+    void main() {
+        int i;
+        int j;
+        i = 0;
+        
+        while (i < 3) {
+            i = i + 1;
+            
+            // outer continue
+            if (i == 2) {
+                printf("outer continue skip %d\n", i);
+                continue;
+            }
+            
+            j = 0;
+            while (j < 3) {
+                j = j + 1;
+                if (j == 2) {
+                    printf("  inner break on %d\n", j);
+                    break;
+                }
+                printf("  inner run i=%d, j=%d\n", i, j);
+            }
+        }
+    }
+}

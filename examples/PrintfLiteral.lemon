@@ -1,0 +1,5 @@
+class PrintfLiteral {
+    void main() {
+        printf("hello literal\n");
+    }
+}

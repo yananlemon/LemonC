@@ -13,6 +13,6 @@ class Test{
 		pi = 3.1415;
 		diameter = 10.0;
 		perimeter = pi*diameter;
-		printf("%d\n",perimeter);
+		printf("%f\n",perimeter);
 	}
 }

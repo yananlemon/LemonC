@@ -46,9 +46,12 @@ public class Lexer {
         KEYWORDS.put("if", TokenKind.If);
         KEYWORDS.put("else", TokenKind.Else);
         KEYWORDS.put("while", TokenKind.While);
+        KEYWORDS.put("for", TokenKind.For);
         KEYWORDS.put("printf", TokenKind.Printf);
         KEYWORDS.put("printLine", TokenKind.PrintLine);
         KEYWORDS.put("return", TokenKind.Return);
+        KEYWORDS.put("break", TokenKind.Break);
+        KEYWORDS.put("continue", TokenKind.Continue);
     }
 
     public Lexer(File f) throws IOException {
@@ -240,7 +243,7 @@ public class Lexer {
     private boolean isSingleCharToken(char c) {
         return c == '+' || c == '-' || c == '*' || c == '%' ||
                c == '{' || c == '}' || c == '(' || c == ')' ||
-               c == '[' || c == ']' || c == ';' || c == ',';
+               c == '[' || c == ']' || c == ';' || c == ',' || c == '.';
     }
 
     /**
@@ -260,6 +263,7 @@ public class Lexer {
             case ']': return TokenKind.Rbracket;
             case ';': return TokenKind.Semicolon;
             case ',': return TokenKind.Comma;
+            case '.': return TokenKind.Dot;
             default: return TokenKind.Unknown;
         }
     }

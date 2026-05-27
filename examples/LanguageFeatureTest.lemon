@@ -1,0 +1,40 @@
+class LanguageFeatureTest {
+    float addOne(float x) {
+        return x + 1;
+    }
+
+    double widen(int x) {
+        return x;
+    }
+
+    void main() {
+        int i;
+        int sum;
+        float f;
+        double d;
+        int arr[3];
+        i = 0;
+        sum = 0;
+        for (i = 0; i < 6; i = i + 1) {
+            if (i == 2) {
+                continue;
+            }
+            if (i == 5) {
+                break;
+            }
+            sum = sum + i;
+        }
+        printf("sum=%d\n", sum);
+        printf("neg=%d\n", -sum);
+        f = 1 + 2.5;
+        d = 1 + f;
+        printf("f=%f,d=%f\n", f, d);
+        f = addOne(2);
+        d = widen(7);
+        printf("call=%f,%f\n", f, d);
+        arr[0] = 1;
+        arr[1] = 2;
+        arr[2] = 3;
+        printf("arr=%d\n", arr[1]);
+    }
+}

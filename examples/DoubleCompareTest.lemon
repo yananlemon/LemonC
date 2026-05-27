@@ -1,0 +1,27 @@
+class DoubleCompareTest {
+    void main() {
+        double a;
+        double b;
+        bool result;
+        int out;
+        a = 1.5;
+        b = 2.0;
+        result = a < b;
+        if (result) { out = 1; } else { out = 0; }
+        printf("lt=%d\n", out);
+        result = b >= b;
+        if (result) { out = 1; } else { out = 0; }
+        printf("gte=%d\n", out);
+        result = a == b;
+        if (result) { out = 1; } else { out = 0; }
+        printf("eq=%d\n", out);
+        result = a != b;
+        if (result) { out = 1; } else { out = 0; }
+        printf("neq=%d\n", out);
+        if (b > a) {
+            printf("if=1\n");
+        } else {
+            printf("if=0\n");
+        }
+    }
+}
