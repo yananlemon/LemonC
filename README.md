@@ -1,241 +1,407 @@
-# LemonC 编译器
+# LemonC
 
-LemonC 是一个基于 Java 实现的编译器，将自定义的 Lemon 语言编译为 **JVM 字节码**，可直接在 JVM 上运行。
+**LemonC is a teaching-oriented C-like compiler written in Java.**
 
-项目包含完整的编译器前端与后端：**词法分析 → 语法分析 → 语义分析 → IR 翻译 → 字节码生成**。
+It compiles Lemon source code to real JVM `.class` files through lexical analysis, recursive descent parsing, semantic analysis, AST optimization, backpatching-based control-flow translation, Jasmin assembly, and bytecode generation.
 
-完整语言功能、示例源码和真实 JVM 运行输出见：[LemonC 功能手册](docs/LEMONC_FEATURES.md)。
+LemonC 是一个面向编译原理教学与实践的小型 C-like 编译器。它不是只停留在 AST 或三地址码展示层，而是把 `.lemon` 源程序真正编译成 JVM 字节码，并用 JVM 执行结果做端到端回归验证。
 
-## 快速开始
+<p align="center">
+  <img src="./docs/assets/lemonc-pipeline.png" alt="LemonC compiler pipeline" width="100%">
+</p>
 
-### 环境要求
+```text
+Java 8+ | Maven | JVM bytecode | 168 tests passing | 82 examples | MIT License
+```
 
-- JDK 1.8+
-- Maven 3.3+
+## Why LemonC
 
-### 构建
+| What you get | Why it matters |
+|---|---|
+| Complete compiler pipeline | Lexer, parser, semantic analyzer, optimizer, IR translator, bytecode generator |
+| Real JVM execution | Examples compile to `.class` and run on a standard JVM |
+| Classic compiler theory | Recursive descent parsing, Visitor-based semantic analysis, backpatching, stack-machine codegen |
+| Teaching-friendly visibility | CLI can dump tokens, AST, and JVM IR |
+| Regression confidence | 82 example programs are checked against real JVM stdout |
+| Small enough to read | A compact codebase for students who want to understand a whole compiler |
+
+## At A Glance
+
+The whole project is intentionally small enough to read, but complete enough to demonstrate a real compiler pipeline from source code to JVM execution.
+
+## 30-Second Demo
+
+Source: [examples/OptimizationTest.lemon](examples/OptimizationTest.lemon)
+
+```c
+class OptimizationTest {
+    void main() {
+        int a;
+        int b;
+        bool c;
+        a = (2 + 3) * 4;
+        b = (a * 1) + 0;
+        c = (1 < 2) && true;
+        if (c) {
+            printf("a=%d,b=%d\n", a, b);
+        } else {
+            printf("bad\n");
+        }
+        while (false) {
+            printf("dead\n");
+        }
+    }
+}
+```
+
+Compile, inspect, and run:
 
 ```bash
-# 1. 安装 jasmin.jar 到本地 Maven 仓库（仅首次）
 mvn install:install-file \
   -DgroupId=com.jasmin -DartifactId=jasmin -Dversion=1.0 \
   -Dpackaging=jar -Dfile=jars/jasmin.jar
 
-# 2. 构建并打包
 mvn clean package
 
-# 3. 运行测试（168 个自动化测试用例）
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar \
+  examples/OptimizationTest.lemon --dump-tokens --dump-ast --dump-ir
+
+java OptimizationTest
+```
+
+Real JVM output:
+
+```text
+a=20,b=20
+```
+
+The same example also demonstrates constant folding, algebraic simplification, boolean folding, dead `while(false)` removal, and the CLI inspection pipeline.
+
+## What Lemon Supports
+
+| Category | Features |
+|---|---|
+| Types | `int`, `float`, `double`, `bool`, `void` |
+| Arrays | `int[]`, `float[]`, `double[]`, indexed access, indexed assignment, `.length` |
+| Arithmetic | `+`, `-`, `*`, `/`, `%`, unary `-` |
+| Numeric widening | `int -> float`, `int -> double`, `float -> double` |
+| Comparison | `>`, `<`, `>=`, `<=`, `==`, `!=` |
+| Boolean logic | `true`, `false`, `!`, `&&`, `||`, short-circuit control flow |
+| Control flow | `if/else`, `while`, `for`, `break`, `continue`, nested loops |
+| Methods | parameters, return values, `void` methods, recursive calls, expression calls |
+| Output | `printf`, `printLine`, `%d`, `%f`, `\n`, `\t` |
+| Optimization | constant folding, boolean folding, algebraic simplification, constant branch simplification |
+| Diagnostics | parse and semantic exceptions with source line context |
+
+For the complete feature list with source code and real outputs, read [docs/LEMONC_FEATURES.md](docs/LEMONC_FEATURES.md).
+
+## Compiler Architecture
+
+```mermaid
+flowchart TB
+    subgraph Frontend
+        L["site.ilemon.lexer<br/>DFA lexer"]
+        P["site.ilemon.parser<br/>recursive descent parser"]
+        S["site.ilemon.semantic<br/>symbol table and type checking"]
+    end
+
+    subgraph MiddleEnd
+        O["site.ilemon.optimizer<br/>AST optimizer"]
+    end
+
+    subgraph Backend
+        T["site.ilemon.codegen.TranslatorVisitor<br/>AST to JVM IR"]
+        B["site.ilemon.codegen.ByteCodeGenerator<br/>Jasmin IL writer"]
+        J["jasmin.Main<br/>IL to .class"]
+    end
+
+    L --> P --> S --> O --> T --> B --> J
+```
+
+| Module | Core classes | Responsibility |
+|---|---|---|
+| `site.ilemon.lexer` | `Lexer`, `Token`, `TokenKind` | Tokenize Lemon source code |
+| `site.ilemon.parser` | `Parser` | Build frontend AST with recursive descent parsing |
+| `site.ilemon.ast` | `Ast` | Define source-level expressions, statements, types, methods, and programs |
+| `site.ilemon.semantic` | `SemanticVisitor`, `MethodVarTable`, `Symbol` | Type checking, declaration checks, assignment checks, return checks |
+| `site.ilemon.optimizer` | `AstOptimizer` | Perform safe AST-level simplifications |
+| `site.ilemon.codegen` | `TranslatorVisitor`, `ByteCodeGenerator` | Translate AST to JVM IR and write Jasmin assembly |
+| `site.ilemon.codegen.ast` | `Ast`, `Label` | Define backend JVM instruction-level IR |
+| `site.ilemon.compiler` | `LemonC`, `AstPrinter`, `IrPrinter` | CLI entrypoint and teaching-friendly dumps |
+
+## Backpatching In Action
+
+LemonC uses classic backpatching for boolean expressions and flow-control statements. Boolean code generation maintains pending jump lists instead of eagerly materializing `0` or `1`.
+
+For:
+
+```c
+if (a < b || c < d && e < f) {
+    printf("yes\n");
+} else {
+    printf("no\n");
+}
+```
+
+The conceptual control-flow shape is:
+
+```mermaid
+flowchart LR
+    A["a < b"] -- true --> T["then branch"]
+    A -- false --> C["c < d"]
+    C -- false --> F["else branch"]
+    C -- true --> E["e < f"]
+    E -- true --> T
+    E -- false --> F
+```
+
+The implementation follows the textbook rules:
+
+```text
+E1 || E2:
+  backpatch(E1.falseList, E2.entry)
+  E.trueList  = merge(E1.trueList, E2.trueList)
+  E.falseList = E2.falseList
+
+E1 && E2:
+  backpatch(E1.trueList, E2.entry)
+  E.trueList  = E2.trueList
+  E.falseList = merge(E1.falseList, E2.falseList)
+```
+
+This makes the project useful for students studying syntax-directed translation and control-flow generation.
+
+## JVM Output Is Tested, Not Assumed
+
+Every root example under [examples](examples) is compiled and executed by [AllExamplesJvmTest.java](src/test/java/AllExamplesJvmTest.java):
+
+<p align="center">
+  <img src="./docs/assets/lemonc-test-loop.png" alt="LemonC end-to-end JVM regression loop" width="100%">
+</p>
+
+Run the suite:
+
+```bash
 mvn test
 ```
 
-### 编译和运行 Lemon 程序
+Current coverage:
 
-```bash
-# 编译
-java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/Fib.lemon
-
-# 运行（生成的 .class 在当前目录）
-java Fib
+```text
+Tests run: 168, Failures: 0, Errors: 0, Skipped: 0
+82 root examples verified by real JVM execution
 ```
 
-### 教学演示：查看编译中间结果
+## More Real Examples
 
-LemonC CLI 支持直接打印编译管线中的关键产物，方便课堂展示从源码到 JVM 栈机指令的降级过程：
+### Numeric Widening, for, break, continue, arrays
 
-```bash
-# 打印 token 流、语义分析后的 AST、降低后的 JVM IR，并继续生成 .class
-java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/ModTest.lemon \
-  --dump-tokens --dump-ast --dump-ir
+Source: [examples/LanguageFeatureTest.lemon](examples/LanguageFeatureTest.lemon)
 
-# 也可以只看某一层
-java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/ArrayLengthTest.lemon --dump-ir
+```text
+sum=8
+neg=-8
+f=3.5,d=4.5
+call=3.0,7.0
+arr=2
 ```
 
-典型链路示例：
+### Nested loops
 
-| 源语言特性 | Token / AST | JVM IR |
-|---|---|---|
-| `10 % 3` | `Mod` | `Irem` |
-| `a < b` where `a,b` are `double` | `LT` | `Dcmpl` + integer branch |
-| `arr.length` | `ArrayLength` | `Arraylength` |
+Source: [examples/NestedLoops.lemon](examples/NestedLoops.lemon)
 
-输出：
+```text
+  inner run i=1, j=1
+  inner break on 2
+outer continue skip 2
+  inner run i=3, j=1
+  inner break on 2
 ```
+
+### Floating-point NaN comparison
+
+Source: [examples/NaNCompareTest.lemon](examples/NaNCompareTest.lemon)
+
+```text
+flt_lt=0
+flt_lte=0
+flt_gt=0
+flt_gte=0
+flt_eq=0
+flt_neq=1
+dbl_lt=0
+dbl_lte=0
+dbl_gt=0
+dbl_gte=0
+dbl_eq=0
+dbl_neq=1
+```
+
+### Recursive Fibonacci
+
+Source: [examples/Fib.lemon](examples/Fib.lemon)
+
+```text
 递归计算斐波那契数列，一年后总共有144对兔子
 循环计算斐波那契数列，一年后总共有144对兔子
 ```
 
-## Lemon 语言规范
+## Quick Start
 
-### 数据类型
+Requirements:
 
-| 类型 | 关键字 | 示例 |
-|------|--------|------|
-| 整数 | `int` | `int x; x = 42;` |
-| 浮点 | `float` | `float f; f = 3.14;` |
-| 双精度 | `double` | `double d; d = 2.718;` |
-| 布尔 | `bool` | `bool b; b = true;` |
-| 整数数组 | `int[]` | `int arr[10];` |
-| 浮点数组 | `float[]` | `float arr[5];` |
-
-### 运算符（按优先级从高到低）
-
-| 优先级 | 运算符 | 说明 |
-|:------:|--------|------|
-| 1 | `!` | 逻辑非 |
-| 2 | `*`, `/`, `%` | 乘、除、取模 |
-| 3 | `+`, `-` | 加、减 |
-| 4 | `>`, `<`, `>=`, `<=` | 关系比较 |
-| 5 | `==`, `!=` | 相等比较 |
-| 6 | `&&` | 逻辑与 |
-| 7 | `\|\|` | 逻辑或 |
-| 8 | `=` | 赋值 |
-
-### 控制流
-
-```c
-// if-else
-if( a > b ) {
-    printf("a大于b\n");
-} else {
-    printf("a不大于b\n");
-}
-
-// while 循环
-while( i < 10 ) {
-    sum = sum + i;
-    i = i + 1;
-}
+```text
+JDK 1.8+
+Maven 3.3+
 ```
 
-### 方法定义与调用
+Install the bundled Jasmin jar once:
+
+```bash
+mvn install:install-file \
+  -DgroupId=com.jasmin -DartifactId=jasmin -Dversion=1.0 \
+  -Dpackaging=jar -Dfile=jars/jasmin.jar
+```
+
+Build:
+
+```bash
+mvn clean package
+```
+
+Compile and run a Lemon program:
+
+```bash
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/Fib.lemon
+java Fib
+```
+
+Inspect compiler stages:
+
+```bash
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar \
+  examples/ModTest.lemon --dump-tokens --dump-ast --dump-ir
+```
+
+## Lemon Language In One Page
 
 ```c
-class Fib {
-    void main() {
-        int n;
-        n = 12;
-        printf("fib(%d)=%d\n", n, fib(n));
-    }
-
+class Demo {
     int fib(int n) {
         int result;
-        if( n < 3 ) {
+        if (n < 3) {
             result = 1;
         } else {
-            result = fib(n-1) + fib(n-2);
+            result = fib(n - 1) + fib(n - 2);
         }
         return result;
     }
+
+    void main() {
+        int i;
+        int sum;
+        int arr[3];
+        sum = 0;
+
+        for (i = 0; i < 3; i = i + 1) {
+            arr[i] = i + 1;
+            sum = sum + arr[i];
+        }
+
+        if (sum == 6 && fib(6) == 8) {
+            printf("ok=%d\n", sum);
+        } else {
+            printf("bad\n");
+        }
+    }
 }
 ```
 
-### BNF 文法
+## Grammar Snapshot
 
 ```bnf
 <program>       ::= "class" <id> "{" <method>* "}"
-
 <method>        ::= <type> <id> "(" <params>? ")" "{" <varDecl>* <stmt>* "}"
                   | "void" "main" "(" ")" "{" <varDecl>* <stmt>* "}"
-
 <params>        ::= <type> <id> ("," <type> <id>)*
-
 <varDecl>       ::= <type> <id> ";"
                   | <type> <id> "[" <integer> "]" ";"
-
 <type>          ::= "int" | "float" | "double" | "bool" | "void"
-
-<stmt>          ::= <id> "=" <expr> ";"                          (* 赋值 *)
-                  | <id> "[" <expr> "]" "=" <expr> ";"           (* 数组赋值 *)
-                  | <id> "(" <args>? ")" ";"                     (* 方法调用 *)
-                  | "if" "(" <expr> ")" <stmt> ("else" <stmt>)?  (* 条件 *)
-                  | "while" "(" <expr> ")" <stmt>                (* 循环 *)
-                  | "{" <stmt>* "}"                               (* 块 *)
-                  | "return" <expr> ";"                           (* 返回 *)
-                  | "printf" "(" <string> ("," <expr>)* ")" ";"  (* 格式化输出 *)
-                  | "printLine" "(" ")" ";"                      (* 换行 *)
-
+<stmt>          ::= <id> "=" <expr> ";"
+                  | <id> "[" <expr> "]" "=" <expr> ";"
+                  | <id> "(" <args>? ")" ";"
+                  | "if" "(" <expr> ")" <stmt> ("else" <stmt>)?
+                  | "while" "(" <expr> ")" <stmt>
+                  | "for" "(" <forInit> ";" <expr> ";" <forUpdate> ")" <stmt>
+                  | "break" ";"
+                  | "continue" ";"
+                  | "{" <stmt>* "}"
+                  | "return" <expr> ";"
+                  | "printf" "(" <string> ("," <expr>)* ")" ";"
 <expr>          ::= <andExpr> ("||" <andExpr>)*
 <andExpr>       ::= <relExpr> ("&&" <relExpr>)*
 <relExpr>       ::= <addExpr> ((">" | "<" | ">=" | "<=" | "==" | "!=") <addExpr>)*
 <addExpr>       ::= <term> (("+" | "-") <term>)*
-<term>          ::= <factor> (("*" | "/") <factor>)*
-<factor>        ::= "(" <expr> ")"
-                  | <integer>
-                  | <float>
-                  | <id>
-                  | <id> "(" <args>? ")"      (* 方法调用表达式 *)
-                  | <id> "[" <expr> "]"        (* 数组访问 *)
-                  | "!" "(" <expr> ")"         (* 逻辑非 *)
-                  | "true" | "false"
-                  | <string>
-
-<args>          ::= <expr> ("," <expr>)*
+<term>          ::= <factor> (("*" | "/" | "%") <factor>)*
+<forInit>       ::= <id> "=" <expr>
+<forUpdate>     ::= <id> "=" <expr>
 ```
 
-## 编译器架构
+## Test Suite
 
-```
-                     ┌─────────────────────────────────────────┐
-  源文件 (.lemon)    │            LemonC 编译管线               │    JVM 字节码
- ─────────────────► │                                         │ ──────────────►
-                     │  Lexer → Parser → Semantic → Translator │
-                     │    ↓        ↓        ↓          ↓       │
-                     │  Token流   AST    类型检查    Jasmin IL  │
-                     └─────────────────────────────────────────┘
-                                                        ↓
-                                                    Jasmin 汇编
-                                                        ↓
-                                                   .class 文件
-```
+| Test class | Count | Purpose |
+|---|---:|---|
+| `AllExamplesJvmTest` | 1 | Compile every root example to `.class`, run JVM, compare stdout |
+| `AstOptimizerTest` | 3 | Verify AST optimization behavior |
+| `ByteCodeGeneratorTest` | 13 | Verify JVM bytecode and stack/local metadata |
+| `CompilerTest` | 69 | End-to-end compiler tests |
+| `ErrorTest` | 34 | Negative parse and semantic tests |
+| `LexerTest` | 18 | Lexer tests |
+| `ParserTest` | 18 | Parser tests |
+| `SemanticTest` | 1 | Semantic visitor smoke test |
+| `TranslatorVisitorTest` | 11 | JVM IR translation tests |
 
-### 模块说明
+## Repository Map
 
-| 包 | 核心类 | 职责 |
-|---|--------|------|
-| `site.ilemon.lexer` | `Lexer` | 基于 DFA 的词法分析器，将源码转换为 Token 流 |
-| `site.ilemon.parser` | `Parser` | 递归下降语法分析器，生成 AST |
-| `site.ilemon.semantic` | `SemanticVisitor` | Visitor 模式语义分析：类型检查、变量声明/赋值检查 |
-| `site.ilemon.codegen` | `TranslatorVisitor` | 将前端 AST 翻译为 Jasmin IL 指令序列 |
-| `site.ilemon.codegen` | `ByteCodeGenerator` | 将 IL 指令序列写入 `.il` 文件 |
-| `site.ilemon.ast` | `Ast` | 前端 AST 节点定义（Expr/Stmt/Type/Method/Program） |
-| `site.ilemon.codegen.ast` | `Ast` | 后端 IR 节点定义（Jasmin 指令级 AST） |
-| `site.ilemon.exception` | `CompilerException` | 统一异常层次：ParseException / SemanticException |
-| `site.ilemon.compiler` | `LemonC` | 编译器入口，串联整个管线 |
+```text
+src/main/java/site/ilemon
+  ast/              source-level AST
+  lexer/            tokenization
+  parser/           recursive descent parser
+  semantic/         symbol tables and type checking
+  optimizer/        AST optimization
+  codegen/          JVM IR and Jasmin generation
+  compiler/         CLI, AST printer, IR printer
 
-## 测试
-
-```bash
-mvn test
+examples/           82 Lemon programs and output manifest
+docs/               feature guide and review notes
+tools/              native backend experiment, kept outside main source
+src/test/java/      automated compiler tests
 ```
 
-测试套件包含 **168 个自动化测试用例**：
+## Current Language Boundaries
 
-| 测试类 | 数量 | 说明 |
-|--------|:---:|------|
-| `AllExamplesJvmTest` | 1 | 所有根目录示例均编译为 `.class`，并在 JVM 上对比真实输出清单 |
-| `AstOptimizerTest` | 3 | AST 优化单元测试 |
-| `ByteCodeGeneratorTest` | 13 | JVM 字节码/栈帧生成测试 |
-| `CompilerTest` | 69 | 端到端集成测试，覆盖可编译的 .lemon 示例 |
-| `ErrorTest` | 34 | 负面测试，覆盖语义错误、语法错误和格式验证 |
-| `LexerTest` | 18 | 词法分析单元测试 |
-| `ParserTest` | 18 | 语法分析单元测试 |
-| `SemanticTest` | 1 | 语义分析单元测试 |
-| `TranslatorVisitorTest` | 11 | IR 翻译单元测试 |
+LemonC intentionally keeps the language small:
 
-## 示例程序
+| Boundary | Status |
+|---|---|
+| Identifier `_` | Not part of the current lexer definition |
+| Multi-line comments | Not part of the current language definition |
+| Block scope | Blocks do not introduce independent local scopes |
+| String variables | Strings are primarily `printf` literals |
+| Object model | Single-class teaching language, not full Java |
 
-`examples/` 目录包含 82 个 Lemon 语言示例程序，覆盖：
+## Roadmap
 
-- 基础计算与变量声明
-- `if/else` 条件分支（13 个测试）
-- `while` 循环与迭代（9 个测试）
-- 布尔表达式与逻辑运算（16 个测试）
-- `int`/`float`/`double` 多类型运算
-- 方法定义、参数传递与递归调用
-- 数组声明、访问与数组排序（冒泡排序）
-- 格式化输出 (`printf`)
+The codebase now has enough substance for a serious teaching compiler. The next milestones are:
 
-## 许可
+1. Add GitHub Actions and show a real CI badge.
+2. Publish `v0.2.0` release with a ready-to-run jar.
+3. Add an English tutorial: "Build a JVM compiler from scratch with LemonC".
+4. Add visual snapshots of token, AST, and IR dumps.
+5. Add CFG/data-flow optimization as the next advanced chapter.
+6. Add GitHub topics: `compiler`, `compiler-design`, `jvm`, `bytecode`, `parser`, `semantic-analysis`, `backpatching`, `teaching`.
 
-MIT License
+## License
+
+LemonC is released under the [MIT License](LICENSE).
