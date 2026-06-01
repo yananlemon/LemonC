@@ -75,6 +75,10 @@ public class LemonC {
             generator.visit(translator.prog);
             File ilFile = generator.getOutputFile();
             jasmin.Main.main(new String[]{"-d", generator.getOutputDir().getPath(), ilFile.getPath()});
+            File classFile = generator.getClassFile(translator.prog.mainClass.id);
+            if (!classFile.isFile() || classFile.length() == 0) {
+                throw new CompilerException("Jasmin did not generate class file: " + classFile.getPath());
+            }
         } catch (CompilerException e) {
             System.err.println("compile failed: " + e.getMessage());
             System.exit(1);

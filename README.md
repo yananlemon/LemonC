@@ -11,7 +11,7 @@ LemonC 是一个面向编译原理教学与实践的小型 C-like 编译器。�
 </p>
 
 ```text
-Java 8+ | Maven | JVM bytecode | 168 tests passing | 82 examples | MIT License
+Java 8+ | Maven | JVM bytecode | 176 tests passing | 82 examples | MIT License
 ```
 
 ## Why LemonC
@@ -57,10 +57,6 @@ class OptimizationTest {
 Compile, inspect, and run:
 
 ```bash
-mvn install:install-file \
-  -DgroupId=com.jasmin -DartifactId=jasmin -Dversion=1.0 \
-  -Dpackaging=jar -Dfile=jars/jasmin.jar
-
 mvn clean package
 
 java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar \
@@ -188,7 +184,7 @@ mvn test
 Current coverage:
 
 ```text
-Tests run: 168, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 176, Failures: 0, Errors: 0, Skipped: 0
 82 root examples verified by real JVM execution
 ```
 
@@ -255,15 +251,7 @@ JDK 1.8+
 Maven 3.3+
 ```
 
-Install the bundled Jasmin jar once:
-
-```bash
-mvn install:install-file \
-  -DgroupId=com.jasmin -DartifactId=jasmin -Dversion=1.0 \
-  -Dpackaging=jar -Dfile=jars/jasmin.jar
-```
-
-Build:
+Build directly. The Jasmin dependency is resolved from the project-local Maven repository under `jars/maven-repo`.
 
 ```bash
 mvn clean package
@@ -352,10 +340,10 @@ class Demo {
 | Test class | Count | Purpose |
 |---|---:|---|
 | `AllExamplesJvmTest` | 1 | Compile every root example to `.class`, run JVM, compare stdout |
-| `AstOptimizerTest` | 3 | Verify AST optimization behavior |
+| `AstOptimizerTest` | 5 | Verify AST optimization behavior |
 | `ByteCodeGeneratorTest` | 13 | Verify JVM bytecode and stack/local metadata |
 | `CompilerTest` | 69 | End-to-end compiler tests |
-| `ErrorTest` | 34 | Negative parse and semantic tests |
+| `ErrorTest` | 40 | Negative parse and semantic tests |
 | `LexerTest` | 18 | Lexer tests |
 | `ParserTest` | 18 | Parser tests |
 | `SemanticTest` | 1 | Semantic visitor smoke test |
@@ -395,7 +383,7 @@ LemonC intentionally keeps the language small:
 
 The codebase now has enough substance for a serious teaching compiler. The next milestones are:
 
-1. Add GitHub Actions and show a real CI badge.
+1. Keep GitHub Actions green and show a real CI badge.
 2. Publish `v0.2.0` release with a ready-to-run jar.
 3. Add an English tutorial: "Build a JVM compiler from scratch with LemonC".
 4. Add visual snapshots of token, AST, and IR dumps.

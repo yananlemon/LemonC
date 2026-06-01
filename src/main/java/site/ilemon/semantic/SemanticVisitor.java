@@ -285,9 +285,24 @@ public class SemanticVisitor implements ISemanticVisitor {
                 methodNameRetTypeMap.put(method.getId(),method.getRetType());
             }
         }
+        validateMainMethod();
         for(int i = 0; i < mainClassSingle.getMethods().size(); i++){
             Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) mainClassSingle.getMethods().get(i);
             this.visit(method);
+        }
+    }
+
+    private void validateMainMethod() {
+        Ast.Method.MethodSingle main = this.methodMap.get("main");
+        if (main == null) {
+            error(1, "程序必须定义 void main()");
+        }
+        if (main.getRetType().getKind() != TypeKind.VOID) {
+            error(main.getLineNum(), "main 方法的返回类型必须是 void，实际声明为: "
+                    + typeName(main.getRetType()));
+        }
+        if (main.getFormals() != null && !main.getFormals().isEmpty()) {
+            error(main.getLineNum(), "main 方法不能声明参数，必须是 void main()");
         }
     }
 

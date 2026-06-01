@@ -167,7 +167,14 @@ public class AstOptimizer {
             Boolean rightValue = boolValue(right);
             if (Boolean.FALSE.equals(leftValue)) return new Ast.Expr.False(node.getLineNum());
             if (Boolean.TRUE.equals(leftValue)) return right;
-            if (rightValue != null) return rightValue ? left : new Ast.Expr.False(node.getLineNum());
+            if (rightValue != null) {
+                if (rightValue.booleanValue()) {
+                    return left;
+                }
+                if (canDiscardEvaluation(left)) {
+                    return new Ast.Expr.False(node.getLineNum());
+                }
+            }
             return new Ast.Expr.And(left, right, node.getLineNum());
         }
         if (expr instanceof Ast.Expr.Or) {
@@ -178,7 +185,14 @@ public class AstOptimizer {
             Boolean rightValue = boolValue(right);
             if (Boolean.TRUE.equals(leftValue)) return new Ast.Expr.True(node.getLineNum());
             if (Boolean.FALSE.equals(leftValue)) return right;
-            if (rightValue != null) return rightValue ? new Ast.Expr.True(node.getLineNum()) : left;
+            if (rightValue != null) {
+                if (!rightValue.booleanValue()) {
+                    return left;
+                }
+                if (canDiscardEvaluation(left)) {
+                    return new Ast.Expr.True(node.getLineNum());
+                }
+            }
             return new Ast.Expr.Or(left, right, node.getLineNum());
         }
         if (expr instanceof Ast.Expr.Not) {
@@ -255,16 +269,90 @@ public class AstOptimizer {
         } else if ("-".equals(op)) {
             if (isZero(right)) return left;
         } else if ("*".equals(op)) {
-            if (isZero(left) || isZero(right)) return zeroFor(left, right, lineNum);
+            if (isZero(left) && canDiscardEvaluation(right)) return zeroFor(left, right, lineNum);
+            if (isZero(right) && canDiscardEvaluation(left)) return zeroFor(left, right, lineNum);
             if (isOne(left)) return right;
             if (isOne(right)) return left;
         } else if ("/".equals(op)) {
             if (isOne(right)) return left;
-            if (isZero(left) && !isZero(right)) return zeroFor(left, right, lineNum);
+            if (isZero(left) && !isZero(right) && canDiscardEvaluation(right)) return zeroFor(left, right, lineNum);
         } else if ("%".equals(op)) {
-            if (isZero(left) && !isZero(right)) return zeroFor(left, right, lineNum);
+            if (isZero(left) && !isZero(right) && canDiscardEvaluation(right)) return zeroFor(left, right, lineNum);
         }
         return null;
+    }
+
+    private boolean canDiscardEvaluation(Ast.Expr.T expr) {
+        if (expr == null) {
+            return true;
+        }
+        if (expr instanceof Ast.Expr.Number
+                || expr instanceof Ast.Expr.True
+                || expr instanceof Ast.Expr.False
+                || expr instanceof Ast.Expr.Id
+                || expr instanceof Ast.Expr.Str
+                || expr instanceof Ast.Expr.ArrayLength) {
+            return true;
+        }
+        if (expr instanceof Ast.Expr.Call || expr instanceof Ast.Expr.ArrayAccess) {
+            return false;
+        }
+        if (expr instanceof Ast.Expr.Not) {
+            return canDiscardEvaluation(((Ast.Expr.Not) expr).getExpr());
+        }
+        if (expr instanceof Ast.Expr.Add) {
+            Ast.Expr.Add node = (Ast.Expr.Add) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.Sub) {
+            Ast.Expr.Sub node = (Ast.Expr.Sub) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.Mul) {
+            Ast.Expr.Mul node = (Ast.Expr.Mul) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.Div) {
+            Ast.Expr.Div node = (Ast.Expr.Div) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.Mod) {
+            Ast.Expr.Mod node = (Ast.Expr.Mod) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.And) {
+            Ast.Expr.And node = (Ast.Expr.And) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.Or) {
+            Ast.Expr.Or node = (Ast.Expr.Or) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.GT) {
+            Ast.Expr.GT node = (Ast.Expr.GT) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.LT) {
+            Ast.Expr.LT node = (Ast.Expr.LT) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.GTE) {
+            Ast.Expr.GTE node = (Ast.Expr.GTE) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.LTE) {
+            Ast.Expr.LTE node = (Ast.Expr.LTE) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.EQ) {
+            Ast.Expr.EQ node = (Ast.Expr.EQ) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        if (expr instanceof Ast.Expr.NEQ) {
+            Ast.Expr.NEQ node = (Ast.Expr.NEQ) expr;
+            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+        }
+        return false;
     }
 
     private Ast.Expr.T foldComparison(String op, Ast.Expr.T left, Ast.Expr.T right, int lineNum) {

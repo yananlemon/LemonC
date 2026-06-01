@@ -37,6 +37,26 @@ public class AstOptimizerTest {
     }
 
     @Test
+    public void doesNotDiscardMethodCallInArithmeticIdentity() {
+        Ast.Expr.T expr = new Ast.Expr.Mul(call("side", new Ast.Type.Int()), num(0), 1);
+
+        Ast.Expr.T optimized = optimizeAssignExpr(expr);
+
+        assertTrue(optimized instanceof Ast.Expr.Mul);
+        assertTrue(((Ast.Expr.Mul) optimized).getLeft() instanceof Ast.Expr.Call);
+    }
+
+    @Test
+    public void doesNotDiscardMethodCallInBooleanIdentity() {
+        Ast.Expr.T expr = new Ast.Expr.Or(call("side", new Ast.Type.Bool()), new Ast.Expr.True(1), 1);
+
+        Ast.Expr.T optimized = optimizeAssignExpr(expr);
+
+        assertTrue(optimized instanceof Ast.Expr.Or);
+        assertTrue(((Ast.Expr.Or) optimized).getLeft() instanceof Ast.Expr.Call);
+    }
+
+    @Test
     public void foldsConstantBooleanCondition() {
         Ast.Stmt.If ifStmt = new Ast.Stmt.If(
                 new Ast.Expr.LT(num(1), num(2), 1),
@@ -77,5 +97,9 @@ public class AstOptimizerTest {
 
     private Ast.Expr.Number num(int value) {
         return new Ast.Expr.Number(new Ast.Type.Int(), value, 1);
+    }
+
+    private Ast.Expr.Call call(String name, Ast.Type.T returnType) {
+        return new Ast.Expr.Call(name, new ArrayList<Ast.Expr.T>(), 1, returnType);
     }
 }

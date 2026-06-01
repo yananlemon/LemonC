@@ -70,6 +70,16 @@ public class ErrorTest {
     }
 
     @Test(expected = SemanticException.class)
+    public void testMainMethodIsRequired() throws IOException {
+        compileSource("class Test { int foo() { return 1; } }");
+    }
+
+    @Test(expected = SemanticException.class)
+    public void testMainMethodCannotHaveParameters() throws IOException {
+        compileSource("class Test { void main(int x) {} }");
+    }
+
+    @Test(expected = SemanticException.class)
     public void testReturnTypeMismatch() throws IOException {
         // 返回值与声明类型不匹配应报语义错误
         compileSource("class Test { void main() { int x; x = foo(); } int foo() { return true; } }");
@@ -127,6 +137,26 @@ public class ErrorTest {
     @Test(expected = ParseException.class)
     public void testOnlyLengthArrayPropertyIsSupported() throws IOException {
         compileSource("class Test { void main() { int arr[3]; int y; y = arr.size; } }");
+    }
+
+    @Test(expected = SemanticException.class)
+    public void testArrayIndexMustBeIntInAssignment() throws IOException {
+        compileSource("class Test { void main() { int arr[3]; bool b; b = true; arr[b] = 1; } }");
+    }
+
+    @Test(expected = SemanticException.class)
+    public void testArrayIndexMustBeIntInAccess() throws IOException {
+        compileSource("class Test { void main() { int arr[3]; float f; int x; f = 1.0; x = arr[f]; } }");
+    }
+
+    @Test(expected = SemanticException.class)
+    public void testArrayAssignmentElementTypeMustMatch() throws IOException {
+        compileSource("class Test { void main() { int arr[3]; float f; f = 1.0; arr[0] = f; } }");
+    }
+
+    @Test(expected = SemanticException.class)
+    public void testScalarCannotBeAssignedWithArraySyntax() throws IOException {
+        compileSource("class Test { void main() { int x; x = 1; x[0] = 2; } }");
     }
 
     // ===== 语法错误 =====
