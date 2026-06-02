@@ -272,13 +272,17 @@ public class TranslatorVisitor implements ISemanticVisitor {
     }
 
     private void emitStore(Ast.Type.T type, int localIndex) {
-        if (type instanceof Ast.Type.Double) emit(new Ast.Stmt.Dstore(localIndex));
+        if (type instanceof Ast.Type.IntArray || type instanceof Ast.Type.FloatArray
+                || type instanceof Ast.Type.DoubleArray || type instanceof Ast.Type.BoolArray) emit(new Ast.Stmt.Astore(localIndex));
+        else if (type instanceof Ast.Type.Double) emit(new Ast.Stmt.Dstore(localIndex));
         else if (type instanceof Ast.Type.Float) emit(new Ast.Stmt.Fstore(localIndex));
         else emit(new Ast.Stmt.Istore(localIndex));
     }
 
     private void emitLoad(Ast.Type.T type, int localIndex) {
-        if (type instanceof Ast.Type.Double) emit(new Ast.Stmt.Dload(localIndex));
+        if (type instanceof Ast.Type.IntArray || type instanceof Ast.Type.FloatArray
+                || type instanceof Ast.Type.DoubleArray || type instanceof Ast.Type.BoolArray) emit(new Ast.Stmt.Aload(localIndex));
+        else if (type instanceof Ast.Type.Double) emit(new Ast.Stmt.Dload(localIndex));
         else if (type instanceof Ast.Type.Float) emit(new Ast.Stmt.Fload(localIndex));
         else emit(new Ast.Stmt.Iload(localIndex));
     }
@@ -374,6 +378,62 @@ public class TranslatorVisitor implements ISemanticVisitor {
         if (type instanceof Type.DoubleArray) return new Ast.Type.DoubleArray();
         if (type instanceof Type.BoolArray) return new Ast.Type.BoolArray();
         throw new CompilerException("[代码生成] 不支持的类型: " + type);
+    }
+
+    private int localSlots(Ast.Type.T type) {
+        return type instanceof Ast.Type.Double ? 2 : 1;
+    }
+
+    private boolean isSourceArrayType(Type.T type) {
+        return type instanceof Type.IntArray
+                || type instanceof Type.FloatArray
+                || type instanceof Type.DoubleArray
+                || type instanceof Type.BoolArray;
+    }
+
+    private Ast.Type.T arrayElementType(Type.T type) {
+        if (type instanceof Type.IntArray) return new Ast.Type.Int();
+        if (type instanceof Type.FloatArray) return new Ast.Type.Float();
+        if (type instanceof Type.DoubleArray) return new Ast.Type.Double();
+        if (type instanceof Type.BoolArray) return new Ast.Type.Bool();
+        throw new CompilerException("[代码生成] 不是数组类型: " + type);
+    }
+
+    private int arraySize(Type.T type) {
+        if (type instanceof Type.IntArray) return ((Type.IntArray) type).getSize();
+        if (type instanceof Type.FloatArray) return ((Type.FloatArray) type).getSize();
+        if (type instanceof Type.DoubleArray) return ((Type.DoubleArray) type).getSize();
+        if (type instanceof Type.BoolArray) return ((Type.BoolArray) type).getSize();
+        throw new CompilerException("[代码生成] 不是数组类型: " + type);
+    }
+
+    private Ast.Declare.DeclareSingle toCodegenDeclare(Declare.DeclareSingle declareSingle) {
+        this.visit(declareSingle.getType());
+        this.dec = new Ast.Declare.DeclareSingle(this.type, declareSingle.getId());
+        return this.dec;
+    }
+
+    private void registerFormal(Declare.DeclareSingle declareSingle) {
+        Ast.Declare.DeclareSingle formal = toCodegenDeclare(declareSingle);
+        this.indexTable.put(declareSingle.getId(), this.index);
+        this.index += localSlots(formal.type);
+    }
+
+    private void translateLocalDeclare(Declare.DeclareSingle declareSingle) {
+        Ast.Declare.DeclareSingle local = toCodegenDeclare(declareSingle);
+        this.indexTable.put(declareSingle.getId(), this.index);
+        if (isSourceArrayType(declareSingle.getType())) {
+            int size = arraySize(declareSingle.getType());
+            if (size <= 0) {
+                throw new CompilerException("[代码生成] 局部数组大小必须为正整数: " + declareSingle.getId());
+            }
+            emit(new Ast.Stmt.Ldc(size));
+            emit(new Ast.Stmt.Newarray(arrayElementType(declareSingle.getType())));
+            emit(new Ast.Stmt.Astore(this.index));
+            this.index++;
+        } else {
+            this.index += localSlots(local.type);
+        }
     }
 
     private void processCallArgument(Expr.T expr, Ast.Type.T expectedType) {
@@ -605,6 +665,9 @@ public class TranslatorVisitor implements ISemanticVisitor {
         } else if (obj.getType() instanceof Type.Str) {
             this.type = new Ast.Type.Str();
             emit(new Ast.Stmt.Aload(index));
+        } else if (isSourceArrayType(obj.getType())) {
+            this.type = toCodegenType(obj.getType());
+            emit(new Ast.Stmt.Aload(index));
         }
         // 如果ID是bool类型
         else if( obj.getType() instanceof Type.Bool ){
@@ -749,42 +812,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
     @Override
     public void visit(Declare.T obj) {
         Declare.DeclareSingle declareSingle = ((Declare.DeclareSingle) obj);
-        this.visit(declareSingle.getType());
-        this.dec = new Ast.Declare.DeclareSingle(this.type, declareSingle.getId());
-        if (this.indexTable != null) { // if it is field
-            this.indexTable.put(declareSingle.getId(), index);
-            
-            // 如果是数组类型，生成newarray指令
-            if (declareSingle.getType() instanceof Type.IntArray) {
-                Type.IntArray arr = (Type.IntArray) declareSingle.getType();
-                emit(new Ast.Stmt.Ldc(arr.getSize()));
-                emit(new Ast.Stmt.Newarray(new Ast.Type.Int()));
-                emit(new Ast.Stmt.Astore(index));
-                index++;
-            } else if (declareSingle.getType() instanceof Type.FloatArray) {
-                Type.FloatArray arr = (Type.FloatArray) declareSingle.getType();
-                emit(new Ast.Stmt.Ldc(arr.getSize()));
-                emit(new Ast.Stmt.Newarray(new Ast.Type.Float()));
-                emit(new Ast.Stmt.Astore(index));
-                index++;
-            } else if (declareSingle.getType() instanceof Type.DoubleArray) {
-                Type.DoubleArray arr = (Type.DoubleArray) declareSingle.getType();
-                emit(new Ast.Stmt.Ldc(arr.getSize()));
-                emit(new Ast.Stmt.Newarray(new Ast.Type.Double()));
-                emit(new Ast.Stmt.Astore(index));
-                index++;
-            } else if (declareSingle.getType() instanceof Type.BoolArray) {
-                Type.BoolArray arr = (Type.BoolArray) declareSingle.getType();
-                emit(new Ast.Stmt.Ldc(arr.getSize()));
-                emit(new Ast.Stmt.Newarray(new Ast.Type.Bool()));
-                emit(new Ast.Stmt.Astore(index));
-                index++;
-            } else if (this.type instanceof Ast.Type.Double) {
-                // double类型占用2个槽位
-                index += 2;
-            } else {
-                index++;
-            }
+        if (this.indexTable == null) {
+            toCodegenDeclare(declareSingle);
+        } else {
+            translateLocalDeclare(declareSingle);
         }
     }
 
@@ -825,14 +856,14 @@ public class TranslatorVisitor implements ISemanticVisitor {
         // 遍历入参
         List<Ast.Declare.DeclareSingle> formals = new ArrayList<>();
         for (int i = 0; i < obj.getFormals().size(); i++) {
-            this.visit(obj.getFormals().get(i));
+            registerFormal((Declare.DeclareSingle) obj.getFormals().get(i));
             formals.add(this.dec);
         }
 
         // 遍历局部变量（这里会生成数组初始化代码）
         List<Ast.Declare.DeclareSingle> locals = new ArrayList<>();
         for (int i = 0; i < obj.getLocals().size(); i++) {
-            this.visit(obj.getLocals().get(i));
+            translateLocalDeclare((Declare.DeclareSingle) obj.getLocals().get(i));
             locals.add(this.dec);
         }
 

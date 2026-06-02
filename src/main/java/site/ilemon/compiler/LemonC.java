@@ -13,6 +13,9 @@ import site.ilemon.semantic.SemanticVisitor;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
 
 /**
  * LemonC command line entry point.
@@ -20,26 +23,33 @@ import java.io.IOException;
 public class LemonC {
 
     public static void main(String[] args) {
+        int exitCode = run(args, System.out, System.err);
+        if (exitCode != 0) {
+            System.exit(exitCode);
+        }
+    }
+
+    public static int run(String[] args, PrintStream out, PrintStream err) {
         try {
-            CompilerOptions options = CompilerOptions.parse(args);
+            CompilerOptions options = CompilerOptions.parse(args, err);
             if (options == null) {
-                usage();
-                System.exit(1);
+                usage(err);
+                return 1;
             }
             if (!options.sourcePath.endsWith(".lemon")) {
-                System.err.println("error: source file must end with .lemon, got: " + options.sourcePath);
-                usage();
-                System.exit(1);
+                err.println("error: source file must end with .lemon, got: " + options.sourcePath);
+                usage(err);
+                return 1;
             }
 
             File sourceFile = new File(options.sourcePath);
             if (!sourceFile.exists()) {
-                System.err.println("error: file does not exist - " + options.sourcePath);
-                System.exit(1);
+                err.println("error: file does not exist - " + options.sourcePath);
+                return 1;
             }
             if (!sourceFile.canRead()) {
-                System.err.println("error: file is not readable - " + options.sourcePath);
-                System.exit(1);
+                err.println("error: file is not readable - " + options.sourcePath);
+                return 1;
             }
 
             Label.resetCounter();
@@ -48,18 +58,19 @@ public class LemonC {
             Parser parser = new Parser(lexer);
             Ast.Program.T program = parser.parse();
             if (options.dumpTokens) {
-                dumpTokens(lexer);
+                dumpTokens(lexer, out);
             }
 
-            SemanticVisitor semantic = new SemanticVisitor();
+            SemanticVisitor semantic = SemanticVisitor.collecting();
             semantic.visit(program);
             if (!semantic.passOrNot()) {
-                System.err.println("compile failed: semantic analysis has errors");
-                System.exit(1);
+                err.println("compile failed: semantic analysis has errors");
+                printSemanticDiagnostics(semantic, lexer, err);
+                return 1;
             }
             if (options.dumpAst) {
-                System.out.println("== AST ==");
-                System.out.print(AstPrinter.print(program));
+                out.println("== AST ==");
+                out.print(AstPrinter.print(program));
             }
 
             Ast.Program.T optimizedProgram = new AstOptimizer().optimize(program);
@@ -67,36 +78,92 @@ public class LemonC {
             TranslatorVisitor translator = new TranslatorVisitor();
             translator.visit(optimizedProgram);
             if (options.dumpIr) {
-                System.out.println("== IR ==");
-                System.out.print(IrPrinter.print(translator.prog));
+                out.println("== IR ==");
+                out.print(IrPrinter.print(translator.prog));
             }
 
             ByteCodeGenerator generator = new ByteCodeGenerator();
             generator.visit(translator.prog);
             File ilFile = generator.getOutputFile();
-            jasmin.Main.main(new String[]{"-d", generator.getOutputDir().getPath(), ilFile.getPath()});
+            assembleWithJasmin(generator.getOutputDir(), ilFile, out, err, options.verbose);
             File classFile = generator.getClassFile(translator.prog.mainClass.id);
             if (!classFile.isFile() || classFile.length() == 0) {
                 throw new CompilerException("Jasmin did not generate class file: " + classFile.getPath());
             }
+            return 0;
         } catch (CompilerException e) {
-            System.err.println("compile failed: " + e.getMessage());
-            System.exit(1);
+            err.println("compile failed: " + e.getMessage());
+            return 1;
         } catch (IOException e) {
-            System.err.println("io error: " + e.getMessage());
-            System.exit(1);
+            err.println("io error: " + e.getMessage());
+            return 1;
         }
     }
 
-    private static void dumpTokens(Lexer lexer) {
-        System.out.println("== TOKENS ==");
+    private static void printSemanticDiagnostics(SemanticVisitor semantic, Lexer lexer, PrintStream err) {
+        ArrayList<String> diagnostics = semantic.getErrors();
+        ArrayList<Integer> lineNumbers = semantic.getErrorLineNumbers();
+        for (int i = 0; i < diagnostics.size(); i++) {
+            err.println(diagnostics.get(i));
+            if (i < lineNumbers.size()) {
+                printSourcePointer(lexer.getSourceLine(lineNumbers.get(i)), err);
+            }
+        }
+    }
+
+    private static void printSourcePointer(String sourceLine, PrintStream err) {
+        if (sourceLine == null || sourceLine.isEmpty()) {
+            return;
+        }
+        int column = firstNonWhitespaceColumn(sourceLine);
+        err.println("    " + sourceLine);
+        err.print("    ");
+        for (int i = 1; i < column; i++) {
+            err.print(' ');
+        }
+        err.println('^');
+    }
+
+    private static int firstNonWhitespaceColumn(String sourceLine) {
+        for (int i = 0; i < sourceLine.length(); i++) {
+            if (!Character.isWhitespace(sourceLine.charAt(i))) {
+                return i + 1;
+            }
+        }
+        return 1;
+    }
+
+    private static void assembleWithJasmin(File outputDir, File ilFile, PrintStream out, PrintStream err, boolean verbose) {
+        PrintStream originalOut = System.out;
+        PrintStream originalErr = System.err;
+        PrintStream quiet = new PrintStream(new OutputStream() {
+            @Override
+            public void write(int b) {
+            }
+        });
+        synchronized (LemonC.class) {
+            try {
+                System.setOut(verbose ? out : quiet);
+                System.setErr(verbose ? err : quiet);
+                jasmin.Main.main(new String[]{"-d", outputDir.getPath(), ilFile.getPath()});
+            } finally {
+                System.setOut(originalOut);
+                System.setErr(originalErr);
+                quiet.close();
+            }
+        }
+    }
+
+    private static void dumpTokens(Lexer lexer, PrintStream out) {
+        out.println("== TOKENS ==");
         for (Token token : lexer.tokens) {
-            System.out.printf("%4d  %-14s  %s%n", token.lineNumber, token.kind, token.lexeme);
+            out.printf("%4d:%-3d %-14s  %s%n",
+                    token.lineNumber, token.columnNumber, token.kind, token.lexeme);
         }
     }
 
-    private static void usage() {
-        System.err.println("usage: java -jar LemonC.jar <source.lemon> [--dump-tokens] [--dump-ast] [--dump-ir]");
+    private static void usage(PrintStream err) {
+        err.println("usage: java -jar LemonC.jar <source.lemon> [--dump-tokens] [--dump-ast] [--dump-ir] [--verbose]");
     }
 
     private static final class CompilerOptions {
@@ -104,12 +171,13 @@ public class LemonC {
         private boolean dumpTokens;
         private boolean dumpAst;
         private boolean dumpIr;
+        private boolean verbose;
 
         private CompilerOptions(String sourcePath) {
             this.sourcePath = sourcePath;
         }
 
-        private static CompilerOptions parse(String[] args) {
+        private static CompilerOptions parse(String[] args, PrintStream err) {
             if (args == null || args.length < 1) {
                 return null;
             }
@@ -121,8 +189,10 @@ public class LemonC {
                     options.dumpAst = true;
                 } else if ("--dump-ir".equals(args[i])) {
                     options.dumpIr = true;
+                } else if ("--verbose".equals(args[i])) {
+                    options.verbose = true;
                 } else {
-                    System.err.println("error: unknown option - " + args[i]);
+                    err.println("error: unknown option - " + args[i]);
                     return null;
                 }
             }

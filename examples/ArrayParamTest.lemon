@@ -1,0 +1,58 @@
+class ArrayParamTest {
+    void setInt(int values[], int index, int value) {
+        values[index] = value;
+    }
+
+    int sumInt(int values[]) {
+        int i;
+        int sum;
+        sum = 0;
+        for (i = 0; i < values.length; i = i + 1) {
+            sum = sum + values[i];
+        }
+        return sum;
+    }
+
+    void bumpFloat(float values[]) {
+        values[0] = values[0] + 1.5;
+    }
+
+    void setDouble(double values[], int index, double value) {
+        values[index] = value;
+    }
+
+    void setFlag(bool flags[], int index, bool value) {
+        flags[index] = value;
+    }
+
+    void main() {
+        int values[3];
+        float weights[1];
+        double scores[2];
+        bool flags[2];
+
+        values[0] = 1;
+        values[1] = 2;
+        values[2] = 3;
+        setInt(values, 1, 99);
+
+        weights[0] = 2.5;
+        bumpFloat(weights);
+
+        scores[0] = 1.25;
+        scores[1] = 2.25;
+        setDouble(scores, 1, 7.25);
+
+        flags[0] = false;
+        flags[1] = false;
+        setFlag(flags, 1, true);
+
+        printf("int=%d,sum=%d,len=%d\n", values[1], sumInt(values), values.length);
+        printf("float=%f,double=%f\n", weights[0], scores[1]);
+        if (flags[1]) {
+            printf("flag=%d\n", 1);
+        } else {
+            printf("flag=%d\n", 0);
+        }
+    }
+}

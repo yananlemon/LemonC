@@ -1,0 +1,90 @@
+class MergeSortTest {
+    int min(int a, int b) {
+        int res;
+        if (a < b) {
+            res = a;
+        } else {
+            res = b;
+        }
+        return res;
+    }
+
+    void main() {
+        int arr[8];
+        int temp[8];
+        int n;
+        int sz;
+        int i;
+        int left;
+        int mid;
+        int right;
+        int p1;
+        int p2;
+        int p;
+        int j;
+
+        n = 8;
+        // Initialize array
+        arr[0] = 38;
+        arr[1] = 27;
+        arr[2] = 43;
+        arr[3] = 3;
+        arr[4] = 9;
+        arr[5] = 82;
+        arr[6] = 10;
+        arr[7] = 19;
+
+        printf("Before sorting:\n");
+        for (i = 0; i < n; i = i + 1) {
+            printf("%d ", arr[i]);
+        }
+        printf("\n");
+
+        for (sz = 1; sz < n; sz = sz * 2) {
+            for (i = 0; i < n - sz; i = i + sz * 2) {
+                left = i;
+                mid = i + sz - 1;
+                right = min(i + sz * 2 - 1, n - 1);
+                
+                // Merge arr[left..mid] and arr[mid+1..right] into temp[left..right]
+                p1 = left;
+                p2 = mid + 1;
+                p = left;
+
+                while (p1 <= mid && p2 <= right) {
+                    if (arr[p1] <= arr[p2]) {
+                        temp[p] = arr[p1];
+                        p1 = p1 + 1;
+                    } else {
+                        temp[p] = arr[p2];
+                        p2 = p2 + 1;
+                    }
+                    p = p + 1;
+                }
+
+                while (p1 <= mid) {
+                    temp[p] = arr[p1];
+                    p1 = p1 + 1;
+                    p = p + 1;
+                }
+
+                while (p2 <= right) {
+                    temp[p] = arr[p2];
+                    p2 = p2 + 1;
+                    p = p + 1;
+                }
+
+                // Copy temp back to arr for the merged segment
+                for (j = left; j <= right; j = j + 1) {
+                    arr[j] = temp[j];
+                }
+            }
+        }
+
+        printf("After sorting:\n");
+        for (i = 0; i < n; i = i + 1) {
+            printf("%d ", arr[i]);
+        }
+        printf("\n");
+    }
+}

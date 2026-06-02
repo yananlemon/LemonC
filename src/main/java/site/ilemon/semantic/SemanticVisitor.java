@@ -33,6 +33,12 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     private boolean pass = true;
 
+    private final boolean collectErrors;
+
+    private final ArrayList<String> errors = new ArrayList<String>();
+
+    private final ArrayList<Integer> errorLineNumbers = new ArrayList<Integer>();
+
     private Ast.Type.T currType;
 
     private String currMethodName;
@@ -50,14 +56,35 @@ public class SemanticVisitor implements ISemanticVisitor {
     private Ast.Type.T typeOfMethodDeclared;
 
     public SemanticVisitor(){
+        this(false);
+    }
 
+    private SemanticVisitor(boolean collectErrors){
+
+        this.collectErrors = collectErrors;
         this.methodVarTable = new HashMap<String,MethodVarTable>();
         this.methodMap = new HashMap<String, Ast.Method.MethodSingle>();
         this.methodNameRetTypeMap = new HashMap<String, Ast.Type.T>();
     }
 
+    public static SemanticVisitor collecting() {
+        return new SemanticVisitor(true);
+    }
+
+    public ArrayList<String> getErrors() {
+        return new ArrayList<String>(this.errors);
+    }
+
+    public ArrayList<Integer> getErrorLineNumbers() {
+        return new ArrayList<Integer>(this.errorLineNumbers);
+    }
+
     public boolean passOrNot(){
         return pass;
+    }
+
+    private Ast.Type.T unknownType() {
+        return new Ast.Type.Int();
     }
 
     private String typeName(Ast.Type.T type) {
@@ -69,6 +96,11 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     private void checkSameOperandTypes(int lineNum, String operator, Ast.Type.T leftType, Ast.Type.T rightType) {
+        if (isArrayType(leftType) || isArrayType(rightType)) {
+            error(lineNum, String.format(
+                    "运算符 '%s' 不支持数组操作数：左侧为 %s，右侧为 %s",
+                    operator, typeName(leftType), typeName(rightType)));
+        }
         Ast.Type.T promoted = promoteNumeric(leftType, rightType);
         if (promoted != null) {
             this.currType = promoted;
@@ -124,6 +156,10 @@ public class SemanticVisitor implements ISemanticVisitor {
             if( this.currMethodLocalVar.contains(obj.getId().getId()))
                 this.currMethodLocalVar.remove(obj.getId().getId());
             this.visit(obj.getId());
+            if (isArrayType(this.currType) || isArrayType(exprType)) {
+                error(obj.getLineNum(), String.format("数组不支持整体赋值：不能将 %s 赋值给 %s",
+                        typeName(exprType), typeName(this.currType)));
+            }
             if( !isMatch(this.currType,exprType))
                 error(obj.getLineNum(),String.format("不能将 %s 类型的表达式赋值给 %s 类型的变量 '%s'",
                         typeName(exprType), typeName(this.currType), obj.getId().getId()));
@@ -204,8 +240,18 @@ public class SemanticVisitor implements ISemanticVisitor {
         MethodVarTable mTable = this.methodVarTable.get(currMethodName);
         if( mTable == null )
             error( obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
+        if (mTable == null) {
+            this.currType = unknownType();
+            obj.setType(this.currType);
+            return;
+        }
         if( mTable.get(obj.getId()) == null )
             error( obj.getLineNum(), "未定义的变量: " + obj.getId());
+        if (mTable.get(obj.getId()) == null) {
+            this.currType = unknownType();
+            obj.setType(this.currType);
+            return;
+        }
         if( currMethodLocalVar.contains(obj.getId()))
             error(obj.getLineNum(),String.format("变量 '%s' 在使用前未赋值",obj.getId()));
         if( obj.getType() == null ) {
@@ -297,6 +343,9 @@ public class SemanticVisitor implements ISemanticVisitor {
         if (main == null) {
             error(1, "程序必须定义 void main()");
         }
+        if (main == null) {
+            return;
+        }
         if (main.getRetType().getKind() != TypeKind.VOID) {
             error(main.getLineNum(), "main 方法的返回类型必须是 void，实际声明为: "
                     + typeName(main.getRetType()));
@@ -311,7 +360,10 @@ public class SemanticVisitor implements ISemanticVisitor {
         MethodVarTable mTable = new MethodVarTable();
         this.currMethodLocalVar = new HashSet<String>();
         for( Ast.Declare.T dec : obj.getLocals()){
-            this.currMethodLocalVar.add(((Ast.Declare.DeclareSingle)dec).getId());
+            Ast.Declare.DeclareSingle declareSingle = (Ast.Declare.DeclareSingle) dec;
+            if (!isArrayType(declareSingle.getType())) {
+                this.currMethodLocalVar.add(declareSingle.getId());
+            }
         }
 
         mTable.put(obj.getFormals(),obj.getLocals());
@@ -601,6 +653,11 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     private void error(int lineNum, String msg){
         this.pass = false;
+        if (this.collectErrors) {
+            this.errors.add("[语义分析] 行 " + lineNum + ": " + msg);
+            this.errorLineNumbers.add(lineNum);
+            return;
+        }
         throw new SemanticException("[语义分析] 行 " + lineNum + ": " + msg);
     }
 
@@ -640,6 +697,15 @@ public class SemanticVisitor implements ISemanticVisitor {
         return kind == TypeKind.INT || kind == TypeKind.FLOAT || kind == TypeKind.DOUBLE;
     }
 
+    private boolean isArrayType(Ast.Type.T type) {
+        if (type == null) {
+            return false;
+        }
+        TypeKind kind = type.getKind();
+        return kind == TypeKind.INT_ARRAY || kind == TypeKind.FLOAT_ARRAY
+                || kind == TypeKind.DOUBLE_ARRAY || kind == TypeKind.BOOL_ARRAY;
+    }
+
     /**
      * 校验比较运算符（== / !=）：只要左右类型匹配即可
      */
@@ -647,6 +713,10 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.visit(left);
         Ast.Type.T leftType = this.currType;
         this.visit(right);
+        if (isArrayType(leftType) || isArrayType(this.currType)) {
+            error(lineNum, String.format("比较运算符 '%s' 不支持数组操作数：左侧为 %s，右侧为 %s",
+                    op, typeName(leftType), typeName(this.currType)));
+        }
         if (promoteNumeric(leftType, this.currType) == null && !isMatch(leftType, this.currType)) {
             error(lineNum, String.format("比较运算符 '%s' 的左右操作数类型不匹配：左侧为 %s，右侧为 %s",
                     op, typeName(leftType), typeName(this.currType)));
@@ -677,7 +747,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         Ast.Method.MethodSingle method = this.methodMap.get(methodName);
         if (method == null) {
             error(lineNum, "未定义的方法: " + methodName);
-            return null; // unreachable, error() throws
+            return unknownType();
         }
         if (inputParams.size() != method.getFormals().size()) {
             error(lineNum, String.format("方法 '%s' 的参数个数不正确：期望 %d 个，实际 %d 个",
@@ -725,9 +795,17 @@ public class SemanticVisitor implements ISemanticVisitor {
         if (mTable == null) {
             error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
         }
+        if (mTable == null) {
+            this.currType = unknownType();
+            return;
+        }
         Ast.Type.T arrayType = mTable.get(obj.getArrayName());
         if (arrayType == null) {
             error(obj.getLineNum(), "未定义的数组: " + obj.getArrayName());
+        }
+        if (arrayType == null) {
+            this.currType = unknownType();
+            return;
         }
         Ast.Type.T elementType = getElementType(arrayType);
         if (elementType == null) {
@@ -735,6 +813,10 @@ public class SemanticVisitor implements ISemanticVisitor {
                     obj.getArrayName(), typeName(arrayType)));
         }
         // 检查下标类型必须是int
+        if (elementType == null) {
+            this.currType = unknownType();
+            return;
+        }
         this.visit(obj.getIndex());
         if (this.currType.getKind() != TypeKind.INT) {
             error(obj.getIndex().getLineNum(), "数组下标必须是 int，实际为 " + typeName(this.currType));
@@ -749,14 +831,22 @@ public class SemanticVisitor implements ISemanticVisitor {
         MethodVarTable mTable = this.methodVarTable.get(currMethodName);
         if (mTable == null) {
             error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
+            this.currType = unknownType();
+            return;
         }
         Ast.Type.T arrayType = mTable.get(obj.getArrayName());
         if (arrayType == null) {
             error(obj.getLineNum(), "未定义的数组: " + obj.getArrayName());
         }
+        if (arrayType == null) {
+            this.currType = unknownType();
+            return;
+        }
         if (getElementType(arrayType) == null) {
             error(obj.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
                     obj.getArrayName(), typeName(arrayType)));
+            this.currType = unknownType();
+            return;
         }
         this.currType = new Ast.Type.Int();
     }
@@ -767,16 +857,22 @@ public class SemanticVisitor implements ISemanticVisitor {
         MethodVarTable mTable = this.methodVarTable.get(currMethodName);
         if (mTable == null) {
             error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
+            this.currType = unknownType();
+            return;
         }
         Ast.Type.T arrayType = mTable.get(obj.getArrayName());
         if (arrayType == null) {
             error(obj.getLineNum(), "未定义的数组: " + obj.getArrayName());
+            this.currType = unknownType();
+            return;
         }
         // 设置元素类型
         Ast.Type.T elementType = getElementType(arrayType);
         if (elementType == null) {
             error(obj.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
                     obj.getArrayName(), typeName(arrayType)));
+            this.currType = unknownType();
+            return;
         }
         obj.setElementType(elementType);
         // 检查下标类型

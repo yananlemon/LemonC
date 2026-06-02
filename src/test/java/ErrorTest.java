@@ -145,6 +145,11 @@ public class ErrorTest {
     }
 
     @Test(expected = SemanticException.class)
+    public void testArrayIndexCheckDoesNotUseStaleCurrType() throws IOException {
+        compileSource("class Test { void main() { int arr[3]; bool b; int x; b = true; x = 1; arr[b] = 1; } }");
+    }
+
+    @Test(expected = SemanticException.class)
     public void testArrayIndexMustBeIntInAccess() throws IOException {
         compileSource("class Test { void main() { int arr[3]; float f; int x; f = 1.0; x = arr[f]; } }");
     }
@@ -155,11 +160,46 @@ public class ErrorTest {
     }
 
     @Test(expected = SemanticException.class)
+    public void testArrayAssignmentValueCheckDoesNotUseStaleCurrType() throws IOException {
+        compileSource("class Test { void main() { int arr[3]; float f; int x; f = 1.0; x = 1; arr[0] = f; } }");
+    }
+
+    @Test(expected = SemanticException.class)
     public void testScalarCannotBeAssignedWithArraySyntax() throws IOException {
         compileSource("class Test { void main() { int x; x = 1; x[0] = 2; } }");
     }
 
     // ===== 语法错误 =====
+
+    @Test(expected = SemanticException.class)
+    public void testArrayArgumentElementTypeMustMatch() throws IOException {
+        compileSource("class Test { void main() { float arr[3]; f(arr); } void f(int arr[]) {} }");
+    }
+
+    @Test(expected = SemanticException.class)
+    public void testArrayArgumentCannotBeScalar() throws IOException {
+        compileSource("class Test { void main() { int x; x = 1; f(x); } void f(int arr[]) {} }");
+    }
+
+    @Test(expected = SemanticException.class)
+    public void testScalarArgumentCannotBeArray() throws IOException {
+        compileSource("class Test { void main() { int arr[3]; f(arr); } void f(int x) {} }");
+    }
+
+    @Test(expected = ParseException.class)
+    public void testArrayParameterCannotDeclareFixedSize() throws IOException {
+        compileSource("class Test { void main() {} void f(int arr[3]) {} }");
+    }
+
+    @Test(expected = SemanticException.class)
+    public void testArrayWholeAssignmentIsRejected() throws IOException {
+        compileSource("class Test { void main() { int a[3]; int b[3]; a = b; } }");
+    }
+
+    @Test(expected = SemanticException.class)
+    public void testArrayComparisonIsRejected() throws IOException {
+        compileSource("class Test { void main() { int a[3]; int b[3]; if (a == b) {} } }");
+    }
 
     @Test(expected = SemanticException.class)
     public void testNonVoidMethodMustReturnOnAllPaths() throws IOException {

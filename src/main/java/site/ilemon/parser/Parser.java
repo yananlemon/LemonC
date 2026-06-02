@@ -79,15 +79,11 @@ public class Parser {
 	}
 
 	private void expected(String s) {
-		throw new ParseException(String.format(
-			"[语法分析] 行 %d: 语法错误，期望 '%s'，实际得到 '%s'",
-			look.lineNumber, s, look.lexeme));
+		throw new ParseException(formatError("语法错误，期望 '" + s + "'，实际得到 '" + look.lexeme + "'"));
 	}
 
 	private void error(String message) {
-		throw new ParseException(String.format(
-			"[语法分析] 行 %d: %s，当前 token 为 '%s'",
-			look.lineNumber, message, look.lexeme));
+		throw new ParseException(formatError(message + "，当前 token 为 '" + look.lexeme + "'"));
 	}
 
 	/**
@@ -95,6 +91,23 @@ public class Parser {
 	 * @return Program
 	 * @throws IOException
 	 */
+	private String formatError(String message) {
+		String sourceLine = lexer.getSourceLine(look.lineNumber);
+		StringBuilder result = new StringBuilder();
+		result.append(String.format("[语法分析] 行 %d, 列 %d: %s",
+				look.lineNumber, look.columnNumber, message));
+		if (sourceLine != null && !sourceLine.isEmpty()) {
+			result.append(System.lineSeparator());
+			result.append("    ").append(sourceLine).append(System.lineSeparator());
+			result.append("    ");
+			for (int i = 1; i < look.columnNumber; i++) {
+				result.append(' ');
+			}
+			result.append('^');
+		}
+		return result.toString();
+	}
+
 	public Ast.Program.T parse() throws IOException{
 		Ast.MainClass.MainClassSingle mainClass = parseMainClass();
 		Ast.Program.T programSingle = new Ast.Program.ProgramSingle(mainClass);
@@ -241,25 +254,36 @@ public class Parser {
 		return null;
 	}
 
-	// <inputparams> -> type id,
+	// <inputparams> -> <formalParam> ("," <formalParam>)*
 	private ArrayList<Ast.Declare.T> parseInputParams() throws IOException {
 		ArrayList<Ast.Declare.T> rs = new ArrayList<Ast.Declare.T>();
 		if( isTypeToken(look.kind) ){
-			Ast.Type.T t = parseType();
-			String id = look.lexeme;
-			int lineNumber = look.lineNumber;
-			rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
-			match(new Token(TokenKind.Id));
+			rs.add(parseFormalParam());
 			while(look.kind == TokenKind.Comma ){
 				move();
-				t = parseType();
-				id = look.lexeme;
-				lineNumber = look.lineNumber;
-				rs.add(new Ast.Declare.DeclareSingle(t, id, lineNumber));
-				match(new Token(TokenKind.Id));
+				rs.add(parseFormalParam());
 			}
 		}
 		return rs;
+	}
+
+	// <formalParam> -> type id | type id "[" "]"
+	private Ast.Declare.T parseFormalParam() throws IOException {
+		Ast.Type.T type = parseType();
+		String id = look.lexeme;
+		int lineNumber = look.lineNumber;
+		match(new Token(TokenKind.Id));
+		if (look.kind == TokenKind.Lbracket) {
+			match("[");
+			match("]");
+			Ast.Type.T arrayType = createArrayType(type, -1);
+			if (arrayType == null) {
+				error(String.format("不支持的数组参数基础类型: %s", type));
+				return null;
+			}
+			type = arrayType;
+		}
+		return new Ast.Declare.DeclareSingle(type, id, lineNumber);
 	}
 
 	/**

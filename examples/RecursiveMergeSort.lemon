@@ -1,0 +1,71 @@
+class RecursiveMergeSort {
+    void merge(int arr[], int temp[], int left, int mid, int right) {
+        int p1;
+        int p2;
+        int p;
+        int i;
+
+        p1 = left;
+        p2 = mid + 1;
+        p = left;
+
+        while (p1 <= mid && p2 <= right) {
+            if (arr[p1] <= arr[p2]) {
+                temp[p] = arr[p1];
+                p1 = p1 + 1;
+            } else {
+                temp[p] = arr[p2];
+                p2 = p2 + 1;
+            }
+            p = p + 1;
+        }
+
+        while (p1 <= mid) {
+            temp[p] = arr[p1];
+            p1 = p1 + 1;
+            p = p + 1;
+        }
+
+        while (p2 <= right) {
+            temp[p] = arr[p2];
+            p2 = p2 + 1;
+            p = p + 1;
+        }
+
+        for (i = left; i <= right; i = i + 1) {
+            arr[i] = temp[i];
+        }
+    }
+
+    void mergeSort(int arr[], int temp[], int left, int right) {
+        int mid;
+        if (left < right) {
+            mid = (left + right) / 2;
+            mergeSort(arr, temp, left, mid);
+            mergeSort(arr, temp, mid + 1, right);
+            merge(arr, temp, left, mid, right);
+        }
+    }
+
+    void main() {
+        int arr[8];
+        int temp[8];
+        int i;
+
+        arr[0] = 38;
+        arr[1] = 27;
+        arr[2] = 43;
+        arr[3] = 3;
+        arr[4] = 9;
+        arr[5] = 82;
+        arr[6] = 10;
+        arr[7] = 19;
+
+        mergeSort(arr, temp, 0, arr.length - 1);
+
+        for (i = 0; i < arr.length; i = i + 1) {
+            printf("%d ", arr[i]);
+        }
+        printf("\n");
+    }
+}

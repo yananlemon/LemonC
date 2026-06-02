@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
@@ -206,12 +207,39 @@ public class CompilerTest {
     @Test public void testArrayLengthTest() throws IOException {
         compileAndVerify("ArrayLengthTest", "values=5,weights=3,total=8\n");
     }
+    @Test public void testArrayParamTest() throws IOException {
+        compileAndVerify("ArrayParamTest",
+                "int=99,sum=103,len=3\n"
+                        + "float=4.0,double=7.25\n"
+                        + "flag=1\n");
+    }
+
+    @Test public void testArrayParamIlDescriptorsAndNoFormalAllocation() throws IOException {
+        compileAndVerify("ArrayParamTest");
+        String il = new String(Files.readAllBytes(new File("target/lemonc/ArrayParamTest.il").toPath()),
+                StandardCharsets.UTF_8);
+        assertTrue(il.contains(".method static setInt([III)V"));
+        assertTrue(il.contains(".method static sumInt([I)I"));
+        assertTrue(il.contains(".method static bumpFloat([F)V"));
+        assertTrue(il.contains(".method static setDouble([DID)V"));
+        assertTrue(il.contains(".method static setFlag([ZII)V"));
+        assertFalse(methodBody(il, "setInt").contains("newarray"));
+        assertFalse(methodBody(il, "sumInt").contains("newarray"));
+        assertFalse(methodBody(il, "bumpFloat").contains("newarray"));
+        assertFalse(methodBody(il, "setDouble").contains("newarray"));
+        assertFalse(methodBody(il, "setFlag").contains("newarray"));
+    }
+
     @Test public void testBubbleSort() throws IOException {
         compileAndVerify("BubbleSort",
                 "排序前: 0\n"
                         + "64 34 25 12 22 11 \n"
                         + "排序后: 0\n"
                         + "11 12 22 25 34 64 \n");
+    }
+
+    @Test public void testRecursiveMergeSort() throws IOException {
+        compileAndVerify("RecursiveMergeSort", "3 9 10 19 27 38 43 82 \n");
     }
 
     @Test
@@ -387,5 +415,14 @@ public class CompilerTest {
 
     private String normalizeNewlines(String value) {
         return value.replace("\r\n", "\n").replace("\r", "\n");
+    }
+
+    private String methodBody(String il, String methodName) {
+        String marker = ".method static " + methodName + "(";
+        int start = il.indexOf(marker);
+        assertTrue("Missing method in IL: " + methodName, start >= 0);
+        int end = il.indexOf(".end method", start);
+        assertTrue("Missing method end in IL: " + methodName, end > start);
+        return il.substring(start, end);
     }
 }
