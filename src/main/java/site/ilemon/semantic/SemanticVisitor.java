@@ -753,7 +753,8 @@ public class SemanticVisitor implements ISemanticVisitor {
             error(lineNum, String.format("方法 '%s' 的参数个数不正确：期望 %d 个，实际 %d 个",
                     methodName, method.getFormals().size(), inputParams.size()));
         }
-        for (int i = 0; i < inputParams.size(); i++) {
+        int checkedArgCount = Math.min(inputParams.size(), method.getFormals().size());
+        for (int i = 0; i < checkedArgCount; i++) {
             this.visit(inputParams.get(i));
             Ast.Type.T actualType = this.currType;
             this.visit(method.getFormals().get(i));

@@ -30,7 +30,7 @@ public class Lexer {
         KEYWORDS.put("true", TokenKind.True);
         KEYWORDS.put("false", TokenKind.False);
         KEYWORDS.put("void", TokenKind.Void);
-        KEYWORDS.put("String", TokenKind.String);
+        KEYWORDS.put("String", TokenKind.StringType);
         KEYWORDS.put("int", TokenKind.Int);
         KEYWORDS.put("bool", TokenKind.Bool);
         KEYWORDS.put("float", TokenKind.Float);
@@ -54,7 +54,8 @@ public class Lexer {
             while ((c = reader.read()) != -1) {
                 sb.append((char) c);
             }
-            this.source = sb.toString();
+            String text = sb.toString();
+            this.source = text.startsWith("\uFEFF") ? text.substring(1) : text;
         }
     }
 
@@ -179,6 +180,115 @@ public class Lexer {
         throw lexicalError("unclosed multiline comment", startLine, startColumn);
     }
 
+    private Token scanStringLiteral(int startLine, int startColumn) {
+        advance(); // opening quote
+        StringBuilder value = new StringBuilder();
+
+        while (position < source.length()) {
+            char c = peek();
+            if (c == '\0' || c == '\n' || c == '\r') {
+                throw lexicalError("unclosed string literal", startLine, startColumn);
+            }
+
+            c = advance();
+            if (c == '"') {
+                return new Token(TokenKind.StringLiteral, value.toString(), startLine, startColumn);
+            }
+
+            if (c == '\\') {
+                if (position >= source.length()) {
+                    throw lexicalError("unclosed string literal", startLine, startColumn);
+                }
+                char escaped = peek();
+                if (escaped == '\n' || escaped == '\r' || escaped == '\0') {
+                    throw lexicalError("unclosed string literal", startLine, startColumn);
+                }
+                advance();
+                switch (escaped) {
+                    case 'n':
+                        value.append('\n');
+                        break;
+                    case 't':
+                        value.append('\t');
+                        break;
+                    case 'r':
+                        value.append('\r');
+                        break;
+                    case '"':
+                        value.append('"');
+                        break;
+                    case '\\':
+                        value.append('\\');
+                        break;
+                    default:
+                        throw lexicalError("unknown escape sequence '\\" + printable(escaped) + "'", line, column - 1);
+                }
+            } else {
+                value.append(c);
+            }
+        }
+
+        throw lexicalError("unclosed string literal", startLine, startColumn);
+    }
+
+    private Token scanNumberLiteral(int startLine, int startColumn) {
+        StringBuilder lexeme = new StringBuilder();
+        boolean hasDot = false;
+        boolean hasExponent = false;
+
+        if (peek() == '.') {
+            hasDot = true;
+            lexeme.append(advance());
+            if (!Character.isDigit(peek())) {
+                throw lexicalError("invalid floating-point literal", startLine, startColumn);
+            }
+        }
+
+        while (Character.isDigit(peek())) {
+            lexeme.append(advance());
+        }
+
+        if (peek() == '.') {
+            hasDot = true;
+            lexeme.append(advance());
+            while (Character.isDigit(peek())) {
+                lexeme.append(advance());
+            }
+        }
+
+        if (peek() == 'e' || peek() == 'E') {
+            hasExponent = true;
+            lexeme.append(advance());
+            if (peek() == '+' || peek() == '-') {
+                lexeme.append(advance());
+            }
+            if (!Character.isDigit(peek())) {
+                throw lexicalError("invalid exponent in numeric literal", startLine, startColumn);
+            }
+            while (Character.isDigit(peek())) {
+                lexeme.append(advance());
+            }
+        }
+
+        char suffix = peek();
+        if (suffix == 'f' || suffix == 'F') {
+            lexeme.append(advance());
+            return new Token(TokenKind.FloatLiteral, lexeme.toString(), startLine, startColumn);
+        }
+        if (suffix == 'd' || suffix == 'D') {
+            lexeme.append(advance());
+            return new Token(TokenKind.DoubleLiteral, lexeme.toString(), startLine, startColumn);
+        }
+
+        if (hasExponent) {
+            return new Token(TokenKind.DoubleLiteral, lexeme.toString(), startLine, startColumn);
+        }
+        if (hasDot) {
+            return new Token(TokenKind.FloatLiteral, lexeme.toString(), startLine, startColumn);
+        }
+        return new Token(TokenKind.Num, lexeme.toString(), startLine, startColumn);
+    }
+
     private LexerState getNextState(LexerState state, char c) {
         switch (state) {
             case START:
@@ -285,6 +395,14 @@ public class Lexer {
         StringBuilder lexeme = new StringBuilder();
         int startLine = line;
         int startColumn = column;
+        char first = peek();
+
+        if (first == '"') {
+            return scanStringLiteral(startLine, startColumn);
+        }
+        if (Character.isDigit(first) || (first == '.' && Character.isDigit(peek(1)))) {
+            return scanNumberLiteral(startLine, startColumn);
+        }
 
         while (state != LexerState.DONE && state != LexerState.ERROR) {
             char c = peek();
@@ -364,7 +482,7 @@ public class Lexer {
                 if (str.endsWith("\"")) {
                     str = str.substring(0, str.length() - 1);
                 }
-                return new Token(TokenKind.String, str, line, column);
+                return new Token(TokenKind.StringLiteral, str, line, column);
 
             case IN_ASSIGN:
                 if (lexeme.equals("==")) return new Token(TokenKind.EQ, lexeme, line, column);

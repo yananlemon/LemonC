@@ -360,6 +360,34 @@ public class TranslatorVisitor implements ISemanticVisitor {
         return name.startsWith("@") ? name.substring(1) : name;
     }
 
+    private String escapeStringLiteralForJasmin(String value) {
+        StringBuilder escaped = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            switch (ch) {
+                case '\n':
+                    escaped.append("\\n");
+                    break;
+                case '\r':
+                    escaped.append("\\r");
+                    break;
+                case '\t':
+                    escaped.append("\\t");
+                    break;
+                case '"':
+                    escaped.append("\\\"");
+                    break;
+                case '\\':
+                    escaped.append("\\\\");
+                    break;
+                default:
+                    escaped.append(ch);
+                    break;
+            }
+        }
+        return escaped.toString();
+    }
+
     private void unsupportedArithmetic(String operator, Ast.Type.T type, int lineNum) {
         throw new CompilerException(String.format(
                 "[代码生成] 行 %d: 运算符 '%s' 不支持类型 %s",
@@ -755,7 +783,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
         // 字符串值需要用引号包裹，但要避免重复添加
         String value = obj.getValue();
         // 处理转义字符：将实际的换行符转换回 \n 表示
-        value = value.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+        value = escapeStringLiteralForJasmin(value);
         emit(new Ast.Stmt.Ldc("\"" + value + "\""));
         emit(new Ast.Stmt.Astore(index));
         index++;

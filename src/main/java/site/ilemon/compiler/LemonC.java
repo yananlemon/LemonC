@@ -2,14 +2,24 @@ package site.ilemon.compiler;
 
 import site.ilemon.ast.Ast;
 import site.ilemon.codegen.ByteCodeGenerator;
-import site.ilemon.codegen.TranslatorVisitor;
 import site.ilemon.codegen.ast.Label;
 import site.ilemon.exception.CompilerException;
+import site.ilemon.ir.AstToIrTranslator;
+import site.ilemon.ir.IrBlock;
+import site.ilemon.ir.IrFunction;
+import site.ilemon.ir.IrInstruction;
+import site.ilemon.ir.IrProgram;
+import site.ilemon.ir.IrToJvmTranslator;
+import site.ilemon.ir.IrToVmTranslator;
+import site.ilemon.ir.IrVerifier;
 import site.ilemon.lexer.Lexer;
 import site.ilemon.lexer.Token;
 import site.ilemon.optimizer.AstOptimizer;
 import site.ilemon.parser.Parser;
 import site.ilemon.semantic.SemanticVisitor;
+import site.ilemon.vm.LemonVm;
+import site.ilemon.vm.Script;
+import site.ilemon.vm.VmFunction;
 
 import java.io.File;
 import java.io.IOException;
@@ -74,19 +84,23 @@ public class LemonC {
             }
 
             Ast.Program.T optimizedProgram = new AstOptimizer().optimize(program);
-
-            TranslatorVisitor translator = new TranslatorVisitor();
-            translator.visit(optimizedProgram);
-            if (options.dumpIr) {
-                out.println("== IR ==");
-                out.print(IrPrinter.print(translator.prog));
+            IrProgram irProgram = buildLemonIr(optimizedProgram);
+            if (options.target == Target.VM) {
+                return runVmBackend(irProgram, options, out);
             }
 
+            if (options.dumpIr) {
+                out.println("== LemonIR ==");
+                out.print(formatLemonIr(irProgram));
+            }
+
+            site.ilemon.codegen.ast.Ast.Program.ProgramSingle jvmProgram =
+                    new IrToJvmTranslator(irProgram).translate();
             ByteCodeGenerator generator = new ByteCodeGenerator();
-            generator.visit(translator.prog);
+            generator.visit(jvmProgram);
             File ilFile = generator.getOutputFile();
             assembleWithJasmin(generator.getOutputDir(), ilFile, out, err, options.verbose);
-            File classFile = generator.getClassFile(translator.prog.mainClass.id);
+            File classFile = generator.getClassFile(jvmProgram.mainClass.id);
             if (!classFile.isFile() || classFile.length() == 0) {
                 throw new CompilerException("Jasmin did not generate class file: " + classFile.getPath());
             }
@@ -98,6 +112,14 @@ public class LemonC {
             err.println("io error: " + e.getMessage());
             return 1;
         }
+    }
+
+    private static IrProgram buildLemonIr(Ast.Program.T optimizedProgram) {
+        AstToIrTranslator astToIr = new AstToIrTranslator();
+        optimizedProgram.accept(astToIr);
+        IrProgram irProgram = astToIr.getProgram();
+        IrVerifier.verify(irProgram);
+        return irProgram;
     }
 
     private static void printSemanticDiagnostics(SemanticVisitor semantic, Lexer lexer, PrintStream err) {
@@ -122,6 +144,59 @@ public class LemonC {
             err.print(' ');
         }
         err.println('^');
+    }
+
+    private static int runVmBackend(IrProgram irProgram, CompilerOptions options, PrintStream out) {
+        if (options.dumpIr) {
+            out.println("== LemonIR ==");
+            out.print(formatLemonIr(irProgram));
+        }
+
+        IrToVmTranslator irToVm = new IrToVmTranslator(irProgram);
+        Script script = irToVm.translate();
+
+        if (options.dumpVmBytecode) {
+            out.println("== LemonVM Bytecode ==");
+            out.print(formatVmBytecode(script));
+        }
+
+        if (options.pipeline) {
+            out.println("== LemonVM Output ==");
+        }
+        out.print(new LemonVm(script).run());
+        return 0;
+    }
+
+    private static String formatLemonIr(IrProgram program) {
+        StringBuilder sb = new StringBuilder();
+        for (IrFunction func : program.getFunctions()) {
+            sb.append("func ").append(func.getName()).append(" {").append(System.lineSeparator());
+            for (IrBlock block : func.getBlocks()) {
+                sb.append(block.getLabel()).append(":").append(System.lineSeparator());
+                for (IrInstruction instr : block.getInstructions()) {
+                    sb.append("    ").append(instr).append(System.lineSeparator());
+                }
+            }
+            sb.append("}").append(System.lineSeparator()).append(System.lineSeparator());
+        }
+        return sb.toString();
+    }
+
+    private static String formatVmBytecode(Script script) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < script.getFuncCount(); i++) {
+            VmFunction func = script.getFunc(i);
+            sb.append("Func ").append(func.getName())
+                    .append(" [Entry PC: ").append(func.getEntryPoint())
+                    .append(", Params: ").append(func.getParamCount())
+                    .append(", Locals: ").append(func.getLocalDataSize())
+                    .append("]").append(System.lineSeparator());
+        }
+        for (int i = 0; i < script.getInstrStream().length; i++) {
+            sb.append(String.format("%04d  %s", i, script.getInstrStream()[i]))
+                    .append(System.lineSeparator());
+        }
+        return sb.toString();
     }
 
     private static int firstNonWhitespaceColumn(String sourceLine) {
@@ -163,14 +238,23 @@ public class LemonC {
     }
 
     private static void usage(PrintStream err) {
-        err.println("usage: java -jar LemonC.jar <source.lemon> [--dump-tokens] [--dump-ast] [--dump-ir] [--verbose]");
+        err.println("usage: java -jar LemonC.jar <source.lemon> [--pipeline] [--target jvm|vm] [--run-vm] [--dump-tokens] [--dump-ast] [--dump-ir] [--dump-vm-bytecode] [--verbose]");
+    }
+
+    private enum Target {
+        JVM,
+        VM
     }
 
     private static final class CompilerOptions {
         private final String sourcePath;
+        private Target target = Target.JVM;
         private boolean dumpTokens;
         private boolean dumpAst;
         private boolean dumpIr;
+        private boolean dumpVmBytecode;
+        private boolean runVm;
+        private boolean pipeline;
         private boolean verbose;
 
         private CompilerOptions(String sourcePath) {
@@ -189,6 +273,32 @@ public class LemonC {
                     options.dumpAst = true;
                 } else if ("--dump-ir".equals(args[i])) {
                     options.dumpIr = true;
+                } else if ("--dump-vm-bytecode".equals(args[i])) {
+                    options.dumpVmBytecode = true;
+                } else if ("--pipeline".equals(args[i])) {
+                    options.pipeline = true;
+                    options.target = Target.VM;
+                    options.dumpTokens = true;
+                    options.dumpAst = true;
+                    options.dumpIr = true;
+                    options.dumpVmBytecode = true;
+                } else if ("--run-vm".equals(args[i])) {
+                    options.runVm = true;
+                    options.target = Target.VM;
+                } else if ("--target".equals(args[i])) {
+                    if (i + 1 >= args.length) {
+                        err.println("error: --target requires jvm or vm");
+                        return null;
+                    }
+                    options.target = parseTarget(args[++i], err);
+                    if (options.target == null) {
+                        return null;
+                    }
+                } else if (args[i].startsWith("--target=")) {
+                    options.target = parseTarget(args[i].substring("--target=".length()), err);
+                    if (options.target == null) {
+                        return null;
+                    }
                 } else if ("--verbose".equals(args[i])) {
                     options.verbose = true;
                 } else {
@@ -196,7 +306,25 @@ public class LemonC {
                     return null;
                 }
             }
+            if (options.pipeline || options.runVm) {
+                options.target = Target.VM;
+            }
+            if (options.dumpVmBytecode && options.target != Target.VM) {
+                err.println("error: --dump-vm-bytecode requires --target vm or --run-vm");
+                return null;
+            }
             return options;
+        }
+
+        private static Target parseTarget(String value, PrintStream err) {
+            if ("jvm".equalsIgnoreCase(value)) {
+                return Target.JVM;
+            }
+            if ("vm".equalsIgnoreCase(value) || "lemonvm".equalsIgnoreCase(value)) {
+                return Target.VM;
+            }
+            err.println("error: unsupported target - " + value);
+            return null;
         }
     }
 }

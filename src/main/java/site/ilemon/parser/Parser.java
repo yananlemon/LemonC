@@ -344,12 +344,12 @@ public class Parser {
 		if( look.kind == TokenKind.Printf ){
 			match(new Token(TokenKind.Printf));
 			match(new Token(TokenKind.Lparen));
-			if (look.kind != TokenKind.String) {
+			if (look.kind != TokenKind.StringLiteral) {
 				error("printf 的第一个参数必须是字符串格式");
 			}
 			String format = look.lexeme;
 			int lineNumber = look.lineNumber;
-			match(new Token(TokenKind.String));
+			match(new Token(TokenKind.StringLiteral));
 			ArrayList<Ast.Expr.T> exprs = new ArrayList<Ast.Expr.T>();
 			while( look.kind == TokenKind.Comma ){
 				match(new Token(TokenKind.Comma));
@@ -649,6 +649,10 @@ public class Parser {
 			expr = new Ast.Expr.Number(new Ast.Type.Float(),look.lexeme,look.lineNumber);
 			move();
 			return expr;
+		}else if(look.kind==TokenKind.DoubleLiteral){
+			expr = new Ast.Expr.Number(new Ast.Type.Double(),look.lexeme,look.lineNumber);
+			move();
+			return expr;
 		}else if( look.kind==TokenKind.Id ){
 			Token temp = look;
 			Token ahead = lexer.lookahead(1);
@@ -682,7 +686,7 @@ public class Parser {
 			}
 			return expr;
 		}
-		else if(look.kind==TokenKind.String ){
+		else if(look.kind==TokenKind.StringLiteral ){
 			expr = new Ast.Expr.Str(look.lexeme, look.lineNumber);
 			move();
 			return expr;

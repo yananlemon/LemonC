@@ -403,10 +403,70 @@ public class AstOptimizer {
     }
 
     private Ast.Expr.T zeroFor(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
-        Ast.Type.T type = left instanceof Ast.Expr.Number && right instanceof Ast.Expr.Number
-                ? resultType((Ast.Expr.Number) left, (Ast.Expr.Number) right)
-                : new Ast.Type.Int();
+        Ast.Type.T type = promotedNumericType(numericTypeOf(left), numericTypeOf(right));
+        if (type == null) {
+            type = new Ast.Type.Int();
+        }
         return number(type, 0, lineNum);
+    }
+
+    private Ast.Type.T numericTypeOf(Ast.Expr.T expr) {
+        if (expr instanceof Ast.Expr.Number) {
+            return ((Ast.Expr.Number) expr).getType();
+        }
+        if (expr instanceof Ast.Expr.Id) {
+            return numericOrNull(((Ast.Expr.Id) expr).getType());
+        }
+        if (expr instanceof Ast.Expr.Call) {
+            return numericOrNull(((Ast.Expr.Call) expr).getReturnType());
+        }
+        if (expr instanceof Ast.Expr.ArrayAccess) {
+            return numericOrNull(((Ast.Expr.ArrayAccess) expr).getElementType());
+        }
+        if (expr instanceof Ast.Expr.Add) {
+            Ast.Expr.Add node = (Ast.Expr.Add) expr;
+            return promotedNumericType(numericTypeOf(node.getLeft()), numericTypeOf(node.getRight()));
+        }
+        if (expr instanceof Ast.Expr.Sub) {
+            Ast.Expr.Sub node = (Ast.Expr.Sub) expr;
+            return promotedNumericType(numericTypeOf(node.getLeft()), numericTypeOf(node.getRight()));
+        }
+        if (expr instanceof Ast.Expr.Mul) {
+            Ast.Expr.Mul node = (Ast.Expr.Mul) expr;
+            return promotedNumericType(numericTypeOf(node.getLeft()), numericTypeOf(node.getRight()));
+        }
+        if (expr instanceof Ast.Expr.Div) {
+            Ast.Expr.Div node = (Ast.Expr.Div) expr;
+            return promotedNumericType(numericTypeOf(node.getLeft()), numericTypeOf(node.getRight()));
+        }
+        if (expr instanceof Ast.Expr.Mod) {
+            return new Ast.Type.Int();
+        }
+        return null;
+    }
+
+    private Ast.Type.T numericOrNull(Ast.Type.T type) {
+        if (type == null) {
+            return null;
+        }
+        TypeKind kind = type.getKind();
+        if (kind == TypeKind.INT || kind == TypeKind.FLOAT || kind == TypeKind.DOUBLE) {
+            return type;
+        }
+        return null;
+    }
+
+    private Ast.Type.T promotedNumericType(Ast.Type.T left, Ast.Type.T right) {
+        if (left == null || right == null) {
+            return left != null ? left : right;
+        }
+        if (left.getKind() == TypeKind.DOUBLE || right.getKind() == TypeKind.DOUBLE) {
+            return new Ast.Type.Double();
+        }
+        if (left.getKind() == TypeKind.FLOAT || right.getKind() == TypeKind.FLOAT) {
+            return new Ast.Type.Float();
+        }
+        return new Ast.Type.Int();
     }
 
     private Ast.Type.T resultType(Ast.Expr.Number left, Ast.Expr.Number right) {

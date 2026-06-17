@@ -373,8 +373,8 @@ LemonC intentionally keeps the language small:
 
 | Boundary | Status |
 |---|---|
-| Identifier `_` | Not part of the current lexer definition |
-| Multi-line comments | Not part of the current language definition |
+| Identifier `_` | Supported in identifiers and class names |
+| Multi-line comments | Supported with `/* ... */` |
 | Block scope | Blocks do not introduce independent local scopes |
 | String variables | Strings are primarily `printf` literals |
 | Object model | Single-class teaching language, not full Java |

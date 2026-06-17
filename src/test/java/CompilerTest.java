@@ -2,9 +2,10 @@ import org.junit.Before;
 import org.junit.Test;
 import site.ilemon.ast.Ast;
 import site.ilemon.codegen.ByteCodeGenerator;
-import site.ilemon.codegen.TranslatorVisitor;
 import site.ilemon.codegen.ast.Label;
-import site.ilemon.exception.CompilerException;
+import site.ilemon.ir.AstToIrTranslator;
+import site.ilemon.ir.IrProgram;
+import site.ilemon.ir.IrToJvmTranslator;
 import site.ilemon.lexer.Lexer;
 import site.ilemon.optimizer.AstOptimizer;
 import site.ilemon.parser.Parser;
@@ -24,7 +25,7 @@ import static org.junit.Assert.*;
 /**
  * 编译器端到端集成测试。
  * 每个 .lemon 示例文件对应独立的 @Test 方法，
- * 验证完整编译管线：Lexer → Parser → SemanticVisitor → TranslatorVisitor → ByteCodeGenerator → Jasmin。
+ * 验证完整编译管线：Lexer → Parser → SemanticVisitor → LemonIR → ByteCodeGenerator → Jasmin。
  */
 public class CompilerTest {
 
@@ -330,14 +331,19 @@ public class CompilerTest {
 
         // 4. IR 翻译
         program = new AstOptimizer().optimize(program);
-        TranslatorVisitor translator = new TranslatorVisitor();
-        translator.visit(program);
-        assertNotNull("IR 程序不应为 null", translator.prog);
-        assertNotNull("IR 主类不应为 null", translator.prog.mainClass);
+        AstToIrTranslator astToIr = new AstToIrTranslator();
+        program.accept(astToIr);
+        IrProgram irProgram = astToIr.getProgram();
+        assertNotNull("LemonIR 程序不应为 null", irProgram);
+        assertNotNull("LemonIR 主类不应为 null", irProgram.getClassName());
+        site.ilemon.codegen.ast.Ast.Program.ProgramSingle jvmProgram =
+                new IrToJvmTranslator(irProgram).translate();
+        assertNotNull("JVM IR 程序不应为 null", jvmProgram);
+        assertNotNull("JVM IR 主类不应为 null", jvmProgram.mainClass);
 
         // 5. 字节码生成
         ByteCodeGenerator generator = new ByteCodeGenerator();
-        generator.visit(translator.prog);
+        generator.visit(jvmProgram);
 
         // 6. 验证 .il 文件已生成
         File ilFile = generator.getOutputFile();
@@ -347,12 +353,12 @@ public class CompilerTest {
 
         // 7. Jasmin 汇编 → .class
         assembleWithJasmin(generator.getOutputDir(), ilFileName);
-        File classFile = generator.getClassFile(translator.prog.mainClass.id);
+        File classFile = generator.getClassFile(jvmProgram.mainClass.id);
         assertTrue(".class 文件应存在: " + name, classFile.exists());
         assertTrue(".class 文件不应为空: " + name, classFile.length() > 0);
 
         if (expectedOutput != null) {
-            assertJvmOutput(translator.prog.mainClass.id, generator.getOutputDir(), expectedOutput);
+            assertJvmOutput(jvmProgram.mainClass.id, generator.getOutputDir(), expectedOutput);
         }
     }
 

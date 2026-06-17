@@ -187,7 +187,7 @@ public class LexerTest {
         
         boolean hasString = false;
         for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.String && t.lexeme.contains("%")) {
+            if (t.kind == TokenKind.StringLiteral && t.lexeme.contains("%")) {
                 hasString = true;
                 break;
             }

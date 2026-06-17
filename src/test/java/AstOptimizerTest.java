@@ -47,6 +47,18 @@ public class AstOptimizerTest {
     }
 
     @Test
+    public void zeroMultiplicationPreservesPromotedNumericType() {
+        Ast.Expr.Id f = new Ast.Expr.Id("f", new Ast.Type.Float(), 1);
+        Ast.Expr.T expr = new Ast.Expr.Mul(num(0.0f), f, 1);
+
+        Ast.Expr.T optimized = optimizeAssignExpr(expr);
+
+        assertTrue(optimized instanceof Ast.Expr.Number);
+        assertTrue(((Ast.Expr.Number) optimized).getType() instanceof Ast.Type.Float);
+        assertEquals(Float.valueOf(0.0f), ((Ast.Expr.Number) optimized).getValue());
+    }
+
+    @Test
     public void doesNotDiscardMethodCallInBooleanIdentity() {
         Ast.Expr.T expr = new Ast.Expr.Or(call("side", new Ast.Type.Bool()), new Ast.Expr.True(1), 1);
 
@@ -97,6 +109,10 @@ public class AstOptimizerTest {
 
     private Ast.Expr.Number num(int value) {
         return new Ast.Expr.Number(new Ast.Type.Int(), value, 1);
+    }
+
+    private Ast.Expr.Number num(float value) {
+        return new Ast.Expr.Number(new Ast.Type.Float(), value, 1);
     }
 
     private Ast.Expr.Call call(String name, Ast.Type.T returnType) {

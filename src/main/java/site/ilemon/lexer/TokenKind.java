@@ -9,7 +9,7 @@ public enum TokenKind {
 		Class,
 		Main,
 		Void,
-		String,
+		StringType,
 		Int,
 		Float,
 		Double,
@@ -60,6 +60,8 @@ public enum TokenKind {
 		Id,
 		Num,
 		FloatLiteral,
+		DoubleLiteral,
+		StringLiteral,
 		Assign,
 		Unknown, PrintLine,
 

@@ -39,6 +39,18 @@ public class DiagnosticTest {
     }
 
     @Test
+    public void lexerSkipsUtf8BomAtStartOfFile() throws Exception {
+        File file = writeSource("BomTest", "\uFEFFclass BomTest {\n    void main() {}\n}\n");
+        Lexer lexer = new Lexer(file);
+        lexer.lexicalAnalysis();
+
+        Token classToken = lexer.tokens.get(0);
+        assertEquals(TokenKind.Class, classToken.kind);
+        assertEquals(1, classToken.lineNumber);
+        assertEquals(1, classToken.columnNumber);
+    }
+
+    @Test
     public void parserErrorIncludesColumnAndSourcePointer() throws Exception {
         File file = writeSource("Test", "class Test {\n    void main() { int x }\n}\n");
         try {
@@ -141,6 +153,30 @@ public class DiagnosticTest {
         assertEquals(1, exitCode);
         assertTrue(errorOutput, errorOutput.contains("missing"));
         assertTrue(errorOutput, !errorOutput.contains("NullPointerException"));
+    }
+
+    @Test
+    public void cliCollectingModeReportsTooManyArgumentsWithoutIndexError() throws Exception {
+        File file = writeSource("TooManyArgs",
+                "class TooManyArgs {\n" +
+                "    void main() {\n" +
+                "        foo(1, 2);\n" +
+                "    }\n" +
+                "    int foo(int a) {\n" +
+                "        return a;\n" +
+                "    }\n" +
+                "}\n");
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        int exitCode = LemonC.run(new String[]{file.getPath()},
+                new PrintStream(out, true, "UTF-8"),
+                new PrintStream(err, true, "UTF-8"));
+
+        String errorOutput = err.toString("UTF-8");
+        assertEquals(1, exitCode);
+        assertTrue(errorOutput, errorOutput.contains("foo"));
+        assertTrue(errorOutput, !errorOutput.contains("IndexOutOfBoundsException"));
     }
 
     @Test
@@ -354,6 +390,94 @@ public class DiagnosticTest {
             assertTrue(message, message.contains("/* comment starts"));
             assertTrue(message, message.contains("^"));
         }
+    }
+
+    @Test
+    public void lexerSeparatesStringKeywordAndStringLiteral() throws Exception {
+        File file = writeSource("Test",
+                "class Test {\n" +
+                "    void main() { printf(\"String\"); }\n" +
+                "}\n" +
+                "String\n");
+        Lexer lexer = new Lexer(file);
+        lexer.lexicalAnalysis();
+
+        Token literal = findToken(lexer.tokens, TokenKind.StringLiteral);
+        Token keyword = findToken(lexer.tokens, TokenKind.StringType);
+        assertEquals("String", literal.lexeme);
+        assertEquals("String", keyword.lexeme);
+    }
+
+    @Test
+    public void lexerDecodesStringEscapes() throws Exception {
+        File file = writeSource("Test",
+                "class Test {\n" +
+                "    void main() {\n" +
+                "        printf(\"a\\n\\t\\\"\\\\\");\n" +
+                "    }\n" +
+                "}\n");
+        Lexer lexer = new Lexer(file);
+        lexer.lexicalAnalysis();
+
+        Token literal = findToken(lexer.tokens, TokenKind.StringLiteral);
+        assertEquals("a\n\t\"\\", literal.lexeme);
+    }
+
+    @Test
+    public void lexerReportsUnknownStringEscape() throws Exception {
+        assertLexErrorContains(
+                "class Test { void main() { printf(\"bad\\q\"); } }",
+                "unknown escape sequence");
+    }
+
+    @Test
+    public void lexerRecognizesDoubleAndLeadingDotFloatLiterals() throws Exception {
+        File file = writeSource("Test",
+                "class Test {\n" +
+                "    void main() {\n" +
+                "        float f;\n" +
+                "        double d;\n" +
+                "        f = .5f;\n" +
+                "        d = 1e2;\n" +
+                "    }\n" +
+                "}\n");
+        Lexer lexer = new Lexer(file);
+        lexer.lexicalAnalysis();
+
+        boolean hasFloat = false;
+        boolean hasDouble = false;
+        for (Token token : lexer.tokens) {
+            if (token.kind == TokenKind.FloatLiteral && ".5f".equals(token.lexeme)) {
+                hasFloat = true;
+            }
+            if (token.kind == TokenKind.DoubleLiteral && "1e2".equals(token.lexeme)) {
+                hasDouble = true;
+            }
+        }
+        assertTrue("leading-dot float literal should be recognized", hasFloat);
+        assertTrue("scientific double literal should be recognized", hasDouble);
+    }
+
+    @Test
+    public void cliCompilesEscapedStringsAndDoubleLiterals() throws Exception {
+        File file = writeSource("EscapedAndDouble",
+                "class EscapedAndDouble {\n" +
+                "    void main() {\n" +
+                "        double d;\n" +
+                "        d = 1e2;\n" +
+                "        printf(\"quote=\\\" slash=\\\\ value=%f\\n\", d);\n" +
+                "    }\n" +
+                "}\n");
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        int exitCode = LemonC.run(new String[]{file.getPath(), "--target=vm"},
+                new PrintStream(out, true, "UTF-8"),
+                new PrintStream(err, true, "UTF-8"));
+
+        assertEquals(err.toString("UTF-8"), 0, exitCode);
+        assertEquals("quote=\" slash=\\ value=100.0\n",
+                out.toString("UTF-8").replace("\r\n", "\n").replace("\r", "\n"));
     }
 
     private static Token findToken(List<Token> tokens, TokenKind kind) {

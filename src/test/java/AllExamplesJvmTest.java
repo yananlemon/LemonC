@@ -1,8 +1,10 @@
 import org.junit.Test;
 import site.ilemon.ast.Ast;
 import site.ilemon.codegen.ByteCodeGenerator;
-import site.ilemon.codegen.TranslatorVisitor;
 import site.ilemon.codegen.ast.Label;
+import site.ilemon.ir.AstToIrTranslator;
+import site.ilemon.ir.IrProgram;
+import site.ilemon.ir.IrToJvmTranslator;
 import site.ilemon.lexer.Lexer;
 import site.ilemon.optimizer.AstOptimizer;
 import site.ilemon.parser.Parser;
@@ -80,18 +82,21 @@ public class AllExamplesJvmTest {
         semantic.visit(program);
 
         program = new AstOptimizer().optimize(program);
-        TranslatorVisitor translator = new TranslatorVisitor();
-        translator.visit(program);
+        AstToIrTranslator astToIr = new AstToIrTranslator();
+        program.accept(astToIr);
+        IrProgram irProgram = astToIr.getProgram();
+        site.ilemon.codegen.ast.Ast.Program.ProgramSingle jvmProgram =
+                new IrToJvmTranslator(irProgram).translate();
 
         ByteCodeGenerator generator = new ByteCodeGenerator();
-        generator.visit(translator.prog);
+        generator.visit(jvmProgram);
         assembleWithJasmin(generator.getOutputDir(), generator.getOutputFile());
 
         Process process = new ProcessBuilder(javaExecutable(),
                 "-Dfile.encoding=UTF-8",
                 "-Dsun.stdout.encoding=UTF-8",
                 "-Dsun.stderr.encoding=UTF-8",
-                "-cp", generator.getOutputDir().getPath(), name)
+                "-cp", generator.getOutputDir().getPath(), jvmProgram.mainClass.id)
                 .redirectErrorStream(true)
                 .start();
         boolean completed = process.waitFor(10, TimeUnit.SECONDS);

@@ -1,0 +1,5 @@
+class hello {
+    void main() {
+        printf("Hello, LemonVM!");
+    }
+}

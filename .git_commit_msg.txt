@@ -1,0 +1,15 @@
+feat: 引入 LemonVM 执行引擎与双后端架构
+
+本次提交对 LemonC 进行了核心架构升级，正式引入了自定义的寄存器虚拟机
+（LemonVM）和中间代码层（LemonIR）。LemonC 现已具备双后端能力，
+同时支持编译为 JVM 字节码或直接在内置 VM 中执行。
+
+核心变更：
+- IR & VM: 新增 `site.ilemon.ir` 模块实现 AST 到 IR 的降级，
+  新增 `site.ilemon.vm` 实现高性能的二地址虚拟机引擎。
+- 词法增强: Lexer 现已支持字符串转义符（\n, \t 等）解析，支持带科学
+  计数法（e/E）的浮点数解析，并自动过滤文件头的 UTF-8 BOM。
+- CLI 适配: `LemonC.java` 主入口增加 `--target=vm` 参数支持。
+- 测试保障: 新增 `DualBackendConsistencyTest`，确保双后端执行
+  结果严格一致；新增 `AllExamplesVmTest` 覆盖全部示例。
+- 文档建设: 补充了 LemonVM 架构设计方案与语言文法规则文档。
