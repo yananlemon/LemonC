@@ -7,7 +7,7 @@ It compiles Lemon source code through lexical analysis, recursive descent parsin
 LemonC 是一个面向编译原理教学与实践的小型 C-like 编译器。它不是只停留在 AST 或三地址码展示层，而是把 `.lemon` 源程序降低到类型化 LemonIR，再分别生成 JVM 字节码或 LemonVM 字节码，并用双后端输出一致性做端到端回归验证。
 
 ```text
-Java 8+ | Maven | LemonIR | JVM + LemonVM | 253 tests passing | 82 examples | MIT License
+Java 8+ | Maven | LemonIR | JVM + LemonVM | 281 tests passing | 82 examples | MIT License
 ```
 
 ## Why LemonC
@@ -189,7 +189,7 @@ mvn clean test
 Current coverage:
 
 ```text
-Tests run: 253, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 281, Failures: 0, Errors: 0, Skipped: 0
 82 root examples verified by real JVM execution and LemonVM execution
 ```
 
@@ -347,7 +347,7 @@ class Demo {
 | `AllExamplesJvmTest` | 1 | Compile every root example to `.class`, run JVM, compare stdout |
 | `AllExamplesVmTest` | 1 | Compile every root example to LemonVM bytecode, run LemonVM, compare stdout |
 | `AstOptimizerTest` | 6 | Verify AST optimization behavior |
-| `BackendEquivalenceTest` | 1 | Compare JVM and LemonVM outputs through the shared LemonIR path |
+| `BackendEquivalenceTest` | 4 | Compare JVM and LemonVM outputs through the shared LemonIR path |
 | `ByteCodeGeneratorTest` | 13 | Verify JVM bytecode and stack/local metadata |
 | `CompilerTest` | 72 | End-to-end compiler tests |
 | `DiagnosticTest` | 24 | Verify source diagnostics and CLI behavior |
@@ -357,10 +357,15 @@ class Demo {
 | `IrVerifierTest` | 5 | Verify LemonIR structural and type checks |
 | `LemonVmCliTest` | 4 | Verify LemonVM CLI behavior |
 | `LemonVmTest` | 21 | Verify LemonVM runtime semantics |
+| `LexerRegressionTest` | 6 | Ensure robust fallback edge cases in Lexer |
 | `LexerTest` | 18 | Lexer tests |
+| `LocalDeclarationTest` | 5 | Variable scoping tests |
+| `ParseRecoveryTest` | 4 | Resilient parse failure behavior |
+| `ParserRobustnessTest` | 5 | Unusual syntax checks |
 | `ParserTest` | 18 | Parser tests |
+| `ReturnStatementTest` | 3 | Semantic return-path analysis |
 | `SemanticTest` | 1 | Semantic visitor smoke test |
-| `TranslatorVisitorTest` | 11 | Legacy direct JVM instruction translation tests |
+| `TranslatorVisitorTest` | 13 | Legacy direct JVM instruction translation tests |
 
 ## Repository Map
 
