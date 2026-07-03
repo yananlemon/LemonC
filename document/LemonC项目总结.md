@@ -1,29 +1,20 @@
 # LemonC 编译器项目总结
 
+> 当前状态说明：本文是早期项目总结，主要描述 JVM 字节码后端。当前源码已经发展为 shared LemonIR + JVM/LemonVM 双后端架构，测试规模和语言能力也已经扩展。当前实现请以 `docs/ARCHITECTURE.md`、`docs/LEMONC_FEATURES.md` 和源码为准。
+
 ## 📋 项目概述
 
-LemonC 是一个基于 Java 实现的**完整编译器前端**，能够将自定义的 Lemon 语言编译为 JVM 字节码，最终运行在 Java 虚拟机上。
+LemonC 是一个基于 Java 实现的教学型 C-like 编译器，当前主线会将自定义 Lemon 语言降低到 typed LemonIR，再分别生成 JVM 字节码和 LemonVM 字节码，最终通过 JVM 与自研 LemonVM 双后端执行并比对输出。
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   .lemon    │───▶│   Lexer     │───▶│   Parser    │───▶│  Semantic   │───▶│  CodeGen    │
-│  源代码     │    │  词法分析   │    │  语法分析   │    │  语义分析   │    │  代码生成   │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-                         │                  │                  │                  │
-                         ▼                  ▼                  ▼                  ▼
-                   Token 序列            AST 树          类型检查完成        .il 文件
-                                                                                  │
-                                                                                  ▼
-                                                                         ┌─────────────┐
-                                                                         │   Jasmin    │
-                                                                         │  汇编器     │
-                                                                         └─────────────┘
-                                                                                  │
-                                                                                  ▼
-                                                                         ┌─────────────┐
-                                                                         │   .class    │
-                                                                         │  字节码     │
-                                                                         └─────────────┘
+.lemon
+  -> Lexer
+  -> Parser
+  -> SemanticVisitor
+  -> AstOptimizer
+  -> LemonIR + IrVerifier
+  -> JVM backend: IrToJvmTranslator -> ByteCodeGenerator -> Jasmin -> .class
+  -> VM backend: IrToVmTranslator -> LemonVM
 ```
 
 ---
@@ -46,11 +37,22 @@ src/main/java/site/ilemon/
 ├── semantic/          # 语义分析
 │   ├── SemanticVisitor.java
 │   └── MethodVarTable.java
+├── optimizer/         # AST 优化
+│   └── AstOptimizer.java
+├── ir/                # typed LemonIR、IR 校验、双后端 lowering
+│   ├── AstToIrTranslator.java
+│   ├── IrVerifier.java
+│   ├── IrToJvmTranslator.java
+│   └── IrToVmTranslator.java
 ├── codegen/           # 代码生成
-│   ├── TranslatorVisitor.java  # AST → 中间代码
-│   ├── ByteCodeGenerator.java  # 中间代码 → Jasmin
+│   ├── TranslatorVisitor.java  # 旧 AST → JVM 指令路径，保留作测试/参考
+│   ├── ByteCodeGenerator.java  # JVM 指令 IR → Jasmin
 │   ├── Visitor.java
-│   └── ast/           # 中间代码 AST
+│   └── ast/           # JVM 指令 IR
+├── vm/                # LemonVM 运行时
+│   ├── LemonVm.java
+│   ├── VmBytecodeParser.java
+│   └── RuntimeStack.java
 └── visitor/           # Visitor 模式接口
     ├── ISemanticVisitor.java
     └── IElement.java
@@ -141,27 +143,25 @@ public void visit(Expr.T obj) {
 
 ### 4. 布尔表达式翻译 - 回填技术
 
-遵循龙书的 **SDT (语法制导翻译)** 规则：
+遵循龙书的 **SDT (语法制导翻译)** 规则。当前实现不再把 `trueList` / `falseList` 存在 AST 节点上，而是由 `translateCondition()` 返回局部的 `BoolCode`：
 
 ```java
-/**
- * E -> E1 and E2
- *  E1.true := newlabel
- *  E1.false := E.false
- *  E2.true := E.true
- *  E2.false := E.false
- *  E.code := E1.code || gen(E1.true ':') || E2.code
- */
-@Override
-public void visit(Expr.And obj) {
-    obj.left.trueList.addToTail(new Label());
-    obj.left.falseList = obj.falseList;
-    this.visit(obj.left);
-    emit(new Ast.Stmt.LabelJ(obj.left.trueList.get(0)));
-    
-    obj.right.trueList = obj.trueList;
-    obj.right.falseList = obj.falseList;
-    this.visit(obj.right);
+private static class BoolCode {
+    final List<Integer> trueList;
+    final List<Integer> falseList;
+}
+
+private BoolCode translateCondition(Expr.T expr) {
+    if (expr instanceof Expr.And) {
+        Expr.And and = (Expr.And) expr;
+        BoolCode left = translateCondition(and.getLeft());
+        Label rightBegin = new Label();
+        emit(new Ast.Stmt.LabelJ(rightBegin));
+        backpatch(left.trueList, rightBegin);
+        BoolCode right = translateCondition(and.getRight());
+        return new BoolCode(right.trueList, merge(left.falseList, right.falseList));
+    }
+    // comparisons, !, ||, true/false and value materialization omitted
 }
 ```
 
@@ -199,16 +199,19 @@ public void visit(Stmt.If obj) {
     Label trueLabel = new Label();
     Label falseLabel = new Label();
     Label nextLabel = new Label();
-    
-    obj.condition.trueList.addToTail(trueLabel);
-    obj.condition.falseList.addToTail(falseLabel);
-    
-    this.visit(obj.condition);           // E.code
+
+    BoolCode condition = translateCondition(obj.getCondition());
+    backpatch(condition.trueList, trueLabel);
+    backpatch(condition.falseList, falseLabel);
+
     emit(new Ast.Stmt.LabelJ(trueLabel)); // E.true:
-    this.visit(obj.thenStmt);            // S1.code
+    this.visit(obj.getThenStmt());       // S1.code
     emit(new Ast.Stmt.Goto(nextLabel));  // goto S.next
+
     emit(new Ast.Stmt.LabelJ(falseLabel)); // E.false:
-    this.visit(obj.elseStmt);            // S2.code
+    if (obj.getElseStmt() != null) {
+        this.visit(obj.getElseStmt());   // S2.code
+    }
     emit(new Ast.Stmt.LabelJ(nextLabel)); // S.next:
 }
 ```
@@ -219,13 +222,15 @@ public void visit(Stmt.If obj) {
 
 | 特性 | 支持情况 |
 |------|---------|
-| 数据类型 | int, float, bool, string |
-| 算术运算 | +, -, *, / |
+| 数据类型 | int, float, double, bool, void；字符串主要作为 printf 字面量 |
+| 数组 | int[], float[], double[], bool[]，支持索引访问、赋值、`.length` |
+| 算术运算 | +, -, *, /, %, 一元 - |
 | 比较运算 | >, <, >=, <=, ==, != |
 | 逻辑运算 | &&, \|\|, ! (短路求值) |
-| 控制流 | if-else, while |
-| 函数 | 定义、调用、递归 |
-| 输出 | printf, printNewLine |
+| 控制流 | if-else, while, for, break, continue |
+| 函数 | 定义、调用、递归、参数、返回值、void 方法 |
+| 输出 | printf, printLine |
+| 后端 | JVM 字节码、LemonVM 字节码与解释执行 |
 
 ---
 
@@ -243,7 +248,7 @@ class MulTable {
                 printf("%d*%d=%d\t", i, j, i*j);
                 j = j + 1;
             }
-            printNewLine();
+                printLine();
             i = i + 1;
         }
     }
@@ -266,14 +271,14 @@ java MulTable
 
 ---
 
-## 🔧 本次优化内容
+## 🔧 历史优化内容
 
 1. **实现双重分派 Visitor 模式** - 为所有 AST 节点添加 `accept` 方法
 2. **补全比较运算符** - 实现 `==`, `!=`, `>=`, `<=`
 3. **修复 ByteCodeGenerator** - 类型判断 bug、重复代码、动态计算 stack/locals
 4. **修复 Lexer 字符串处理** - 正确去除首尾引号
 5. **更新 pom.xml** - 修复 assembly 插件配置
-6. **添加测试用例** - 55 个测试全部通过
+6. **添加测试用例** - 当前干净测试规模为 253 个测试全部通过
 
 ---
 

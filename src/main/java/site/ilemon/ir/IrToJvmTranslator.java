@@ -256,6 +256,7 @@ public class IrToJvmTranslator {
             if (currentFunction.getReturnType() != IrType.VOID) {
                 throw new CompilerException("Missing return value in function: " + currentFunction.getName());
             }
+            emit(new Ast.Stmt.Vreturn());
             return;
         }
 

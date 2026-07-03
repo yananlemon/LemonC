@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
@@ -25,6 +26,81 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class BackendEquivalenceTest {
+
+    @Test
+    public void initializedAndBlockLocalDeclarationsMatchAcrossBackends() throws Exception {
+        File sourceFile = writeSource("BlockDeclarationIntegration",
+                "class BlockDeclarationIntegration {\n" +
+                "    void main() {\n" +
+                "        int x = 0x10;\n" +
+                "        x = x + 1;\n" +
+                "        {\n" +
+                "            int y = 010;\n" +
+                "            double widened = x;\n" +
+                "            int values[2];\n" +
+                "            values[0] = y;\n" +
+                "            printf(\"%d %d %f %d\\n\", x, y, widened, values[0]);\n" +
+                "        }\n" +
+                "        int z;\n" +
+                "        z = 3;\n" +
+                "        printf(\"%d\\n\", z);\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("17 8 17.0 8\n3\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void emptyReturnStopsVoidMethodsAcrossBackends() throws Exception {
+        File sourceFile = writeSource("EmptyReturnIntegration",
+                "class EmptyReturnIntegration {\n" +
+                "    void main() {\n" +
+                "        helper();\n" +
+                "        return;\n" +
+                "        printf(\"unreachable-main\\n\");\n" +
+                "    }\n" +
+                "    void helper() {\n" +
+                "        printf(\"before\\n\");\n" +
+                "        return;\n" +
+                "        printf(\"unreachable-helper\\n\");\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("before\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void hexadecimalAndOctalLiteralsMatchAcrossBackends() throws Exception {
+        File sourceFile = writeSource("RadixIntegration",
+                "class RadixIntegration {\n" +
+                "    void main() {\n" +
+                "        int values[010];\n" +
+                "        int folded;\n" +
+                "        double widened;\n" +
+                "        folded = 0x20 + 010 + 2;\n" +
+                "        widened = 0x2A;\n" +
+                "        values[07] = 077;\n" +
+                "        printf(\"%d %d %f\\n\", folded, values[07], widened);\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("42 63 42.0\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
 
     @Test
     public void allRootExamplesHaveEquivalentJvmAndVmOutputFromSameLemonIr() throws Exception {
@@ -38,20 +114,32 @@ public class BackendEquivalenceTest {
     }
 
     private IrProgram compileToLemonIr(String name) throws Exception {
+        return compileToLemonIr(new File("examples/" + name + ".lemon"));
+    }
+
+    private IrProgram compileToLemonIr(File sourceFile) throws Exception {
         Label.resetCounter();
-        File sourceFile = new File("examples/" + name + ".lemon");
         Lexer lexer = new Lexer(sourceFile);
         Parser parser = new Parser(lexer);
         Ast.Program.T program = parser.parse();
 
         SemanticVisitor semantic = new SemanticVisitor();
         semantic.visit(program);
-        assertTrue("Semantic analysis should pass for " + name, semantic.passOrNot());
+        assertTrue("Semantic analysis should pass for " + sourceFile.getName(), semantic.passOrNot());
 
         program = new AstOptimizer().optimize(program);
         AstToIrTranslator astToIr = new AstToIrTranslator();
         program.accept(astToIr);
         return astToIr.getProgram();
+    }
+
+    private File writeSource(String className, String source) throws Exception {
+        File directory = new File("test_tmp");
+        directory.mkdirs();
+        File file = new File(directory, className + ".lemon");
+        Files.write(file.toPath(), source.getBytes(StandardCharsets.UTF_8));
+        file.deleteOnExit();
+        return file;
     }
 
     private String runVm(IrProgram irProgram) {

@@ -32,6 +32,7 @@ public interface ISemanticVisitor {
 	void visit(Ast.Expr.True obj);
 	void visit(Ast.Expr.False obj);
 	void visit(Ast.Expr.Not obj);
+	void visit(Ast.Expr.UnaryMinus obj);
 	void visit(Ast.Expr.Str obj);
 	void visit(Ast.Expr.ArrayAccess obj);
 	void visit(Ast.Expr.ArrayLength obj);
@@ -57,6 +58,7 @@ public interface ISemanticVisitor {
 	void visit(Ast.Stmt.If obj);
 	void visit(Ast.Stmt.T obj);
 	void visit(Ast.Stmt.Assign obj);
+	void visit(Ast.Stmt.VarDecl obj);
 	void visit(Ast.Stmt.Block obj);
 	void visit(Ast.Stmt.Printf obj);
 	void visit(Ast.Stmt.PrintLine obj);

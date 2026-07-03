@@ -2,6 +2,7 @@ package site.ilemon.optimizer;
 
 import site.ilemon.ast.Ast;
 import site.ilemon.ast.Ast.Type.TypeKind;
+import site.ilemon.lexer.IntegerLiterals;
 
 import java.util.ArrayList;
 
@@ -60,6 +61,11 @@ public class AstOptimizer {
         if (stmt instanceof Ast.Stmt.Assign) {
             Ast.Stmt.Assign assign = (Ast.Stmt.Assign) stmt;
             return new Ast.Stmt.Assign(assign.getId(), optimizeExpr(assign.getExpr()), assign.getLineNum());
+        }
+        if (stmt instanceof Ast.Stmt.VarDecl) {
+            Ast.Stmt.VarDecl varDecl = (Ast.Stmt.VarDecl) stmt;
+            return new Ast.Stmt.VarDecl(varDecl.getDeclaration(),
+                    optimizeExpr(varDecl.getInitializer()));
         }
         if (stmt instanceof Ast.Stmt.ArrayAssign) {
             Ast.Stmt.ArrayAssign arrayAssign = (Ast.Stmt.ArrayAssign) stmt;
@@ -138,6 +144,21 @@ public class AstOptimizer {
     private Ast.Expr.T optimizeExpr(Ast.Expr.T expr) {
         if (expr == null) {
             return null;
+        }
+        if (expr instanceof Ast.Expr.UnaryMinus) {
+            Ast.Expr.UnaryMinus node = (Ast.Expr.UnaryMinus) expr;
+            Ast.Expr.T inner = optimizeExpr(node.getExpr());
+            if (inner instanceof Ast.Expr.Number) {
+                Ast.Expr.Number num = (Ast.Expr.Number) inner;
+                if (num.getType() instanceof Ast.Type.Int) {
+                    return new Ast.Expr.Number(num.getType(), -((Integer) num.getValue()), node.getLineNum());
+                } else if (num.getType() instanceof Ast.Type.Float) {
+                    return new Ast.Expr.Number(num.getType(), -((Float) num.getValue()), node.getLineNum());
+                } else if (num.getType() instanceof Ast.Type.Double) {
+                    return new Ast.Expr.Number(num.getType(), -((Double) num.getValue()), node.getLineNum());
+                }
+            }
+            return new Ast.Expr.UnaryMinus(inner, node.getLineNum());
         }
         if (expr instanceof Ast.Expr.Add) {
             Ast.Expr.Add node = (Ast.Expr.Add) expr;
@@ -526,7 +547,7 @@ public class AstOptimizer {
             return (Number) value;
         }
         if (number.getType().getKind() == TypeKind.INT) {
-            return Integer.valueOf(value.toString());
+            return Integer.valueOf(IntegerLiterals.parse(value.toString()));
         }
         if (number.getType().getKind() == TypeKind.FLOAT) {
             return Float.valueOf(value.toString());

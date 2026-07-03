@@ -7,6 +7,8 @@ import site.ilemon.semantic.SemanticVisitor;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 import static org.junit.Assert.*;
 
@@ -161,10 +163,58 @@ public class TranslatorVisitorTest {
         assertNotNull(visitor.prog);
     }
 
+    @Test
+    public void testTranslateHexadecimalAndOctalIntegerLiterals() throws IOException {
+        File sourceFile = writeSource("LegacyRadix",
+                "class LegacyRadix {\n" +
+                "    void main() {\n" +
+                "        int hex;\n" +
+                "        int octal;\n" +
+                "        hex = 0x2A;\n" +
+                "        octal = 077;\n" +
+                "    }\n" +
+                "}\n");
+
+        TranslatorVisitor visitor = translate(sourceFile);
+        boolean hasHexValue = false;
+        boolean hasOctalValue = false;
+        for (site.ilemon.codegen.ast.Ast.Method.MethodSingle method : visitor.prog.mainClass.methods) {
+            for (site.ilemon.codegen.ast.Ast.Stmt.T statement : method.stms) {
+                if (statement instanceof site.ilemon.codegen.ast.Ast.Stmt.Ldc) {
+                    Object value = ((site.ilemon.codegen.ast.Ast.Stmt.Ldc) statement).i;
+                    hasHexValue |= Integer.valueOf(42).equals(value);
+                    hasOctalValue |= Integer.valueOf(63).equals(value);
+                }
+            }
+        }
+        assertTrue("legacy translator should decode hexadecimal literals", hasHexValue);
+        assertTrue("legacy translator should decode octal literals", hasOctalValue);
+    }
+
+    @Test
+    public void testTranslateInitializedAndBlockLocalDeclarations() throws IOException {
+        File sourceFile = writeSource("LegacyBlockDeclarations",
+                "class LegacyBlockDeclarations {\n" +
+                "    void main() {\n" +
+                "        int x = 1;\n" +
+                "        { int y = x + 1; printf(\"%d\", y); }\n" +
+                "    }\n" +
+                "}\n");
+
+        TranslatorVisitor visitor = translate(sourceFile);
+
+        assertNotNull(visitor.prog);
+        assertEquals(2, visitor.prog.mainClass.methods.get(0).locals.size());
+    }
+
     // ==================== 辅助方法 ====================
 
     private TranslatorVisitor translate(String filename) throws IOException {
-        Lexer lexer = new Lexer(new File(filename));
+        return translate(new File(filename));
+    }
+
+    private TranslatorVisitor translate(File sourceFile) throws IOException {
+        Lexer lexer = new Lexer(sourceFile);
         Parser parser = new Parser(lexer);
         Ast.Program.T prog = parser.parse();
         SemanticVisitor semantic = new SemanticVisitor();
@@ -174,5 +224,14 @@ public class TranslatorVisitorTest {
         visitor.visit(prog);
         
         return visitor;
+    }
+
+    private File writeSource(String className, String source) throws IOException {
+        File directory = new File("test_tmp");
+        directory.mkdirs();
+        File file = new File(directory, className + ".lemon");
+        Files.write(file.toPath(), source.getBytes(StandardCharsets.UTF_8));
+        file.deleteOnExit();
+        return file;
     }
 }

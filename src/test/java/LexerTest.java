@@ -23,8 +23,8 @@ public class LexerTest {
         
         // 验证能识别 class 关键字
         Token first = lexer.next();
-        assertEquals(TokenKind.Class, first.kind);
-        assertEquals("class", first.lexeme);
+        assertEquals(TokenKind.Class, first.getKind());
+        assertEquals("class", first.getLexeme());
     }
 
     @Test
@@ -34,11 +34,11 @@ public class LexerTest {
         
         // 检查tokens中包含各种关键字
         boolean hasClass = false, hasVoid = false, hasFloat = false, hasReturn = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.Class) hasClass = true;
-            if (t.kind == TokenKind.Void) hasVoid = true;
-            if (t.kind == TokenKind.Float) hasFloat = true;
-            if (t.kind == TokenKind.Return) hasReturn = true;
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.Class) hasClass = true;
+            if (t.getKind() == TokenKind.Void) hasVoid = true;
+            if (t.getKind() == TokenKind.Float) hasFloat = true;
+            if (t.getKind() == TokenKind.Return) hasReturn = true;
         }
         assertTrue("应识别class关键字", hasClass);
         assertTrue("应识别void关键字", hasVoid);
@@ -55,8 +55,8 @@ public class LexerTest {
         
         // 查找标识符
         boolean hasId = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.Id) {
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.Id) {
                 hasId = true;
                 break;
             }
@@ -72,8 +72,8 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         boolean hasNum = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.Num) {
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.Num) {
                 hasNum = true;
                 break;
             }
@@ -87,11 +87,11 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         boolean hasDNum = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.FloatLiteral) {
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.FloatLiteral) {
                 hasDNum = true;
                 // 验证浮点数格式
-                assertTrue("浮点数应包含小数点", t.lexeme.contains("."));
+                assertTrue("浮点数应包含小数点", t.getLexeme().contains("."));
                 break;
             }
         }
@@ -107,11 +107,11 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         boolean hasAdd = false, hasSub = false, hasMul = false, hasDiv = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.Add) hasAdd = true;
-            if (t.kind == TokenKind.Sub) hasSub = true;
-            if (t.kind == TokenKind.Mul) hasMul = true;
-            if (t.kind == TokenKind.Div) hasDiv = true;
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.Add) hasAdd = true;
+            if (t.getKind() == TokenKind.Sub) hasSub = true;
+            if (t.getKind() == TokenKind.Mul) hasMul = true;
+            if (t.getKind() == TokenKind.Div) hasDiv = true;
         }
         assertTrue("应识别加法运算符", hasAdd);
         assertTrue("应识别减法运算符", hasSub);
@@ -125,10 +125,10 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         boolean hasComparison = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.LT || t.kind == TokenKind.GT ||
-                t.kind == TokenKind.LTE || t.kind == TokenKind.GTE ||
-                t.kind == TokenKind.EQ || t.kind == TokenKind.NEQ) {
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.LT || t.getKind() == TokenKind.GT ||
+                t.getKind() == TokenKind.LTE || t.getKind() == TokenKind.GTE ||
+                t.getKind() == TokenKind.EQ || t.getKind() == TokenKind.NEQ) {
                 hasComparison = true;
                 break;
             }
@@ -142,8 +142,8 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         boolean hasLogical = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.And || t.kind == TokenKind.Or || t.kind == TokenKind.Not) {
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.And || t.getKind() == TokenKind.Or || t.getKind() == TokenKind.Not) {
                 hasLogical = true;
                 break;
             }
@@ -163,12 +163,12 @@ public class LexerTest {
         boolean hasLparen = false, hasRparen = false;
         boolean hasSemicolon = false;
         
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.Lbrace) hasLbrace = true;
-            if (t.kind == TokenKind.Rbrace) hasRbrace = true;
-            if (t.kind == TokenKind.Lparen) hasLparen = true;
-            if (t.kind == TokenKind.Rparen) hasRparen = true;
-            if (t.kind == TokenKind.Semicolon) hasSemicolon = true;
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.Lbrace) hasLbrace = true;
+            if (t.getKind() == TokenKind.Rbrace) hasRbrace = true;
+            if (t.getKind() == TokenKind.Lparen) hasLparen = true;
+            if (t.getKind() == TokenKind.Rparen) hasRparen = true;
+            if (t.getKind() == TokenKind.Semicolon) hasSemicolon = true;
         }
         
         assertTrue("应识别左花括号", hasLbrace);
@@ -186,8 +186,8 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         boolean hasString = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.StringLiteral && t.lexeme.contains("%")) {
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.StringLiteral && t.getLexeme().contains("%")) {
                 hasString = true;
                 break;
             }
@@ -203,9 +203,9 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         // 注释应该被忽略，不应出现在tokens中
-        for (Token t : lexer.tokens) {
+        for (Token t : lexer.getTokens()) {
             assertFalse("注释内容不应出现在token中", 
-                t.lexeme.contains("测试") || t.lexeme.contains("浮点型"));
+                t.getLexeme().contains("测试") || t.getLexeme().contains("浮点型"));
         }
     }
 
@@ -218,7 +218,7 @@ public class LexerTest {
         
         // 第一个token应该在第1行或更后
         Token first = lexer.next();
-        assertTrue("行号应大于0", first.lineNumber >= 1);
+        assertTrue("行号应大于0", first.getLineNumber() >= 1);
     }
 
     // ==================== EOF测试 ====================
@@ -229,8 +229,8 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         // 最后一个token应该是EOF
-        Token last = lexer.tokens.get(lexer.tokens.size() - 1);
-        assertEquals("最后一个token应为EOF", TokenKind.EOF, last.kind);
+        Token last = lexer.getTokens().get(lexer.getTokens().size() - 1);
+        assertEquals("最后一个token应为EOF", TokenKind.EOF, last.getKind());
     }
 
     // ==================== 综合测试 ====================
@@ -241,9 +241,9 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         // 验证token数量合理
-        assertTrue("应产生多个token", lexer.tokens.size() > 10);
-        assertEquals(TokenKind.Class, lexer.tokens.get(0).kind);
-        assertEquals(TokenKind.EOF, lexer.tokens.get(lexer.tokens.size() - 1).kind);
+        assertTrue("应产生多个token", lexer.getTokens().size() > 10);
+        assertEquals(TokenKind.Class, lexer.getTokens().get(0).getKind());
+        assertEquals(TokenKind.EOF, lexer.getTokens().get(lexer.getTokens().size() - 1).getKind());
     }
 
     @Test
@@ -252,9 +252,9 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         boolean hasIf = false, hasElse = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.If) hasIf = true;
-            if (t.kind == TokenKind.Else) hasElse = true;
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.If) hasIf = true;
+            if (t.getKind() == TokenKind.Else) hasElse = true;
         }
         assertTrue("应识别if关键字", hasIf);
     }
@@ -265,8 +265,8 @@ public class LexerTest {
         lexer.lexicalAnalysis();
         
         boolean hasWhile = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.While) {
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.While) {
                 hasWhile = true;
                 break;
             }
@@ -281,9 +281,9 @@ public class LexerTest {
         
         // 方法调用应该有标识符和括号
         boolean hasId = false, hasLparen = false;
-        for (Token t : lexer.tokens) {
-            if (t.kind == TokenKind.Id) hasId = true;
-            if (t.kind == TokenKind.Lparen) hasLparen = true;
+        for (Token t : lexer.getTokens()) {
+            if (t.getKind() == TokenKind.Id) hasId = true;
+            if (t.getKind() == TokenKind.Lparen) hasLparen = true;
         }
         assertTrue("应有标识符", hasId);
         assertTrue("应有左括号", hasLparen);
@@ -295,8 +295,8 @@ public class LexerTest {
     public void testCal() throws IOException {
         Lexer lexer = new Lexer(new File("examples/FloatTest01.lemon"));
         lexer.lexicalAnalysis();
-        assertTrue(lexer.tokens.size() > 10);
-        assertEquals(TokenKind.Class, lexer.tokens.get(0).kind);
-        assertEquals(TokenKind.EOF, lexer.tokens.get(lexer.tokens.size() - 1).kind);
+        assertTrue(lexer.getTokens().size() > 10);
+        assertEquals(TokenKind.Class, lexer.getTokens().get(0).getKind());
+        assertEquals(TokenKind.EOF, lexer.getTokens().get(lexer.getTokens().size() - 1).getKind());
     }
 }

@@ -1,5 +1,7 @@
 # LemonIR 与 LemonVM 设计方案
 
+> 当前状态说明：本文是 LemonIR 与 LemonVM 的设计路线文档。当前源码已经实现了 typed LemonIR、IR verifier、JVM 后端 lowering、LemonVM bytecode lowering、LemonVM runtime 和双后端一致性测试。当前实现边界请以 `docs/ARCHITECTURE.md` 和源码为准。
+
 ## 1. 设计目标
 
 当前 LemonC 已经具备较完整的编译链路：
@@ -1206,4 +1208,3 @@ LemonIR 采用类型化三地址码和基本块控制流图，用于解耦前端
 ```
 
 这条路线不会推倒现有 LemonC，也不会继续被 JVM 单后端限制。它能把项目升级成一个更完整、更有设计深度的编译原理系统。
-

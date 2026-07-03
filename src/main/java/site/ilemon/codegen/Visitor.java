@@ -42,6 +42,7 @@ public interface Visitor {
     void visit(Ast.Stmt.Iload s);
     void visit(Ast.Stmt.Invokestatic s);
     void visit(Ast.Stmt.Ireturn s);
+    void visit(Ast.Stmt.Vreturn s);
     void visit(Ast.Stmt.Istore s);
     void visit(Ast.Stmt.LabelJ s);
     void visit(Ast.Stmt.Ldc s);

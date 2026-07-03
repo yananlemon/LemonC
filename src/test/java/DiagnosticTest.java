@@ -28,14 +28,14 @@ public class DiagnosticTest {
         Lexer lexer = new Lexer(file);
         lexer.lexicalAnalysis();
 
-        Token classToken = lexer.tokens.get(0);
-        assertEquals(TokenKind.Class, classToken.kind);
-        assertEquals(1, classToken.lineNumber);
-        assertEquals(1, classToken.columnNumber);
+        Token classToken = lexer.getTokens().get(0);
+        assertEquals(TokenKind.Class, classToken.getKind());
+        assertEquals(1, classToken.getLineNumber());
+        assertEquals(1, classToken.getColumnNumber());
 
-        Token voidToken = findToken(lexer.tokens, TokenKind.Void);
-        assertEquals(2, voidToken.lineNumber);
-        assertEquals(5, voidToken.columnNumber);
+        Token voidToken = findToken(lexer.getTokens(), TokenKind.Void);
+        assertEquals(2, voidToken.getLineNumber());
+        assertEquals(5, voidToken.getColumnNumber());
     }
 
     @Test
@@ -44,10 +44,10 @@ public class DiagnosticTest {
         Lexer lexer = new Lexer(file);
         lexer.lexicalAnalysis();
 
-        Token classToken = lexer.tokens.get(0);
-        assertEquals(TokenKind.Class, classToken.kind);
-        assertEquals(1, classToken.lineNumber);
-        assertEquals(1, classToken.columnNumber);
+        Token classToken = lexer.getTokens().get(0);
+        assertEquals(TokenKind.Class, classToken.getKind());
+        assertEquals(1, classToken.getLineNumber());
+        assertEquals(1, classToken.getColumnNumber());
     }
 
     @Test
@@ -288,8 +288,8 @@ public class DiagnosticTest {
         lexer.lexicalAnalysis();
 
         boolean found = false;
-        for (Token token : lexer.tokens) {
-            if (token.kind == TokenKind.Id && "sum_count".equals(token.lexeme)) {
+        for (Token token : lexer.getTokens()) {
+            if (token.getKind() == TokenKind.Id && "sum_count".equals(token.getLexeme())) {
                 found = true;
                 break;
             }
@@ -369,9 +369,9 @@ public class DiagnosticTest {
         Lexer lexer = new Lexer(file);
         lexer.lexicalAnalysis();
 
-        Token voidToken = findToken(lexer.tokens, TokenKind.Void);
-        assertEquals(4, voidToken.lineNumber);
-        assertEquals(5, voidToken.columnNumber);
+        Token voidToken = findToken(lexer.getTokens(), TokenKind.Void);
+        assertEquals(4, voidToken.getLineNumber());
+        assertEquals(5, voidToken.getColumnNumber());
     }
 
     @Test
@@ -402,10 +402,10 @@ public class DiagnosticTest {
         Lexer lexer = new Lexer(file);
         lexer.lexicalAnalysis();
 
-        Token literal = findToken(lexer.tokens, TokenKind.StringLiteral);
-        Token keyword = findToken(lexer.tokens, TokenKind.StringType);
-        assertEquals("String", literal.lexeme);
-        assertEquals("String", keyword.lexeme);
+        Token literal = findToken(lexer.getTokens(), TokenKind.StringLiteral);
+        Token keyword = findToken(lexer.getTokens(), TokenKind.StringType);
+        assertEquals("String", literal.getLexeme());
+        assertEquals("String", keyword.getLexeme());
     }
 
     @Test
@@ -419,8 +419,8 @@ public class DiagnosticTest {
         Lexer lexer = new Lexer(file);
         lexer.lexicalAnalysis();
 
-        Token literal = findToken(lexer.tokens, TokenKind.StringLiteral);
-        assertEquals("a\n\t\"\\", literal.lexeme);
+        Token literal = findToken(lexer.getTokens(), TokenKind.StringLiteral);
+        assertEquals("a\n\t\"\\", literal.getLexeme());
     }
 
     @Test
@@ -446,11 +446,11 @@ public class DiagnosticTest {
 
         boolean hasFloat = false;
         boolean hasDouble = false;
-        for (Token token : lexer.tokens) {
-            if (token.kind == TokenKind.FloatLiteral && ".5f".equals(token.lexeme)) {
+        for (Token token : lexer.getTokens()) {
+            if (token.getKind() == TokenKind.FloatLiteral && ".5f".equals(token.getLexeme())) {
                 hasFloat = true;
             }
-            if (token.kind == TokenKind.DoubleLiteral && "1e2".equals(token.lexeme)) {
+            if (token.getKind() == TokenKind.DoubleLiteral && "1e2".equals(token.getLexeme())) {
                 hasDouble = true;
             }
         }
@@ -482,7 +482,7 @@ public class DiagnosticTest {
 
     private static Token findToken(List<Token> tokens, TokenKind kind) {
         for (Token token : tokens) {
-            if (token.kind == kind) {
+            if (token.getKind() == kind) {
                 return token;
             }
         }

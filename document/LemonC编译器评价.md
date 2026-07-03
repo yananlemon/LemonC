@@ -1,8 +1,10 @@
 # LemonC 编译器评价报告
 
+> 当前状态说明：本文是历史评价材料，部分“不支持”列表已经落后于当前源码。当前 LemonC 已支持 `for`、`break`、`continue`、`%`、多行注释、下划线标识符、typed LemonIR、LemonVM 后端和双后端一致性测试。当前事实请以 `docs/ARCHITECTURE.md`、`docs/LEMONC_FEATURES.md` 和源码为准。
+
 ## 一、项目概述
 
-LemonC 是一个用 Java 实现的教学型编译器，将自定义的 Lemon 语言编译为 JVM 字节码。项目完整实现了编译器的四个核心阶段：词法分析、语法分析、语义分析、代码生成。
+LemonC 是一个用 Java 实现的教学型编译器，将自定义的 Lemon 语言降低到 typed LemonIR，并支持 JVM 字节码与 LemonVM 两条执行后端。项目完整实现了词法分析、语法分析、语义分析、AST 优化、IR 生成、IR 校验、后端降低和运行验证。
 
 ## 二、功能特性
 
@@ -16,11 +18,11 @@ LemonC 是一个用 Java 实现的教学型编译器，将自定义的 Lemon 语
 | String | ❌ | ✅ | ❌ | ❌ (仅printf) |
 
 ### 2.2 支持的语言结构
-- 控制流: if-else, while
+- 控制流: if-else, while, for, break, continue
 - 函数: 定义、调用、递归、多参数
 - 数组: 声明 `int arr[10];`、访问 `arr[i]`、赋值 `arr[i] = x;`
 - 运算符: 
-  - 算术: `+`, `-`, `*`, `/`
+  - 算术: `+`, `-`, `*`, `/`, `%`
   - 比较: `>`, `<`, `>=`, `<=`, `==`, `!=`
   - 逻辑: `&&`, `||`, `!` (支持短路求值)
 - 输出: printf (格式化), printLine
@@ -43,18 +45,18 @@ class BubbleSort {
 ```
 
 ### 2.4 不支持的特性
-- for 循环、break/continue
 - String 变量
 - 自增/自减 `++`, `--`
-- 取模运算符 `%`
 - 类和对象 (面向对象)
 - 多维数组
+- 块级变量作用域
+- `return;` 空返回语句
 
 ## 三、架构设计优点
 
 ### 3.1 清晰的模块划分
 ```
-Lexer → Parser → SemanticVisitor → TranslatorVisitor → ByteCodeGenerator
+Lexer → Parser → SemanticVisitor → AstOptimizer → LemonIR → JVM backend / LemonVM backend
 ```
 每个阶段职责单一，符合编译原理教科书的经典架构。
 
@@ -150,7 +152,7 @@ public void visit(Ast.Stmt.T stmt) {
 
 ## 六、测试覆盖
 
-项目有 60+ 个示例程序，覆盖了：
+项目有 82 个根目录示例程序和 253 个自动化测试，覆盖了：
 - 基本算术运算、各种布尔表达式组合
 - 控制流嵌套、递归函数
 - 数组操作 (冒泡排序)
@@ -163,8 +165,8 @@ public void visit(Ast.Stmt.T stmt) {
 3. 清理未使用的代码
 
 ### 中期
-1. 添加 for 循环、break/continue
-2. 添加 String 变量支持
+1. 添加 String 变量支持
+2. 添加块级作用域
 3. 改进错误恢复机制
 
 ### 长期

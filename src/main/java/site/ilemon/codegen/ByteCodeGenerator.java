@@ -231,7 +231,8 @@ public class ByteCodeGenerator implements Visitor {
     }
 
     private static boolean isReturn(Ast.Stmt.T stmt) {
-        return stmt instanceof Ast.Stmt.Ireturn
+        return stmt instanceof Ast.Stmt.Vreturn
+                || stmt instanceof Ast.Stmt.Ireturn
                 || stmt instanceof Ast.Stmt.Freturn
                 || stmt instanceof Ast.Stmt.Dreturn
                 || stmt instanceof Ast.Stmt.Areturn;
@@ -265,6 +266,7 @@ public class ByteCodeGenerator implements Visitor {
                 || stmt instanceof Ast.Stmt.Ificmpge || stmt instanceof Ast.Stmt.Ificmple
                 || stmt instanceof Ast.Stmt.Ificmpeq || stmt instanceof Ast.Stmt.Ificmpne) return deltas(-2);
 
+        if (stmt instanceof Ast.Stmt.Vreturn) return deltas();
         if (stmt instanceof Ast.Stmt.Ireturn || stmt instanceof Ast.Stmt.Freturn
                 || stmt instanceof Ast.Stmt.Areturn) return deltas(-1);
         if (stmt instanceof Ast.Stmt.Dreturn) return deltas(-2);
@@ -572,6 +574,11 @@ public class ByteCodeGenerator implements Visitor {
     @Override
     public void visit(Ast.Stmt.Ireturn s) {
         this.iwriteln("ireturn");
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Vreturn s) {
+        this.iwriteln("return");
     }
 
     @Override

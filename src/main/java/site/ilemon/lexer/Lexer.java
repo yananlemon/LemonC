@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,32 +19,39 @@ public class Lexer {
     private int position = 0;
     private int line = 1;
     private int column = 1;
-    public List<Token> tokens = new ArrayList<Token>();  // public for test compatibility
+    private final List<Token> tokens = new ArrayList<Token>();
     private int tokenIndex = 0;
     private final String className;
 
-    private static final Map<String, TokenKind> KEYWORDS = new HashMap<String, TokenKind>();
+    /** Returns an unmodifiable view of the token list. */
+    public List<Token> getTokens() {
+        return Collections.unmodifiableList(tokens);
+    }
+
+    private static final Map<String, TokenKind> KEYWORDS;
 
     static {
-        KEYWORDS.put("class", TokenKind.Class);
-        KEYWORDS.put("main", TokenKind.Main);
-        KEYWORDS.put("true", TokenKind.True);
-        KEYWORDS.put("false", TokenKind.False);
-        KEYWORDS.put("void", TokenKind.Void);
-        KEYWORDS.put("String", TokenKind.StringType);
-        KEYWORDS.put("int", TokenKind.Int);
-        KEYWORDS.put("bool", TokenKind.Bool);
-        KEYWORDS.put("float", TokenKind.Float);
-        KEYWORDS.put("double", TokenKind.Double);
-        KEYWORDS.put("if", TokenKind.If);
-        KEYWORDS.put("else", TokenKind.Else);
-        KEYWORDS.put("while", TokenKind.While);
-        KEYWORDS.put("for", TokenKind.For);
-        KEYWORDS.put("printf", TokenKind.Printf);
-        KEYWORDS.put("printLine", TokenKind.PrintLine);
-        KEYWORDS.put("return", TokenKind.Return);
-        KEYWORDS.put("break", TokenKind.Break);
-        KEYWORDS.put("continue", TokenKind.Continue);
+        Map<String, TokenKind> keywords = new HashMap<String, TokenKind>();
+        keywords.put("class", TokenKind.Class);
+        keywords.put("main", TokenKind.Main);
+        keywords.put("true", TokenKind.True);
+        keywords.put("false", TokenKind.False);
+        keywords.put("void", TokenKind.Void);
+        keywords.put("String", TokenKind.StringType);
+        keywords.put("int", TokenKind.Int);
+        keywords.put("bool", TokenKind.Bool);
+        keywords.put("float", TokenKind.Float);
+        keywords.put("double", TokenKind.Double);
+        keywords.put("if", TokenKind.If);
+        keywords.put("else", TokenKind.Else);
+        keywords.put("while", TokenKind.While);
+        keywords.put("for", TokenKind.For);
+        keywords.put("printf", TokenKind.Printf);
+        keywords.put("printLine", TokenKind.PrintLine);
+        keywords.put("return", TokenKind.Return);
+        keywords.put("break", TokenKind.Break);
+        keywords.put("continue", TokenKind.Continue);
+        KEYWORDS = Collections.unmodifiableMap(keywords);
     }
 
     public Lexer(File f) throws IOException {
@@ -93,7 +101,7 @@ public class Lexer {
         Token token;
         while ((token = nextToken()) != null) {
             tokens.add(token);
-            if (token.kind == TokenKind.EOF) {
+            if (token.getKind() == TokenKind.EOF) {
                 break;
             }
         }
@@ -151,16 +159,26 @@ public class Lexer {
         return c;
     }
 
-    private void skipWhitespace() {
+    private void skipTrivia() {
         while (position < source.length()) {
             char c = peek();
             if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
                 advance();
+            } else if (c == '/' && peek(1) == '/') {
+                skipLineComment();
             } else if (c == '/' && peek(1) == '*') {
                 skipMultilineComment();
             } else {
                 break;
             }
+        }
+    }
+
+    private void skipLineComment() {
+        advance();
+        advance();
+        while (position < source.length() && peek() != '\n') {
+            advance();
         }
     }
 
@@ -231,7 +249,22 @@ public class Lexer {
         throw lexicalError("unclosed string literal", startLine, startColumn);
     }
 
+    private Token scanIdentifier(int startLine, int startColumn) {
+        StringBuilder lexeme = new StringBuilder();
+        while (isIdentifierPart(peek())) {
+            lexeme.append(advance());
+        }
+
+        String text = lexeme.toString();
+        TokenKind kind = KEYWORDS.get(text);
+        return new Token(kind == null ? TokenKind.Id : kind, text, startLine, startColumn);
+    }
+
     private Token scanNumberLiteral(int startLine, int startColumn) {
+        if (peek() == '0' && (peek(1) == 'x' || peek(1) == 'X')) {
+            return scanHexadecimalInteger(startLine, startColumn);
+        }
+
         StringBuilder lexeme = new StringBuilder();
         boolean hasDot = false;
         boolean hasExponent = false;
@@ -239,9 +272,6 @@ public class Lexer {
         if (peek() == '.') {
             hasDot = true;
             lexeme.append(advance());
-            if (!Character.isDigit(peek())) {
-                throw lexicalError("invalid floating-point literal", startLine, startColumn);
-            }
         }
 
         while (Character.isDigit(peek())) {
@@ -279,82 +309,71 @@ public class Lexer {
             lexeme.append(advance());
             return new Token(TokenKind.DoubleLiteral, lexeme.toString(), startLine, startColumn);
         }
-
         if (hasExponent) {
             return new Token(TokenKind.DoubleLiteral, lexeme.toString(), startLine, startColumn);
         }
         if (hasDot) {
             return new Token(TokenKind.FloatLiteral, lexeme.toString(), startLine, startColumn);
         }
-        return new Token(TokenKind.Num, lexeme.toString(), startLine, startColumn);
+
+        String text = lexeme.toString();
+        if (isInvalidOctal(text)) {
+            throw lexicalError("invalid octal integer literal '" + text + "'", startLine, startColumn);
+        }
+        validateIntegerRange(text, startLine, startColumn);
+        return new Token(TokenKind.Num, text, startLine, startColumn);
     }
 
-    private LexerState getNextState(LexerState state, char c) {
-        switch (state) {
-            case START:
-                if (isIdentifierStart(c)) return LexerState.IN_ID;
-                if (Character.isDigit(c)) return LexerState.IN_NUM;
-                if (c == '"') return LexerState.IN_STRING;
-                if (c == '=') return LexerState.IN_ASSIGN;
-                if (c == '<') return LexerState.IN_LT;
-                if (c == '>') return LexerState.IN_GT;
-                if (c == '!') return LexerState.IN_NOT;
-                if (c == '&') return LexerState.IN_AND;
-                if (c == '|') return LexerState.IN_OR;
-                if (c == '/') return LexerState.IN_DIV;
-                if (isSingleCharToken(c)) return LexerState.DONE;
-                if (c == '\0') return LexerState.DONE;
-                return LexerState.ERROR;
+    private Token scanHexadecimalInteger(int startLine, int startColumn) {
+        StringBuilder lexeme = new StringBuilder();
+        lexeme.append(advance());
+        lexeme.append(advance());
 
-            case IN_ID:
-                if (isIdentifierPart(c)) return LexerState.IN_ID;
-                return LexerState.DONE;
+        if (!isHexDigit(peek())) {
+            if (isIdentifierPart(peek())) {
+                throw lexicalError("invalid hexadecimal integer literal", startLine, startColumn);
+            }
+            throw lexicalError("hexadecimal integer literal requires at least one digit",
+                    startLine, startColumn);
+        }
+        while (isHexDigit(peek())) {
+            lexeme.append(advance());
+        }
+        if (isIdentifierPart(peek())) {
+            throw lexicalError("invalid hexadecimal integer literal", startLine, startColumn);
+        }
 
-            case IN_NUM:
-                if (Character.isDigit(c)) return LexerState.IN_NUM;
-                if (c == '.') return LexerState.IN_FLOAT;
-                return LexerState.DONE;
+        String text = lexeme.toString();
+        validateIntegerRange(text, startLine, startColumn);
+        return new Token(TokenKind.Num, text, startLine, startColumn);
+    }
 
-            case IN_FLOAT:
-                if (Character.isDigit(c)) return LexerState.IN_FLOAT;
-                return LexerState.DONE;
-
-            case IN_STRING:
-                if (c == '"') return LexerState.DONE;
-                if (c == '\0' || c == '\n') return LexerState.ERROR;
-                return LexerState.IN_STRING;
-
-            case IN_COMMENT:
-                if (c == '\n' || c == '\0') return LexerState.DONE;
-                return LexerState.IN_COMMENT;
-
-            case IN_ASSIGN:
-            case IN_LT:
-            case IN_GT:
-            case IN_NOT:
-                return LexerState.DONE;
-
-            case IN_AND:
-                if (c == '&') return LexerState.DONE;
-                return LexerState.ERROR;
-
-            case IN_OR:
-                if (c == '|') return LexerState.DONE;
-                return LexerState.ERROR;
-
-            case IN_DIV:
-                if (c == '/') return LexerState.IN_COMMENT;
-                return LexerState.DONE;
-
-            default:
-                return LexerState.ERROR;
+    private void validateIntegerRange(String text, int startLine, int startColumn) {
+        try {
+            IntegerLiterals.parse(text);
+        } catch (NumberFormatException e) {
+            throw lexicalError("integer literal out of range '" + text + "'",
+                    startLine, startColumn);
         }
     }
 
-    private boolean isSingleCharToken(char c) {
-        return c == '+' || c == '-' || c == '*' || c == '%' ||
-               c == '{' || c == '}' || c == '(' || c == ')' ||
-               c == '[' || c == ']' || c == ';' || c == ',' || c == '.';
+    private boolean isInvalidOctal(String text) {
+        if (text.length() <= 1 || text.charAt(0) != '0') {
+            return false;
+        }
+        for (int i = 1; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '8' || c == '9') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isHexDigit(char c) {
+        return c >= '0' && c <= '9'
+                || c >= 'a' && c <= 'f'
+                || c >= 'A' && c <= 'F';
     }
 
     private boolean isIdentifierStart(char c) {
@@ -365,154 +384,85 @@ public class Lexer {
         return Character.isLetterOrDigit(c) || c == '_';
     }
 
-    private TokenKind getSingleCharTokenKind(char c) {
-        switch (c) {
-            case '+': return TokenKind.Add;
-            case '-': return TokenKind.Sub;
-            case '*': return TokenKind.Mul;
-            case '%': return TokenKind.Mod;
-            case '{': return TokenKind.Lbrace;
-            case '}': return TokenKind.Rbrace;
-            case '(': return TokenKind.Lparen;
-            case ')': return TokenKind.Rparen;
-            case '[': return TokenKind.Lbracket;
-            case ']': return TokenKind.Rbracket;
-            case ';': return TokenKind.Semicolon;
-            case ',': return TokenKind.Comma;
-            case '.': return TokenKind.Dot;
-            default: return TokenKind.Unknown;
+    private Token scanOperatorOrDelimiter(int startLine, int startColumn) {
+        char first = advance();
+        switch (first) {
+            case '+': return token(TokenKind.Add, first, startLine, startColumn);
+            case '-': return token(TokenKind.Sub, first, startLine, startColumn);
+            case '*': return token(TokenKind.Mul, first, startLine, startColumn);
+            case '/': return token(TokenKind.Div, first, startLine, startColumn);
+            case '%': return token(TokenKind.Mod, first, startLine, startColumn);
+            case '{': return token(TokenKind.Lbrace, first, startLine, startColumn);
+            case '}': return token(TokenKind.Rbrace, first, startLine, startColumn);
+            case '(': return token(TokenKind.Lparen, first, startLine, startColumn);
+            case ')': return token(TokenKind.Rparen, first, startLine, startColumn);
+            case '[': return token(TokenKind.Lbracket, first, startLine, startColumn);
+            case ']': return token(TokenKind.Rbracket, first, startLine, startColumn);
+            case ';': return token(TokenKind.Semicolon, first, startLine, startColumn);
+            case ',': return token(TokenKind.Comma, first, startLine, startColumn);
+            case '.': return token(TokenKind.Dot, first, startLine, startColumn);
+            case '=': return scanOptionalEquals(TokenKind.Assign, TokenKind.EQ,
+                    first, startLine, startColumn);
+            case '<': return scanOptionalEquals(TokenKind.LT, TokenKind.LTE,
+                    first, startLine, startColumn);
+            case '>': return scanOptionalEquals(TokenKind.GT, TokenKind.GTE,
+                    first, startLine, startColumn);
+            case '!': return scanOptionalEquals(TokenKind.Not, TokenKind.NEQ,
+                    first, startLine, startColumn);
+            case '&':
+                if (peek() == '&') {
+                    advance();
+                    return new Token(TokenKind.And, "&&", startLine, startColumn);
+                }
+                throw lexicalError("illegal logical operator '&', did you mean '&&'?",
+                        startLine, startColumn);
+            case '|':
+                if (peek() == '|') {
+                    advance();
+                    return new Token(TokenKind.Or, "||", startLine, startColumn);
+                }
+                throw lexicalError("illegal logical operator '|', did you mean '||'?",
+                        startLine, startColumn);
+            default:
+                throw lexicalError("illegal character '" + printable(first) + "'",
+                        startLine, startColumn);
         }
     }
 
+    private Token scanOptionalEquals(TokenKind singleKind, TokenKind pairKind,
+                                     char first, int startLine, int startColumn) {
+        if (peek() == '=') {
+            advance();
+            return new Token(pairKind, String.valueOf(first) + '=', startLine, startColumn);
+        }
+        return token(singleKind, first, startLine, startColumn);
+    }
+
+    private Token token(TokenKind kind, char lexeme, int lineNumber, int columnNumber) {
+        return new Token(kind, String.valueOf(lexeme), lineNumber, columnNumber);
+    }
+
     private Token nextToken() {
-        skipWhitespace();
+        skipTrivia();
 
         if (position >= source.length()) {
             return new Token(TokenKind.EOF, "EOF", line, column);
         }
 
-        LexerState state = LexerState.START;
-        StringBuilder lexeme = new StringBuilder();
         int startLine = line;
         int startColumn = column;
         char first = peek();
 
+        if (isIdentifierStart(first)) {
+            return scanIdentifier(startLine, startColumn);
+        }
         if (first == '"') {
             return scanStringLiteral(startLine, startColumn);
         }
         if (Character.isDigit(first) || (first == '.' && Character.isDigit(peek(1)))) {
             return scanNumberLiteral(startLine, startColumn);
         }
-
-        while (state != LexerState.DONE && state != LexerState.ERROR) {
-            char c = peek();
-            LexerState nextState = getNextState(state, c);
-
-            if (nextState == LexerState.DONE) {
-                if (shouldConsumeOnDone(state, c)) {
-                    lexeme.append(advance());
-                }
-                if (state == LexerState.IN_COMMENT) {
-                    return nextToken();
-                }
-                break;
-            } else if (nextState == LexerState.ERROR) {
-                if (state == LexerState.START) {
-                    advance();
-                    throw lexicalError("illegal character '" + printable(c) + "'", startLine, startColumn);
-                }
-                throw lexicalError(errorMessageForState(state), startLine, startColumn);
-            } else {
-                lexeme.append(advance());
-                state = nextState;
-            }
-        }
-
-        return makeToken(state, lexeme.toString(), startLine, startColumn);
-    }
-
-    private boolean shouldConsumeOnDone(LexerState state, char c) {
-        switch (state) {
-            case START:
-                return isSingleCharToken(c);
-            case IN_STRING:
-                return c == '"';
-            case IN_ASSIGN:
-                return c == '=';
-            case IN_LT:
-                return c == '=';
-            case IN_GT:
-                return c == '=';
-            case IN_NOT:
-                return c == '=';
-            case IN_AND:
-                return c == '&';
-            case IN_OR:
-                return c == '|';
-            case IN_DIV:
-                return false;
-            default:
-                return false;
-        }
-    }
-
-    private Token makeToken(LexerState state, String lexeme, int line, int column) {
-        switch (state) {
-            case START:
-                if (lexeme.length() == 1) {
-                    return new Token(getSingleCharTokenKind(lexeme.charAt(0)), lexeme, line, column);
-                }
-                break;
-
-            case IN_ID:
-                TokenKind kind = KEYWORDS.get(lexeme);
-                if (kind != null) {
-                    return new Token(kind, lexeme, line, column);
-                }
-                return new Token(TokenKind.Id, lexeme, line, column);
-
-            case IN_NUM:
-                return new Token(TokenKind.Num, lexeme, line, column);
-
-            case IN_FLOAT:
-                return new Token(TokenKind.FloatLiteral, lexeme, line, column);
-
-            case IN_STRING:
-                String str = lexeme.substring(1);
-                if (str.endsWith("\"")) {
-                    str = str.substring(0, str.length() - 1);
-                }
-                return new Token(TokenKind.StringLiteral, str, line, column);
-
-            case IN_ASSIGN:
-                if (lexeme.equals("==")) return new Token(TokenKind.EQ, lexeme, line, column);
-                return new Token(TokenKind.Assign, lexeme, line, column);
-
-            case IN_LT:
-                if (lexeme.equals("<=")) return new Token(TokenKind.LTE, lexeme, line, column);
-                return new Token(TokenKind.LT, lexeme, line, column);
-
-            case IN_GT:
-                if (lexeme.equals(">=")) return new Token(TokenKind.GTE, lexeme, line, column);
-                return new Token(TokenKind.GT, lexeme, line, column);
-
-            case IN_NOT:
-                if (lexeme.equals("!=")) return new Token(TokenKind.NEQ, lexeme, line, column);
-                return new Token(TokenKind.Not, lexeme, line, column);
-
-            case IN_AND:
-                return new Token(TokenKind.And, lexeme, line, column);
-
-            case IN_OR:
-                return new Token(TokenKind.Or, lexeme, line, column);
-
-            case IN_DIV:
-                return new Token(TokenKind.Div, lexeme, line, column);
-
-            default:
-                break;
-        }
-        throw lexicalError("unknown token '" + lexeme + "'", line, column);
+        return scanOperatorOrDelimiter(startLine, startColumn);
     }
 
     private LexException lexicalError(String message, int lineNumber, int columnNumber) {
@@ -530,19 +480,6 @@ public class Lexer {
             result.append('^');
         }
         return new LexException(result.toString());
-    }
-
-    private String errorMessageForState(LexerState state) {
-        if (state == LexerState.IN_STRING) {
-            return "unclosed string literal";
-        }
-        if (state == LexerState.IN_AND) {
-            return "illegal logical operator '&', did you mean '&&'?";
-        }
-        if (state == LexerState.IN_OR) {
-            return "illegal logical operator '|', did you mean '||'?";
-        }
-        return "invalid token";
     }
 
     private String printable(char c) {

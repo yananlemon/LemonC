@@ -5,6 +5,7 @@ import site.ilemon.ast.Ast.*;
 import site.ilemon.ast.Ast.Type.TypeKind;
 import site.ilemon.codegen.ast.Ast;
 import site.ilemon.codegen.ast.Label;
+import site.ilemon.lexer.IntegerLiterals;
 import site.ilemon.visitor.ISemanticVisitor;
 
 import java.util.ArrayList;
@@ -450,18 +451,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
     private void translateLocalDeclare(Declare.DeclareSingle declareSingle) {
         Ast.Declare.DeclareSingle local = toCodegenDeclare(declareSingle);
         this.indexTable.put(declareSingle.getId(), this.index);
-        if (isSourceArrayType(declareSingle.getType())) {
-            int size = arraySize(declareSingle.getType());
-            if (size <= 0) {
-                throw new CompilerException("[代码生成] 局部数组大小必须为正整数: " + declareSingle.getId());
-            }
-            emit(new Ast.Stmt.Ldc(size));
-            emit(new Ast.Stmt.Newarray(arrayElementType(declareSingle.getType())));
-            emit(new Ast.Stmt.Astore(this.index));
-            this.index++;
-        } else {
-            this.index += localSlots(local.type);
-        }
+        this.index += localSlots(local.type);
     }
 
     private void processCallArgument(Expr.T expr, Ast.Type.T expectedType) {
@@ -546,6 +536,12 @@ public class TranslatorVisitor implements ISemanticVisitor {
     @Override
     public void visit(Expr.Not obj) {
         emitBooleanValue(obj);
+    }
+
+    @Override
+    public void visit(Expr.UnaryMinus obj) {
+        Expr.Sub synthetic = new Expr.Sub(new Expr.Number(new site.ilemon.ast.Ast.Type.Int(), 0, obj.getLineNum()), obj.getExpr(), obj.getLineNum());
+        this.visit(synthetic);
     }
 
     @Override
@@ -747,7 +743,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
     @Override
     public void visit(Expr.Number obj) {
         if (obj.getType() instanceof Type.Int) {
-            emit(new Ast.Stmt.Ldc(Integer.parseInt(obj.getValue().toString())));
+            emit(new Ast.Stmt.Ldc(IntegerLiterals.parse(obj.getValue().toString())));
             this.type = new Ast.Type.Int();
         } else if (obj.getType() instanceof Type.Float) {
             emit(new Ast.Stmt.Ldc(Float.parseFloat(obj.getValue().toString())));
@@ -913,6 +909,26 @@ public class TranslatorVisitor implements ISemanticVisitor {
         obj.accept(this);
     }
 
+    @Override
+    public void visit(Stmt.VarDecl obj) {
+        Declare.DeclareSingle declaration = obj.getDeclaration();
+        if (isSourceArrayType(declaration.getType())) {
+            int size = arraySize(declaration.getType());
+            if (size <= 0) {
+                throw new CompilerException("[代码生成] 局部数组大小必须为正整数: "
+                        + declaration.getId());
+            }
+            emit(new Ast.Stmt.Ldc(size));
+            emit(new Ast.Stmt.Newarray(arrayElementType(declaration.getType())));
+            emit(new Ast.Stmt.Astore(lookupIndex(declaration.getId())));
+        }
+        if (obj.getInitializer() != null) {
+            visit(new Stmt.Assign(
+                    new Expr.Id(declaration.getId(), declaration.getType(), obj.getLineNum()),
+                    obj.getInitializer(), obj.getLineNum()));
+        }
+    }
+
 
     @Override
     public void visit(Stmt.Block obj) {
@@ -1000,6 +1016,11 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Stmt.Return obj) {
+        if (obj.getExpr() == null) {
+            emit(new Ast.Stmt.Vreturn());
+            this.type = new Ast.Type.Void();
+            return;
+        }
         if ( checkWhetherBoolExpression(obj.getExpr()) ||  ( obj.getExpr() instanceof Expr.Call && ((Expr.Call)obj.getExpr()).getReturnType() instanceof Type.Bool)) {
             emitBooleanValue(obj.getExpr());
         } else {

@@ -1,4 +1,6 @@
-LemonC 包括完整的编译器前端，目标代码是Java 字节码，可以运行在JVM之上。
+> 当前状态说明：本文是早期编译器说明，保留了 JVM 单后端时期的介绍。当前 LemonC 已经引入 typed LemonIR、LemonVM 后端、更多语言特性和双后端一致性测试。当前实现请以 `docs/ARCHITECTURE.md`、`docs/LEMONC_FEATURES.md` 和源码为准。
+
+LemonC 包括完整的编译器前端、typed LemonIR 中间层、JVM 后端和 LemonVM 后端。默认目标代码可以生成 Java 字节码运行在 JVM 之上，也可以通过 `--target vm` / `--run-vm` 走自研 LemonVM。
 [toc]
 # 1 LemonC介绍
 
@@ -8,14 +10,14 @@ Lemon语言支持的运算符见下表：
 优先级 | 运算符|说明
 ---|---|---
 2|!|逻辑非
-3|*,/|乘，除
+3|*,/,%|乘，除，取模
 4|+,-|加，减
-6|>,<,|
+6|>,<,>=,<=,==,!=|比较
 11|&&|逻辑与
 12|\|\||逻辑或
 14|=|赋值
 
-**>=,<=,==,!=** 这些运算符暂不支持，它们的实现非常简单，和LemonC中已经实现的>,<非常类似。
+当前实现已支持 `>=`、`<=`、`==`、`!=`，并覆盖 int/float/double 的比较语义。
 
 ## 1.2 关键字
 LemonC中的关键字是Java语言的子集，下表列出了关键字：  
@@ -27,17 +29,23 @@ void|
 main|
 int|整型数字
 float|浮点型数字
+double|双精度浮点数字
 bool|
 if|
+else|
 true|
 false|
 while|
+for|
+break|
+continue|
+return|
 printf|
-printNewLine|
+printLine|
 
-~~在LemonC的源代码中，保留了bool关键字，但是并不支持直接在控制流语句中使用bool类型的变量，后续版本可能考虑支持。~~
+当前实现支持 bool 变量、bool 字面量、逻辑表达式和控制流条件中的 bool 类型。
 ## 1.3 控制流
-LemonC中的控制流只有两种，if和while。
+LemonC 当前支持 `if/else`、`while`、`for`、`break` 和 `continue`。
 if的代码示例如下所示：
 ```
 int a;
@@ -48,7 +56,7 @@ if( !( 1 > 0 ) || !(10 > 9) && (5 < 4)   ){
 }
 printf("a=%d\n",a);// 13
 ```
-while的代码示例如下所示，while不支持break。
+while 的代码示例如下所示，循环内部支持 `break` 和 `continue`。
 ```
 class Iteration02{
 	void main(){
@@ -67,7 +75,7 @@ class Iteration02{
 其中bool 表达式支持and，or，not（即&&,||,!），逻辑运算符的优先级请参考1.1运算符。
 
 # 2 JVM字节码介绍
-在LemonC中，用到了如下JVM指令：
+JVM 后端由 LemonIR 降低到 JVM 指令 IR，再由 `ByteCodeGenerator` 生成 Jasmin。LemonC 中用到了如下 JVM 指令：
 1. 加载和存储指令
 2. 算术指令
 3. 转移指令
@@ -104,7 +112,7 @@ if_icmplt | 如果次栈顶元素小于栈顶则跳转到指定标号处执行
 fcmpl | compare two floats. If same, pushes 0; else if value 2 greater, pushes 1; else pushes -1. Returns -1 on NaN.
 goto | 无条件跳转到指定标号处执行
 
-事实上，JVM还支持很多转移指令（if_icmpge,if_icmple,ifeq,ifne）,这也是实现>=,<=,==,!=所需要做的事情。  
+当前实现已经使用相关转移指令支持 `>=`、`<=`、`==`、`!=` 等比较。
 
 ## 2.4 方法调用和返回指令
 方法调用和返回指令：  

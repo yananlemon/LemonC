@@ -1,5 +1,8 @@
 # LemonC JVM Compiler Delivery
 
+> Current note: LemonC now also has a typed LemonIR layer and a LemonVM backend. This file records
+> the JVM delivery scope; for the current whole-project architecture, see `docs/ARCHITECTURE.md`.
+
 This delivery scope is the JVM backend compiler. Experimental native/x86 work is kept under
 `tools/native-experiment/` and is not part of the main Maven build or scoring baseline.
 
@@ -29,7 +32,7 @@ mvn -e clean test
 Expected result:
 
 ```text
-Tests run: 153, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 253, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 

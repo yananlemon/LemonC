@@ -413,6 +413,10 @@ public String name;
             public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
 }
 
+        public static class Vreturn extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+}
+
         public static class Istore extends T {
             public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
 public int index;

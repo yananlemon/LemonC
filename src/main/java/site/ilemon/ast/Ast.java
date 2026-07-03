@@ -112,6 +112,26 @@ public class Ast {
             }
         }
 
+        public static class VarDecl extends T {
+            private Ast.Declare.DeclareSingle declaration;
+            private Ast.Expr.T initializer;
+
+            public Ast.Declare.DeclareSingle getDeclaration() { return this.declaration; }
+            public Ast.Expr.T getInitializer() { return this.initializer; }
+            public void setInitializer(Ast.Expr.T initializer) { this.initializer = initializer; }
+
+            public VarDecl(Ast.Declare.DeclareSingle declaration, Ast.Expr.T initializer) {
+                this.declaration = declaration;
+                this.initializer = initializer;
+                this.setLineNum(declaration.getLineNum());
+            }
+
+            @Override
+            public void accept(ISemanticVisitor v) {
+                v.visit(this);
+            }
+        }
+
         public static class Block extends T{
             private ArrayList<T> stmts;
             public ArrayList<T> getStmts() { return this.stmts; }
@@ -499,101 +519,65 @@ public class Ast {
             public abstract void accept(ISemanticVisitor v);
         }
 
+        public static abstract class BinaryExpr extends T {
+            private Ast.Expr.T left;
+            private Ast.Expr.T right;
+            public Ast.Expr.T getLeft() { return this.left; }
+            public void setLeft(Ast.Expr.T left) { this.left = left; }
+            public Ast.Expr.T getRight() { return this.right; }
+            public void setRight(Ast.Expr.T right) { this.right = right; }
+            public BinaryExpr(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                this.left = left;
+                this.right = right;
+                this.setLineNum(lineNum);
+            }
+        }
+
         /** 四则运算表达式 **/
-        public static class Add extends T{
-            private Ast.Expr.T left;
-            private Ast.Expr.T right;
-            public Ast.Expr.T getLeft() { return this.left; }
-            public void setLeft(Ast.Expr.T left) { this.left = left; }
-            public Ast.Expr.T getRight() { return this.right; }
-            public void setRight(Ast.Expr.T right) { this.right = right; }
-
-            public Add(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class Add extends BinaryExpr {
+            public Add(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
             }
         }
 
-        public static class Sub extends T{
-            private Ast.Expr.T left;
-            private Ast.Expr.T right;
-            public Ast.Expr.T getLeft() { return this.left; }
-            public void setLeft(Ast.Expr.T left) { this.left = left; }
-            public Ast.Expr.T getRight() { return this.right; }
-            public void setRight(Ast.Expr.T right) { this.right = right; }
-
-            public Sub(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class Sub extends BinaryExpr {
+            public Sub(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
             }
         }
 
-        public static class Mul extends T{
-            private Expr.T left;
-            private Expr.T right;
-            public Expr.T getLeft() { return this.left; }
-            public void setLeft(Expr.T left) { this.left = left; }
-            public Expr.T getRight() { return this.right; }
-            public void setRight(Expr.T right) { this.right = right; }
-
-            public Mul(Expr.T left, Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class Mul extends BinaryExpr {
+            public Mul(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
             }
         }
 
-        public static class Div extends T{
-            private Expr.T left;
-            private Expr.T right;
-            public Expr.T getLeft() { return this.left; }
-            public void setLeft(Expr.T left) { this.left = left; }
-            public Expr.T getRight() { return this.right; }
-            public void setRight(Expr.T right) { this.right = right; }
-
-            public Div(Expr.T left, Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class Div extends BinaryExpr {
+            public Div(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
             }
         }
 
-        public static class Mod extends T{
-            private Expr.T left;
-            private Expr.T right;
-            public Expr.T getLeft() { return this.left; }
-            public void setLeft(Expr.T left) { this.left = left; }
-            public Expr.T getRight() { return this.right; }
-            public void setRight(Expr.T right) { this.right = right; }
-
-            public Mod(Expr.T left, Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class Mod extends BinaryExpr {
+            public Mod(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
@@ -601,39 +585,20 @@ public class Ast {
         }
 
         /** 逻辑运算表达式 **/
-        public static class And extends T{
-            private Expr.T left;
-            private Expr.T right;
-            public Expr.T getLeft() { return this.left; }
-            public void setLeft(Expr.T left) { this.left = left; }
-            public Expr.T getRight() { return this.right; }
-            public void setRight(Expr.T right) { this.right = right; }
-            public And(Expr.T left, Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class And extends BinaryExpr {
+            public And(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
             }
         }
 
-        public static class Or extends T{
-            private Expr.T left;
-            private Expr.T right;
-            public Expr.T getLeft() { return this.left; }
-            public void setLeft(Expr.T left) { this.left = left; }
-            public Expr.T getRight() { return this.right; }
-            public void setRight(Expr.T right) { this.right = right; }
-
-            public Or(Expr.T left, Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class Or extends BinaryExpr {
+            public Or(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
@@ -649,6 +614,20 @@ public class Ast {
                 this.expr = expr;
             }
 
+            @Override
+            public void accept(ISemanticVisitor v) {
+                v.visit(this);
+            }
+        }
+
+        public static class UnaryMinus extends T{
+            private Expr.T expr;
+            public Expr.T getExpr() { return this.expr; }
+            public void setExpr(Expr.T expr) { this.expr = expr; }
+            public UnaryMinus(Expr.T expr, int lineNumber) {
+                this.expr = expr;
+                this.setLineNum(lineNumber);
+            }
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
@@ -692,20 +671,10 @@ public class Ast {
 
         /** 比较运算表达式 **/
         // >
-        public static class GT extends T{
-            private Ast.Expr.T left;
-            private Ast.Expr.T right;
-            public Ast.Expr.T getLeft() { return this.left; }
-            public void setLeft(Ast.Expr.T left) { this.left = left; }
-            public Ast.Expr.T getRight() { return this.right; }
-            public void setRight(Ast.Expr.T right) { this.right = right; }
-
-            public GT(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class GT extends BinaryExpr {
+            public GT(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
@@ -713,20 +682,10 @@ public class Ast {
         }
 
         // <
-        public static class LT extends T{
-            private Ast.Expr.T left;
-            private Ast.Expr.T right;
-            public Ast.Expr.T getLeft() { return this.left; }
-            public void setLeft(Ast.Expr.T left) { this.left = left; }
-            public Ast.Expr.T getRight() { return this.right; }
-            public void setRight(Ast.Expr.T right) { this.right = right; }
-
-            public LT(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class LT extends BinaryExpr {
+            public LT(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
@@ -734,20 +693,10 @@ public class Ast {
         }
 
         // >=
-        public static class GTE extends T{
-            private Ast.Expr.T left;
-            private Ast.Expr.T right;
-            public Ast.Expr.T getLeft() { return this.left; }
-            public void setLeft(Ast.Expr.T left) { this.left = left; }
-            public Ast.Expr.T getRight() { return this.right; }
-            public void setRight(Ast.Expr.T right) { this.right = right; }
-
-            public GTE(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class GTE extends BinaryExpr {
+            public GTE(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
@@ -755,20 +704,10 @@ public class Ast {
         }
 
         // <=
-        public static class LTE extends T{
-            private Ast.Expr.T left;
-            private Ast.Expr.T right;
-            public Ast.Expr.T getLeft() { return this.left; }
-            public void setLeft(Ast.Expr.T left) { this.left = left; }
-            public Ast.Expr.T getRight() { return this.right; }
-            public void setRight(Ast.Expr.T right) { this.right = right; }
-
-            public LTE(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class LTE extends BinaryExpr {
+            public LTE(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
@@ -776,20 +715,10 @@ public class Ast {
         }
 
         // ==
-        public static class EQ extends T{
-            private Ast.Expr.T left;
-            private Ast.Expr.T right;
-            public Ast.Expr.T getLeft() { return this.left; }
-            public void setLeft(Ast.Expr.T left) { this.left = left; }
-            public Ast.Expr.T getRight() { return this.right; }
-            public void setRight(Ast.Expr.T right) { this.right = right; }
-
-            public EQ(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class EQ extends BinaryExpr {
+            public EQ(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
@@ -797,20 +726,10 @@ public class Ast {
         }
 
         // !=
-        public static class NEQ extends T{
-            private Ast.Expr.T left;
-            private Ast.Expr.T right;
-            public Ast.Expr.T getLeft() { return this.left; }
-            public void setLeft(Ast.Expr.T left) { this.left = left; }
-            public Ast.Expr.T getRight() { return this.right; }
-            public void setRight(Ast.Expr.T right) { this.right = right; }
-
-            public NEQ(Ast.Expr.T left, Ast.Expr.T right,int lineNum) {
-                this.setLeft(left);
-                this.setRight(right);
-                this.setLineNum(lineNum);
+        public static class NEQ extends BinaryExpr {
+            public NEQ(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+                super(left, right, lineNum);
             }
-
             @Override
             public void accept(ISemanticVisitor v) {
                 v.visit(this);

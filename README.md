@@ -2,32 +2,28 @@
 
 **LemonC is a teaching-oriented C-like compiler written in Java.**
 
-It compiles Lemon source code to real JVM `.class` files through lexical analysis, recursive descent parsing, semantic analysis, AST optimization, backpatching-based control-flow translation, Jasmin assembly, and bytecode generation.
+It compiles Lemon source code through lexical analysis, recursive descent parsing, semantic analysis, AST optimization, typed LemonIR, and dual backends for JVM bytecode and LemonVM execution.
 
-LemonC 是一个面向编译原理教学与实践的小型 C-like 编译器。它不是只停留在 AST 或三地址码展示层，而是把 `.lemon` 源程序真正编译成 JVM 字节码，并用 JVM 执行结果做端到端回归验证。
-
-<p align="center">
-  <img src="./docs/assets/lemonc-pipeline.png" alt="LemonC compiler pipeline" width="100%">
-</p>
+LemonC 是一个面向编译原理教学与实践的小型 C-like 编译器。它不是只停留在 AST 或三地址码展示层，而是把 `.lemon` 源程序降低到类型化 LemonIR，再分别生成 JVM 字节码或 LemonVM 字节码，并用双后端输出一致性做端到端回归验证。
 
 ```text
-Java 8+ | Maven | JVM bytecode | 176 tests passing | 82 examples | MIT License
+Java 8+ | Maven | LemonIR | JVM + LemonVM | 253 tests passing | 82 examples | MIT License
 ```
 
 ## Why LemonC
 
 | What you get | Why it matters |
 |---|---|
-| Complete compiler pipeline | Lexer, parser, semantic analyzer, optimizer, IR translator, bytecode generator |
-| Real JVM execution | Examples compile to `.class` and run on a standard JVM |
+| Complete compiler pipeline | Lexer, parser, semantic analyzer, optimizer, LemonIR, JVM backend, LemonVM backend |
+| Real backend execution | Examples compile to `.class` for JVM and to LemonVM bytecode for the custom VM |
 | Classic compiler theory | Recursive descent parsing, Visitor-based semantic analysis, backpatching, stack-machine codegen |
-| Teaching-friendly visibility | CLI can dump tokens, AST, and JVM IR |
-| Regression confidence | 82 example programs are checked against real JVM stdout |
+| Teaching-friendly visibility | CLI can dump tokens, AST, LemonIR, and LemonVM bytecode |
+| Regression confidence | 82 example programs are checked against real JVM and LemonVM stdout |
 | Small enough to read | A compact codebase for students who want to understand a whole compiler |
 
 ## At A Glance
 
-The whole project is intentionally small enough to read, but complete enough to demonstrate a real compiler pipeline from source code to JVM execution.
+The whole project is intentionally small enough to read, but complete enough to demonstrate a real compiler pipeline from source code to typed IR, JVM execution, and custom VM execution.
 
 ## 30-Second Demo
 
@@ -103,15 +99,20 @@ flowchart TB
 
     subgraph MiddleEnd
         O["site.ilemon.optimizer<br/>AST optimizer"]
+        IR["site.ilemon.ir<br/>typed LemonIR + verifier"]
     end
 
     subgraph Backend
-        T["site.ilemon.codegen.TranslatorVisitor<br/>AST to JVM IR"]
+        JIR["IrToJvmTranslator<br/>LemonIR to JVM instruction IR"]
         B["site.ilemon.codegen.ByteCodeGenerator<br/>Jasmin IL writer"]
         J["jasmin.Main<br/>IL to .class"]
+        VIR["IrToVmTranslator<br/>LemonIR to LemonVM bytecode"]
+        VM["site.ilemon.vm<br/>LemonVM interpreter"]
     end
 
-    L --> P --> S --> O --> T --> B --> J
+    L --> P --> S --> O --> IR
+    IR --> JIR --> B --> J
+    IR --> VIR --> VM
 ```
 
 | Module | Core classes | Responsibility |
@@ -121,13 +122,17 @@ flowchart TB
 | `site.ilemon.ast` | `Ast` | Define source-level expressions, statements, types, methods, and programs |
 | `site.ilemon.semantic` | `SemanticVisitor`, `MethodVarTable`, `Symbol` | Type checking, declaration checks, assignment checks, return checks |
 | `site.ilemon.optimizer` | `AstOptimizer` | Perform safe AST-level simplifications |
-| `site.ilemon.codegen` | `TranslatorVisitor`, `ByteCodeGenerator` | Translate AST to JVM IR and write Jasmin assembly |
+| `site.ilemon.ir` | `AstToIrTranslator`, `IrVerifier`, `IrToJvmTranslator`, `IrToVmTranslator` | Define typed LemonIR and lower it to JVM or LemonVM backends |
+| `site.ilemon.codegen` | `ByteCodeGenerator`, `TranslatorVisitor` | Write Jasmin assembly; `TranslatorVisitor` is the older direct AST-to-JVM path kept for tests/reference |
 | `site.ilemon.codegen.ast` | `Ast`, `Label` | Define backend JVM instruction-level IR |
+| `site.ilemon.vm` | `LemonVm`, `VmBytecodeParser`, `RuntimeStack`, `Value` | Execute LemonVM bytecode |
 | `site.ilemon.compiler` | `LemonC`, `AstPrinter`, `IrPrinter` | CLI entrypoint and teaching-friendly dumps |
+
+For the current implementation boundaries, read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Backpatching In Action
 
-LemonC uses classic backpatching for boolean expressions and flow-control statements. Boolean code generation maintains pending jump lists instead of eagerly materializing `0` or `1`.
+The legacy direct JVM translator uses classic backpatching for boolean expressions and flow-control statements. The current LemonIR pipeline represents short-circuit boolean logic as explicit control-flow blocks before lowering to each backend.
 
 For:
 
@@ -167,9 +172,9 @@ E1 && E2:
 
 This makes the project useful for students studying syntax-directed translation and control-flow generation.
 
-## JVM Output Is Tested, Not Assumed
+## Backend Output Is Tested, Not Assumed
 
-Every root example under [examples](examples) is compiled and executed by [AllExamplesJvmTest.java](src/test/java/AllExamplesJvmTest.java):
+Every root example under [examples](examples) is compiled and executed by [AllExamplesJvmTest.java](src/test/java/AllExamplesJvmTest.java) and [AllExamplesVmTest.java](src/test/java/AllExamplesVmTest.java). Additional equivalence tests compare JVM and LemonVM output through the shared LemonIR pipeline.
 
 <p align="center">
   <img src="./docs/assets/lemonc-test-loop.png" alt="LemonC end-to-end JVM regression loop" width="100%">
@@ -178,14 +183,14 @@ Every root example under [examples](examples) is compiled and executed by [AllEx
 Run the suite:
 
 ```bash
-mvn test
+mvn clean test
 ```
 
 Current coverage:
 
 ```text
-Tests run: 176, Failures: 0, Errors: 0, Skipped: 0
-82 root examples verified by real JVM execution
+Tests run: 253, Failures: 0, Errors: 0, Skipped: 0
+82 root examples verified by real JVM execution and LemonVM execution
 ```
 
 ## More Real Examples
@@ -340,14 +345,22 @@ class Demo {
 | Test class | Count | Purpose |
 |---|---:|---|
 | `AllExamplesJvmTest` | 1 | Compile every root example to `.class`, run JVM, compare stdout |
-| `AstOptimizerTest` | 5 | Verify AST optimization behavior |
+| `AllExamplesVmTest` | 1 | Compile every root example to LemonVM bytecode, run LemonVM, compare stdout |
+| `AstOptimizerTest` | 6 | Verify AST optimization behavior |
+| `BackendEquivalenceTest` | 1 | Compare JVM and LemonVM outputs through the shared LemonIR path |
 | `ByteCodeGeneratorTest` | 13 | Verify JVM bytecode and stack/local metadata |
-| `CompilerTest` | 69 | End-to-end compiler tests |
-| `ErrorTest` | 40 | Negative parse and semantic tests |
+| `CompilerTest` | 72 | End-to-end compiler tests |
+| `DiagnosticTest` | 24 | Verify source diagnostics and CLI behavior |
+| `DualBackendConsistencyTest` | 7 | Check selected examples on the LemonVM path |
+| `ErrorTest` | 48 | Negative parse and semantic tests |
+| `IrToVmTranslatorTest` | 2 | Verify IR-to-VM lowering |
+| `IrVerifierTest` | 5 | Verify LemonIR structural and type checks |
+| `LemonVmCliTest` | 4 | Verify LemonVM CLI behavior |
+| `LemonVmTest` | 21 | Verify LemonVM runtime semantics |
 | `LexerTest` | 18 | Lexer tests |
 | `ParserTest` | 18 | Parser tests |
 | `SemanticTest` | 1 | Semantic visitor smoke test |
-| `TranslatorVisitorTest` | 11 | JVM IR translation tests |
+| `TranslatorVisitorTest` | 11 | Legacy direct JVM instruction translation tests |
 
 ## Repository Map
 
@@ -358,11 +371,13 @@ src/main/java/site/ilemon
   parser/           recursive descent parser
   semantic/         symbol tables and type checking
   optimizer/        AST optimization
-  codegen/          JVM IR and Jasmin generation
+  ir/               typed LemonIR, verifier, JVM/VM lowering
+  codegen/          JVM instruction IR and Jasmin generation
+  vm/               LemonVM runtime and bytecode parser
   compiler/         CLI, AST printer, IR printer
 
 examples/           82 Lemon programs and output manifest
-docs/               feature guide and review notes
+docs/               architecture, feature guide, and review notes
 tools/              native backend experiment, kept outside main source
 src/test/java/      automated compiler tests
 ```

@@ -1,6 +1,6 @@
 # LemonC 功能手册
 
-本文档按功能维度列出 LemonC 当前支持的语言能力和编译器能力。所有“运行输出”均来自 `examples/example-output-manifest.tsv` 中的端到端 JVM 输出基线，也就是 `.lemon` 源程序经 LemonC 编译为 `.class` 后，在 JVM 上实际执行得到的结果。
+本文档按功能维度列出 LemonC 当前支持的语言能力和编译器能力。所有“运行输出”均来自 `examples/example-output-manifest.tsv` 中的端到端输出基线，也就是 `.lemon` 源程序经 LemonC 编译后，在 JVM 后端与 LemonVM 后端执行得到的一致结果。
 
 ## 1. 编译链路
 
@@ -12,10 +12,10 @@ Lemon source (.lemon)
   -> Parser AST
   -> Semantic analysis
   -> AST optimization
-  -> JVM IR
-  -> Jasmin assembly
-  -> JVM .class
-  -> JVM execution output
+  -> LemonIR
+  -> IrVerifier
+  -> JVM backend: JVM instruction IR -> Jasmin assembly -> JVM .class -> JVM execution output
+  -> VM backend: LemonVM bytecode -> LemonVM execution output
 ```
 
 命令行入口：
@@ -25,10 +25,17 @@ java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/HelloWorld.l
 java HelloWorld
 ```
 
+运行 LemonVM 后端：
+
+```bash
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/HelloWorld.lemon --run-vm
+```
+
 可选教学输出：
 
 ```bash
 java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/ModTest.lemon --dump-tokens --dump-ast --dump-ir
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/ModTest.lemon --target vm --dump-vm-bytecode
 ```
 
 ## 2. 类与 main 方法
@@ -450,6 +457,7 @@ printf("%d\n", values.length);
 int[]
 float[]
 double[]
+bool[]
 ```
 
 示例：[examples/ArrayLengthTest.lemon](../examples/ArrayLengthTest.lemon)
@@ -511,7 +519,12 @@ i=7, f=1.5, d=2.25
 // this is a comment
 ```
 
-多行注释不是当前 Lemon 语言定义的一部分。
+支持多行注释：
+
+```c
+/* this is a
+   block comment */
+```
 
 ## 17. AST 优化
 
@@ -557,15 +570,15 @@ class OptimizationTest {
 a=20,b=20
 ```
 
-## 18. 端到端 JVM 示例覆盖
+## 18. 端到端双后端示例覆盖
 
-`examples/` 根目录下的所有 `.lemon` 示例均由 `AllExamplesJvmTest` 覆盖：
+`examples/` 根目录下的所有 `.lemon` 示例均由 `AllExamplesJvmTest` 与 `AllExamplesVmTest` 覆盖，并通过 `BackendEquivalenceTest` 比对 JVM 与 LemonVM 输出：
 
 ```text
 source .lemon
-  -> LemonC compile
-  -> Jasmin assemble
+  -> LemonC compile through LemonIR
   -> JVM run
+  -> LemonVM run
   -> stdout compare with examples/example-output-manifest.tsv
 ```
 
@@ -573,7 +586,7 @@ source .lemon
 
 ```text
 82 root examples
-168 automated tests
+253 automated tests
 ```
 
 综合示例：[examples/ReliabilityCanary.lemon](../examples/ReliabilityCanary.lemon)
@@ -601,8 +614,8 @@ end
 
 | 边界 | 说明 |
 |---|---|
-| 标识符不含 `_` | 当前词法定义只支持字母数字类标识符 |
-| 不支持多行注释 | 当前只定义 `//` 单行注释 |
+| 标识符 `_` | 当前支持下划线标识符 |
+| 多行注释 | 当前支持 `/* ... */`，未闭合注释会报词法错误 |
 | 局部变量声明位于方法体前部 | 不支持任意语句位置声明变量 |
 | 无块级作用域 | `{ ... }` 不引入独立变量作用域 |
 | 无字符串变量类型 | 字符串主要用于 `printf` 字面量 |

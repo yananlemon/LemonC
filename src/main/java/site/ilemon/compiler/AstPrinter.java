@@ -83,6 +83,13 @@ public final class AstPrinter {
             Ast.Stmt.Assign node = (Ast.Stmt.Assign) stmt;
             line(depth, "Assign " + node.getId().getId());
             expr(node.getExpr(), depth + 1);
+        } else if (stmt instanceof Ast.Stmt.VarDecl) {
+            Ast.Stmt.VarDecl node = (Ast.Stmt.VarDecl) stmt;
+            Ast.Declare.DeclareSingle declaration = node.getDeclaration();
+            line(depth, "VarDecl " + type(declaration.getType()) + " " + declaration.getId());
+            if (node.getInitializer() != null) {
+                expr(node.getInitializer(), depth + 1);
+            }
         } else if (stmt instanceof Ast.Stmt.ArrayAssign) {
             Ast.Stmt.ArrayAssign node = (Ast.Stmt.ArrayAssign) stmt;
             line(depth, "ArrayAssign " + node.getArrayName());

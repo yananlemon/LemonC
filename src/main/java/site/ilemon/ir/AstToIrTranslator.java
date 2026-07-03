@@ -2,6 +2,7 @@ package site.ilemon.ir;
 
 import site.ilemon.ast.Ast;
 import site.ilemon.exception.CompilerException;
+import site.ilemon.lexer.IntegerLiterals;
 import site.ilemon.visitor.ISemanticVisitor;
 
 import java.util.ArrayList;
@@ -133,14 +134,23 @@ public class AstToIrTranslator implements ISemanticVisitor {
         }
         Ast.Expr.Number number = (Ast.Expr.Number) expr;
         String text = number.getValue().toString();
+        if (number.getType() instanceof Ast.Type.Int) {
+            int value = IntegerLiterals.parse(text);
+            if (targetType == IrType.DOUBLE) {
+                return IrValue.constDouble((double) value);
+            }
+            if (targetType == IrType.FLOAT) {
+                return IrValue.constFloat((float) value);
+            }
+            if (targetType == IrType.INT) {
+                return IrValue.constInt(value);
+            }
+        }
         if (targetType == IrType.DOUBLE) {
             return IrValue.constDouble(Double.parseDouble(text));
         }
         if (targetType == IrType.FLOAT) {
             return IrValue.constFloat(Float.parseFloat(text));
-        }
-        if (targetType == IrType.INT && number.getType() instanceof Ast.Type.Int) {
-            return IrValue.constInt(Integer.parseInt(text));
         }
         return null;
     }
@@ -281,19 +291,6 @@ public class AstToIrTranslator implements ISemanticVisitor {
 
         startBlock(obj.getId() + "_entry");
 
-        for (Ast.Declare.T local : obj.getLocals()) {
-            Ast.Declare.DeclareSingle decl = (Ast.Declare.DeclareSingle) local;
-            IrType type = toIrType(decl.getType());
-            int size = arraySize(decl.getType());
-            if (size > 0) {
-                IrInstruction newArr = new IrInstruction(IrOpcode.NEW_ARR);
-                newArr.setType(type);
-                newArr.setResult(varMap.get(decl.getId()));
-                newArr.addOperand(IrValue.constInt(size));
-                emit(newArr);
-            }
-        }
-
         for (Ast.Stmt.T stmt : obj.getStms()) {
             stmt.accept(this);
         }
@@ -316,6 +313,25 @@ public class AstToIrTranslator implements ISemanticVisitor {
             exprValue = castIfNeeded(this.lastValue, targetReg.getType());
         }
         emit(instruction(IrOpcode.MOV, targetReg.getType(), targetReg, exprValue));
+    }
+
+    @Override
+    public void visit(Ast.Stmt.VarDecl obj) {
+        Ast.Declare.DeclareSingle declaration = obj.getDeclaration();
+        IrValue target = varMap.get(declaration.getId());
+        int size = arraySize(declaration.getType());
+        if (size > 0) {
+            IrInstruction newArr = new IrInstruction(IrOpcode.NEW_ARR);
+            newArr.setType(toIrType(declaration.getType()));
+            newArr.setResult(target);
+            newArr.addOperand(IrValue.constInt(size));
+            emit(newArr);
+        }
+        if (obj.getInitializer() != null) {
+            visit(new Ast.Stmt.Assign(
+                    new Ast.Expr.Id(declaration.getId(), declaration.getType(), obj.getLineNum()),
+                    obj.getInitializer(), obj.getLineNum()));
+        }
     }
 
     @Override
@@ -599,6 +615,21 @@ public class AstToIrTranslator implements ISemanticVisitor {
     }
 
     @Override
+    public void visit(Ast.Expr.UnaryMinus obj) {
+        obj.getExpr().accept(this);
+        IrValue exprValue = this.lastValue;
+        IrType type = exprValue.getType();
+        IrValue zeroValue;
+        if (type == IrType.INT) zeroValue = IrValue.constInt(0);
+        else if (type == IrType.FLOAT) zeroValue = IrValue.constFloat(0f);
+        else if (type == IrType.DOUBLE) zeroValue = IrValue.constDouble(0d);
+        else throw new CompilerException("Cannot apply unary minus to type " + type);
+        IrValue targetReg = newVReg(type);
+        emit(instruction(IrOpcode.SUB, type, targetReg, zeroValue, exprValue));
+        this.lastValue = targetReg;
+    }
+
+    @Override
     public void visit(Ast.Expr.Call obj) {
         this.lastValue = emitCall(obj.getName(), obj.getInputParams(), true);
     }
@@ -613,7 +644,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
         Object val = obj.getValue();
         String strVal = val.toString();
         if (obj.getType() instanceof Ast.Type.Int) {
-            this.lastValue = IrValue.constInt(Integer.parseInt(strVal));
+            this.lastValue = IrValue.constInt(IntegerLiterals.parse(strVal));
         } else if (obj.getType() instanceof Ast.Type.Float) {
             this.lastValue = IrValue.constFloat(Float.parseFloat(strVal));
         } else if (obj.getType() instanceof Ast.Type.Double) {

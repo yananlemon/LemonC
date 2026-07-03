@@ -16,6 +16,8 @@ import site.ilemon.lexer.Lexer;
 import site.ilemon.lexer.Token;
 import site.ilemon.optimizer.AstOptimizer;
 import site.ilemon.parser.Parser;
+import site.ilemon.parser.ParseDiagnostic;
+import site.ilemon.parser.ParseResult;
 import site.ilemon.semantic.SemanticVisitor;
 import site.ilemon.vm.LemonVm;
 import site.ilemon.vm.Script;
@@ -66,10 +68,18 @@ public class LemonC {
 
             Lexer lexer = new Lexer(sourceFile);
             Parser parser = new Parser(lexer);
-            Ast.Program.T program = parser.parse();
+            ParseResult parseResult = parser.parseCollecting();
             if (options.dumpTokens) {
                 dumpTokens(lexer, out);
             }
+            if (parseResult.hasErrors()) {
+                err.println("compile failed: syntax analysis has errors");
+                for (ParseDiagnostic diagnostic : parseResult.getDiagnostics()) {
+                    err.println(diagnostic.getMessage());
+                }
+                return 1;
+            }
+            Ast.Program.T program = parseResult.getProgram();
 
             SemanticVisitor semantic = SemanticVisitor.collecting();
             semantic.visit(program);
@@ -231,9 +241,9 @@ public class LemonC {
 
     private static void dumpTokens(Lexer lexer, PrintStream out) {
         out.println("== TOKENS ==");
-        for (Token token : lexer.tokens) {
+        for (Token token : lexer.getTokens()) {
             out.printf("%4d:%-3d %-14s  %s%n",
-                    token.lineNumber, token.columnNumber, token.kind, token.lexeme);
+                    token.getLineNumber(), token.getColumnNumber(), token.getKind(), token.getLexeme());
         }
     }
 
