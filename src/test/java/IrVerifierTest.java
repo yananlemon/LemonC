@@ -71,6 +71,41 @@ public class IrVerifierTest {
         IrVerifier.verify(program);
     }
 
+    @Test(expected = CompilerException.class)
+    public void rejectsUndefinedVirtualRegister() {
+        IrProgram program = minimalProgram();
+        IrInstruction print = new IrInstruction(IrOpcode.PRINT);
+        print.addOperand(IrValue.vreg(99, IrType.INT));
+        mainBlock(program).getInstructions().add(0, print);
+
+        IrVerifier.verify(program);
+    }
+
+    @Test(expected = CompilerException.class)
+    public void rejectsUseBeforeDefinition() {
+        IrProgram program = minimalProgram();
+        IrInstruction print = new IrInstruction(IrOpcode.PRINT);
+        print.addOperand(IrValue.vreg(0, IrType.INT));
+        IrInstruction define = new IrInstruction(IrOpcode.MOV);
+        define.setType(IrType.INT);
+        define.setResult(IrValue.vreg(0, IrType.INT));
+        define.addOperand(IrValue.constInt(1));
+        mainBlock(program).getInstructions().add(0, print);
+        mainBlock(program).getInstructions().add(1, define);
+
+        IrVerifier.verify(program);
+    }
+
+    @Test(expected = CompilerException.class)
+    public void rejectsInstructionAfterTerminator() {
+        IrProgram program = minimalProgram();
+        IrInstruction jump = new IrInstruction(IrOpcode.JMP);
+        jump.setLabelTarget("main_entry");
+        mainBlock(program).getInstructions().add(0, jump);
+
+        IrVerifier.verify(program);
+    }
+
     private IrProgram minimalProgram() {
         IrProgram program = new IrProgram();
         program.setClassName("VerifierProgram");

@@ -16,8 +16,8 @@ public class MethodVarTable {
         this.table = new HashMap<String, Symbol>();
     }
 
-    public void put(List<Ast.Declare.T> formals, List<Ast.Declare.T> locals) {
-        for (Ast.Declare.T dec : formals) {
+    public void put(List<Ast.Declare.Base> formals, List<Ast.Declare.Base> locals) {
+        for (Ast.Declare.Base dec : formals) {
             Ast.Declare.DeclareSingle declareSingle = (Ast.Declare.DeclareSingle) dec;
             if (this.table.get(declareSingle.getId()) != null) {
                 throw new SemanticException("重复的参数 " + declareSingle.getId()
@@ -27,7 +27,7 @@ public class MethodVarTable {
                     declareSingle.getId(), declareSingle.getType(), Symbol.Kind.PARAMETER, dec.getLineNum()));
         }
 
-        for (Ast.Declare.T dec : locals) {
+        for (Ast.Declare.Base dec : locals) {
             Ast.Declare.DeclareSingle declareSingle = (Ast.Declare.DeclareSingle) dec;
             if (this.table.get(declareSingle.getId()) != null) {
                 throw new SemanticException("重复的变量 " + declareSingle.getId()
@@ -38,7 +38,7 @@ public class MethodVarTable {
         }
     }
 
-    public Ast.Type.T get(String id) {
+    public Ast.Type.Base get(String id) {
         Symbol symbol = this.table.get(id);
         return symbol == null ? null : symbol.getType();
     }
@@ -47,7 +47,7 @@ public class MethodVarTable {
         return this.table.get(id);
     }
 
-    public Ast.Type.T put(String key, Ast.Type.T value) {
+    public Ast.Type.Base put(String key, Ast.Type.Base value) {
         Symbol previous = this.table.put(key, new Symbol(key, value, Symbol.Kind.LOCAL, -1));
         return previous == null ? null : previous.getType();
     }

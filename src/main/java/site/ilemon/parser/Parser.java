@@ -6,8 +6,6 @@ import site.ilemon.lexer.Lexer;
 import site.ilemon.lexer.Token;
 import site.ilemon.lexer.TokenKind;
 import site.ilemon.exception.ParseException;
-
-import java.io.IOException;
 import java.util.ArrayList;
 
 import static site.ilemon.lexer.TokenKind.Num;
@@ -33,7 +31,7 @@ import static site.ilemon.lexer.TokenKind.Num;
  * <pre>
  * Lexer lexer = new Lexer(new File("Hello.lemon"));
  * Parser parser = new Parser(lexer);
- * Ast.Program.T ast = parser.parse();
+ * Ast.Program.Base ast = parser.parse();
  * </pre>
  *
  * @author andy
@@ -47,13 +45,13 @@ public class Parser {
 
 	private Token look;  // 当前token
 
-	private ArrayList<Ast.Declare.T> currentMethodLocals;
+	private ArrayList<Ast.Declare.Base> currentMethodLocals;
 
 	private final ArrayList<ParseDiagnostic> diagnostics = new ArrayList<ParseDiagnostic>();
 
 	private boolean collectingErrors;
 
-	public Parser(Lexer lexer) throws IOException{
+	public Parser(Lexer lexer) {
 		this.lexer=lexer;
 		lexer.lexicalAnalysis();
 		move();
@@ -67,19 +65,7 @@ public class Parser {
 	}
 
 
-	/**
-	 * 将{@code token}与当前词法分析器读到的token进行对比
-	 * @param lexeme
-	 * @throws IOException
-	 */
-	private void match(String lexeme) throws IOException{
-		if( lexeme.equals(look.getLexeme()))
-			move();
-		else
-			expected(lexeme);
-	}
-	
-	private void match(TokenKind kind) throws IOException{
+	private void match(TokenKind kind) {
 		if( kind == look.getKind() ){
 			move();
 		}else{
@@ -108,11 +94,6 @@ public class Parser {
 		return name;
 	}
 
-	/**
-	 * 语法分析入口
-	 * @return Program
-	 * @throws IOException
-	 */
 	private String formatError(String message) {
 		String sourceLine = lexer.getSourceLine(look.getLineNumber());
 		StringBuilder result = new StringBuilder();
@@ -130,16 +111,20 @@ public class Parser {
 		return result.toString();
 	}
 
-	public Ast.Program.T parse() throws IOException{
+	/**
+	 * 语法分析入口
+	 * @return Program
+	 */
+	public Ast.Program.Base parse() {
 		Ast.MainClass.MainClassSingle mainClass = parseMainClass();
-		Ast.Program.T programSingle = new Ast.Program.ProgramSingle(mainClass);
+		Ast.Program.Base programSingle = new Ast.Program.ProgramSingle(mainClass);
 		return programSingle;
 	}
 
-	public ParseResult parseCollecting() throws IOException {
+	public ParseResult parseCollecting() {
 		this.diagnostics.clear();
 		this.collectingErrors = true;
-		Ast.Program.T program = null;
+		Ast.Program.Base program = null;
 		try {
 			program = parse();
 		} catch (ParseException e) {
@@ -152,26 +137,26 @@ public class Parser {
 
 
 	// <mainClass> -> class <name> { <methodList>}
-	private Ast.MainClass.MainClassSingle parseMainClass() throws IOException {
+	private Ast.MainClass.MainClassSingle parseMainClass() {
 		Ast.MainClass.MainClassSingle mainClass = null;
-		match("class");
+		match(TokenKind.Class);
 		String className = consumeName("类名", false).getLexeme();
 		// 检查class名称是否一致
 		if( !className.equals(lexer.getClassName()) ){
 			this.error(String.format("类名 '%s' 与文件名 '%s' 不一致", className, lexer.getClassName()));
 		}
-		match("{");
-		ArrayList<Ast.Method.T> methods = parseMethodList();
-		mainClass = new Ast.MainClass.MainClassSingle(className,null,methods);
-		match("}");
-		match("EOF");
+		match(TokenKind.Lbrace);
+		ArrayList<Ast.Method.Base> methods = parseMethodList();
+		mainClass = new Ast.MainClass.MainClassSingle(className, methods);
+		match(TokenKind.Rbrace);
+		match(TokenKind.EOF);
 		//System.out.println("语法分析成功");
 		return mainClass;
 	}
 
 	// <methodList> -> <method>*
-	private ArrayList<Ast.Method.T> parseMethodList() throws IOException {
-		ArrayList<Ast.Method.T> methods = new ArrayList<Ast.Method.T>();
+	private ArrayList<Ast.Method.Base> parseMethodList() {
+		ArrayList<Ast.Method.Base> methods = new ArrayList<Ast.Method.Base>();
 		while (look.getKind() != TokenKind.Rbrace && look.getKind() != TokenKind.EOF) {
 			if (!isMethodStart(look.getKind())) {
 				ParseException error = syntaxError("期望方法声明，实际得到 '" + look.getLexeme() + "'");
@@ -197,22 +182,22 @@ public class Parser {
 
 	
 	// <method> -> void | int | double | methodname ( <inputparams> ) {<varDeclares> <stmts> [return <expr>]}
-	private Ast.Method.MethodSingle parseMethod() throws IOException {
-		Ast.Type.T t = parseType();
+	private Ast.Method.MethodSingle parseMethod() {
+		Ast.Type.Base t = parseType();
 		Token methodNameToken = consumeName("方法名", true);
 		String methodName = methodNameToken.getLexeme();
 		int lineNumber = methodNameToken.getLineNumber();
-		match("(");
-			ArrayList<Ast.Declare.T> inputParams = parseInputParams();
-		match(")");
-		match("{");
-		ArrayList<Ast.Declare.T> localParams = new ArrayList<Ast.Declare.T>();
+		match(TokenKind.Lparen);
+			ArrayList<Ast.Declare.Base> inputParams = parseInputParams();
+		match(TokenKind.Rparen);
+		match(TokenKind.Lbrace);
+		ArrayList<Ast.Declare.Base> localParams = new ArrayList<Ast.Declare.Base>();
 		this.currentMethodLocals = localParams;
-		ArrayList<Ast.Stmt.T> stmts = parseBlockItems();
+		ArrayList<Ast.Stmt.Base> stmts = parseBlockItems();
 		this.currentMethodLocals = null;
-		match("}");
+		match(TokenKind.Rbrace);
 		if( !methodName.equals("main")){
-			Ast.Stmt.T stmt = stmts.isEmpty() ? null : stmts.get(stmts.size()-1);
+			Ast.Stmt.Base stmt = stmts.isEmpty() ? null : stmts.get(stmts.size()-1);
 			return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,stmt,lineNumber);
 		}else{
 			return new Ast.Method.MethodSingle(t,methodName,inputParams,localParams,stmts,null,lineNumber);
@@ -221,15 +206,15 @@ public class Parser {
 	}
 
 	// <localDecl> -> type id ("[" num "]")? ("=" expr)? ";"
-	private Ast.Stmt.VarDecl parseLocalDeclaration() throws IOException {
-		Ast.Type.T type = parseType();
+	private Ast.Stmt.VarDecl parseLocalDeclaration() {
+		Ast.Type.Base type = parseType();
 		Token idToken = consumeName("变量名", false);
 		String id = idToken.getLexeme();
 		int lineNumber = idToken.getLineNumber();
 		boolean array = false;
 		if (look.getKind() == TokenKind.Lbracket) {
 			array = true;
-			match("[");
+			match(TokenKind.Lbracket);
 			if (look.getKind() != TokenKind.Num) {
 				error("数组大小必须是整数");
 			}
@@ -244,14 +229,14 @@ public class Parser {
 				error(String.format("数组大小必须为正整数，但得到: %d", size));
 			}
 			match(TokenKind.Num);
-			match("]");
+			match(TokenKind.Rbracket);
 			type = createArrayType(type, size);
 			if (type == null) {
 				error("不支持的数组基础类型");
 			}
 		}
 
-		Ast.Expr.T initializer = null;
+		Ast.Expr.Base initializer = null;
 		if (look.getKind() == TokenKind.Assign) {
 			if (array) {
 				error("数组声明暂不支持初始化表达式");
@@ -259,7 +244,7 @@ public class Parser {
 			match(TokenKind.Assign);
 			initializer = parseExpr();
 		}
-		match(";");
+		match(TokenKind.Semicolon);
 
 		Ast.Declare.DeclareSingle declaration =
 				new Ast.Declare.DeclareSingle(type, id, lineNumber);
@@ -271,7 +256,7 @@ public class Parser {
 	}
 
 	// 根据基础类型创建对应的数组类型
-	private Ast.Type.T createArrayType(Ast.Type.T baseType, int size) {
+	private Ast.Type.Base createArrayType(Ast.Type.Base baseType, int size) {
 		if (baseType instanceof Ast.Type.Int) {
 			return new Ast.Type.IntArray(size);
 		} else if (baseType instanceof Ast.Type.Float) {
@@ -285,8 +270,8 @@ public class Parser {
 	}
 
 	// <inputparams> -> <formalParam> ("," <formalParam>)*
-	private ArrayList<Ast.Declare.T> parseInputParams() throws IOException {
-		ArrayList<Ast.Declare.T> rs = new ArrayList<Ast.Declare.T>();
+	private ArrayList<Ast.Declare.Base> parseInputParams() {
+		ArrayList<Ast.Declare.Base> rs = new ArrayList<Ast.Declare.Base>();
 		if( isTypeToken(look.getKind()) ){
 			rs.add(parseFormalParam());
 			while(look.getKind() == TokenKind.Comma ){
@@ -298,15 +283,15 @@ public class Parser {
 	}
 
 	// <formalParam> -> type id | type id "[" "]"
-	private Ast.Declare.T parseFormalParam() throws IOException {
-		Ast.Type.T type = parseType();
+	private Ast.Declare.Base parseFormalParam() {
+		Ast.Type.Base type = parseType();
 		String id = look.getLexeme();
 		int lineNumber = look.getLineNumber();
 		match(TokenKind.Id);
 		if (look.getKind() == TokenKind.Lbracket) {
-			match("[");
-			match("]");
-			Ast.Type.T arrayType = createArrayType(type, -1);
+			match(TokenKind.Lbracket);
+			match(TokenKind.Rbracket);
+			Ast.Type.Base arrayType = createArrayType(type, -1);
 			if (arrayType == null) {
 				throw syntaxError(String.format("不支持的数组参数基础类型: %s", type));
 			}
@@ -324,7 +309,7 @@ public class Parser {
 	}
 
 
-	private Ast.Type.T parseType() {
+	private Ast.Type.Base parseType() {
 		if( look.getKind() == TokenKind.Int ){
 			move();
 			return new Ast.Type.Int();
@@ -352,8 +337,8 @@ public class Parser {
 		return kind == TokenKind.Void || isTypeToken(kind);
 	}
 	
-	private ArrayList<Ast.Stmt.T> parseBlockItems() throws IOException {
-		ArrayList<Ast.Stmt.T> rs = new ArrayList<Ast.Stmt.T>();
+	private ArrayList<Ast.Stmt.Base> parseBlockItems() {
+		ArrayList<Ast.Stmt.Base> rs = new ArrayList<Ast.Stmt.Base>();
 		while (look.getKind() != TokenKind.Rbrace && look.getKind() != TokenKind.EOF) {
 			Token itemStart = look;
 			try {
@@ -439,8 +424,8 @@ public class Parser {
 		}
 	}
 
-	private Ast.Stmt.T parseStmt() throws IOException {
-		Ast.Stmt.T stmt = null;
+	private Ast.Stmt.Base parseStmt() {
+		Ast.Stmt.Base stmt = null;
 		
 		if( look.getKind() == TokenKind.Printf ){
 			match(TokenKind.Printf);
@@ -451,7 +436,7 @@ public class Parser {
 			String format = look.getLexeme();
 			int lineNumber = look.getLineNumber();
 			match(TokenKind.StringLiteral);
-			ArrayList<Ast.Expr.T> exprs = new ArrayList<Ast.Expr.T>();
+			ArrayList<Ast.Expr.Base> exprs = new ArrayList<Ast.Expr.Base>();
 			while( look.getKind() == TokenKind.Comma ){
 				match(TokenKind.Comma);
 				exprs.add(parseExpr());
@@ -484,95 +469,61 @@ public class Parser {
 			match(TokenKind.While);
 			match(TokenKind.Lparen);
 			int lineNumber = look.getLineNumber();
-			Ast.Expr.T condition = parseExpr();
+			Ast.Expr.Base condition = parseExpr();
 			match(TokenKind.Rparen);
-			Ast.Stmt.T whileStmt = parseStmt();
+			Ast.Stmt.Base whileStmt = parseStmt();
 			stmt = new Ast.Stmt.While(condition, whileStmt, lineNumber);
 		}
 		else if( look.getKind() == TokenKind.For ){
 			int lineNumber = look.getLineNumber();
 			match(TokenKind.For);
 			match(TokenKind.Lparen);
-			Ast.Stmt.T init = null;
+			Ast.Stmt.Base init = null;
 			if (look.getKind() != TokenKind.Semicolon) {
 				init = parseSimpleStmtWithoutTerminator();
 			}
 			match(TokenKind.Semicolon);
-			Ast.Expr.T condition = look.getKind() == TokenKind.Semicolon
+			Ast.Expr.Base condition = look.getKind() == TokenKind.Semicolon
 					? new Ast.Expr.True(lineNumber)
 					: parseExpr();
 			match(TokenKind.Semicolon);
-			Ast.Stmt.T update = null;
+			Ast.Stmt.Base update = null;
 			if (look.getKind() != TokenKind.Rparen) {
 				update = parseSimpleStmtWithoutTerminator();
 			}
 			match(TokenKind.Rparen);
-			Ast.Stmt.T body = parseStmt();
+			Ast.Stmt.Base body = parseStmt();
 			stmt = new Ast.Stmt.For(init, condition, update, body, lineNumber);
 		}
 		else if ( look.getKind() == TokenKind.Id ) {
-			Token ahead = lexer.lookahead(1);
-			
-			// 方法调用
-			if( ahead.getKind() == TokenKind.Lparen ){
-				String mthName = look.getLexeme();
-				int lineNumber = look.getLineNumber();
-				Ast.Expr.T expr =  parseMethodCall();
-				if( expr instanceof Ast.Expr.Call){
-					stmt = new Ast.Stmt.Call(mthName,((Ast.Expr.Call)expr).getInputParams(),lineNumber);
-					match(TokenKind.Semicolon);
-				}
-
-			}
-			// 数组赋值: arr[i] = expr;
-			else if( ahead.getKind() == TokenKind.Lbracket ){
-				String arrayName = look.getLexeme();
-				int lineNum = look.getLineNumber();
-				match(TokenKind.Id);
-				match( "[" );
-				Ast.Expr.T index = parseExpr();
-				match( "]" );
-				match(TokenKind.Assign);
-				Ast.Expr.T expr = parseExpr();
-				match(TokenKind.Semicolon);
-				stmt = new Ast.Stmt.ArrayAssign(arrayName, index, expr, lineNum);
-			}
-			else{
-				String id = look.getLexeme();
-				int lineNum = look.getLineNumber();
-				match(TokenKind.Id);
-				match(TokenKind.Assign);
-				Ast.Expr.T expr = parseExpr();
-				match(TokenKind.Semicolon);
-				stmt = new Ast.Stmt.Assign(new Ast.Expr.Id(id,lineNum), expr, lineNum);
-				
-			}
+			stmt = parseSimpleStmtWithoutTerminator();
+			match(TokenKind.Semicolon);
 		}
 		else if( look.getKind() == TokenKind.Lbrace ) {
-			match( "{" );
+			match(TokenKind.Lbrace);
 			int lineNumber = look.getLineNumber();
 			stmt = new Ast.Stmt.Block(parseBlockItems(), lineNumber);
-			match( "}" );
+			match(TokenKind.Rbrace);
 
 		}
 		else if( look.getKind() == TokenKind.Return ) {
 			int lineNumber = look.getLineNumber();
-			match( "return" );
-			Ast.Expr.T expr = look.getKind() == TokenKind.Semicolon ? null : parseExpr();
+			match(TokenKind.Return);
+			Ast.Expr.Base expr = look.getKind() == TokenKind.Semicolon ? null : parseExpr();
 			stmt = new Ast.Stmt.Return(expr, lineNumber);
-			match( ";" );
+			match(TokenKind.Semicolon);
 
 		}else if( look.getKind() == TokenKind.If ){
-			match( "if" );
-			match( "(" );
+			match(TokenKind.If);
+			match(TokenKind.Lparen);
 			int lineNumber = look.getLineNumber();
-			Ast.Expr.T condition = parseExpr();
-			match( ")" );
-			Ast.Stmt.T thenStmt = parseStmt();
-			Ast.Stmt.T elseStmt = null;
+			Ast.Expr.Base condition = parseExpr();
+			match(TokenKind.Rparen);
+			Ast.Stmt.Base thenStmt = parseStmt();
+			Ast.Stmt.Base elseStmt = null;
 			if( look.getKind() == TokenKind.Else){
 
-				match( "else" );
+				match(TokenKind.Else);
 				elseStmt = parseStmt();
 			}
 
@@ -584,7 +535,7 @@ public class Parser {
 		return stmt;
 	}
 
-	private Ast.Stmt.T parseSimpleStmtWithoutTerminator() throws IOException {
+	private Ast.Stmt.Base parseSimpleStmtWithoutTerminator() {
 		if (look.getKind() != TokenKind.Id) {
 			error("期望赋值语句或方法调用");
 		}
@@ -592,7 +543,7 @@ public class Parser {
 		if( ahead.getKind() == TokenKind.Lparen ){
 			String mthName = look.getLexeme();
 			int lineNumber = look.getLineNumber();
-			Ast.Expr.T expr = parseMethodCall();
+			Ast.Expr.Base expr = parseMethodCall();
 			if( expr instanceof Ast.Expr.Call){
 				return new Ast.Stmt.Call(mthName,((Ast.Expr.Call)expr).getInputParams(),lineNumber);
 			}
@@ -601,11 +552,11 @@ public class Parser {
 			String arrayName = look.getLexeme();
 			int lineNum = look.getLineNumber();
 			match(TokenKind.Id);
-			match( "[" );
-			Ast.Expr.T index = parseExpr();
-			match( "]" );
+			match(TokenKind.Lbracket);
+			Ast.Expr.Base index = parseExpr();
+			match(TokenKind.Rbracket);
 			match(TokenKind.Assign);
-			Ast.Expr.T expr = parseExpr();
+			Ast.Expr.Base expr = parseExpr();
 			return new Ast.Stmt.ArrayAssign(arrayName, index, expr, lineNum);
 		}
 		else{
@@ -613,7 +564,7 @@ public class Parser {
 			int lineNum = look.getLineNumber();
 			match(TokenKind.Id);
 			match(TokenKind.Assign);
-			Ast.Expr.T expr = parseExpr();
+			Ast.Expr.Base expr = parseExpr();
 			return new Ast.Stmt.Assign(new Ast.Expr.Id(id,lineNum), expr, lineNum);
 		}
 		throw syntaxError("无法解析简单语句");
@@ -624,11 +575,11 @@ public class Parser {
 
 	// Exp -> AndExp || AndExp
 	//  -> AndExp
-	private Ast.Expr.T parseExpr() throws IOException {
-		Ast.Expr.T expr = parseAndExpr();
+	private Ast.Expr.Base parseExpr() {
+		Ast.Expr.Base expr = parseAndExpr();
 		while( look.getKind() == TokenKind.Or ) {
 			move();
-			Ast.Expr.T right = parseAndExpr();
+			Ast.Expr.Base right = parseAndExpr();
 			expr = new Ast.Expr.Or(expr, right, expr.getLineNum());
 		}
 		return expr;
@@ -638,19 +589,19 @@ public class Parser {
 
 	// Exp -> AndExp && AndExp
 	//  -> AndExp
-	private Ast.Expr.T parseAndExpr() throws IOException {
-		Ast.Expr.T expr = parseRelationExpr();
+	private Ast.Expr.Base parseAndExpr() {
+		Ast.Expr.Base expr = parseRelationExpr();
 		while( look.getKind() == TokenKind.And) {
 			move();
-			Ast.Expr.T right = parseRelationExpr();
+			Ast.Expr.Base right = parseRelationExpr();
 			expr = new Ast.Expr.And(expr, right, expr.getLineNum());
 		}
 		return expr;
 	}
 
 	// <relation_expr> -> additive_expr |<additive_expr>(>|<|>=|<=|==|!=)<additive_expr>
-	private Ast.Expr.T parseRelationExpr() throws IOException {
-		Ast.Expr.T expr = parseAdditiveExpr();
+	private Ast.Expr.Base parseRelationExpr() {
+		Ast.Expr.Base expr = parseAdditiveExpr();
 		while( look.getKind() == TokenKind.LT ||
 				look.getKind() == TokenKind.GT ||
 				look.getKind() == TokenKind.LTE ||
@@ -660,7 +611,7 @@ public class Parser {
 			String operator = look.getLexeme();
 			int lineNumber = look.getLineNumber();
 			move();
-			Ast.Expr.T right = parseAdditiveExpr();
+			Ast.Expr.Base right = parseAdditiveExpr();
 			switch (operator) {
 			case ">":
 				expr = new Ast.Expr.GT(expr, right, lineNumber);
@@ -689,37 +640,37 @@ public class Parser {
 	}
 
 	//<additiveExpr>-><term>{(+|-)<term>}
-	private Ast.Expr.T parseAdditiveExpr() throws IOException {
-		Ast.Expr.T expr = parseTerm();
+	private Ast.Expr.Base parseAdditiveExpr() {
+		Ast.Expr.Base expr = parseTerm();
 		while(look.getKind()==TokenKind.Add
 				||look.getKind()==TokenKind.Sub) {
 			Token temp=look;
 			move();
-			Ast.Expr.T otherExpr = parseTerm();
+			Ast.Expr.Base otherExpr = parseTerm();
 			if(temp.getKind()==TokenKind.Add) {
-				expr = new Ast.Expr.Add(expr, otherExpr, look.getLineNumber());
+				expr = new Ast.Expr.Add(expr, otherExpr, temp.getLineNumber());
 			}else {
-				expr = new Ast.Expr.Sub(expr, otherExpr, look.getLineNumber());
+				expr = new Ast.Expr.Sub(expr, otherExpr, temp.getLineNumber());
 			}
 		}
 		return expr;
 	}
 
 	// <term> -> <factor> *|/ <factor>
-	private Ast.Expr.T parseTerm() throws IOException{
-		Ast.Expr.T expr = parseFactor();
+	private Ast.Expr.Base parseTerm() {
+		Ast.Expr.Base expr = parseFactor();
 		while(look.getKind()==TokenKind.Mul
 				||look.getKind()==TokenKind.Div
 				||look.getKind()==TokenKind.Mod) {
 			Token temp=look;
 			move();
-			Ast.Expr.T otherExpr = parseFactor();
+			Ast.Expr.Base otherExpr = parseFactor();
 			if(temp.getKind() == TokenKind.Mul) {
-				expr = new Ast.Expr.Mul(expr, otherExpr, look.getLineNumber());
+				expr = new Ast.Expr.Mul(expr, otherExpr, temp.getLineNumber());
 			}else if(temp.getKind() == TokenKind.Div) {
-				expr = new Ast.Expr.Div(expr, otherExpr, look.getLineNumber());
+				expr = new Ast.Expr.Div(expr, otherExpr, temp.getLineNumber());
 			}else {
-				expr = new Ast.Expr.Mod(expr, otherExpr, look.getLineNumber());
+				expr = new Ast.Expr.Mod(expr, otherExpr, temp.getLineNumber());
 			}
 		}
 		return expr;
@@ -730,8 +681,8 @@ public class Parser {
 	//  		| Integer Literal
 	//  		| id
 	//          | not(<expression>)
-	private Ast.Expr.T parseFactor() throws IOException{
-		Ast.Expr.T expr = null;
+	private Ast.Expr.Base parseFactor() {
+		Ast.Expr.Base expr = null;
 		if(look.getKind()==TokenKind.Lparen){
 			move();
 			expr = parseExpr();
@@ -740,23 +691,22 @@ public class Parser {
 		}else if(look.getKind()==TokenKind.Sub){
 			int lineNumber = look.getLineNumber();
 			move();
-			Ast.Expr.T operand = parseFactor();
+			Ast.Expr.Base operand = parseFactor();
 			return new Ast.Expr.UnaryMinus(operand, lineNumber);
 		}else if(look.getKind()== Num){
-			expr = new Ast.Expr.Number(new Ast.Type.Int(),look.getLexeme(),look.getLineNumber());
+			expr = new Ast.Expr.IntLiteral(look.getLexeme(), look.getLineNumber());
 			move();
 			return expr;
 		}else if(look.getKind()==TokenKind.FloatLiteral){
 			// 浮点数字面量默认为float类型（保持向后兼容）
-			expr = new Ast.Expr.Number(new Ast.Type.Float(),look.getLexeme(),look.getLineNumber());
+			expr = new Ast.Expr.FloatLiteral(look.getLexeme(), look.getLineNumber());
 			move();
 			return expr;
 		}else if(look.getKind()==TokenKind.DoubleLiteral){
-			expr = new Ast.Expr.Number(new Ast.Type.Double(),look.getLexeme(),look.getLineNumber());
+			expr = new Ast.Expr.DoubleLiteral(look.getLexeme(), look.getLineNumber());
 			move();
 			return expr;
 		}else if( look.getKind()==TokenKind.Id ){
-			Token temp = look;
 			Token ahead = lexer.lookahead(1);
 			if( ahead.getKind() == TokenKind.Lparen){
 				expr = parseMethodCall();
@@ -766,16 +716,16 @@ public class Parser {
 				String arrayName = look.getLexeme();
 				int lineNum = look.getLineNumber();
 				move(); // consume id
-				match("[");
-				Ast.Expr.T index = parseExpr();
-				match("]");
+				match(TokenKind.Lbracket);
+				Ast.Expr.Base index = parseExpr();
+				match(TokenKind.Rbracket);
 				expr = new Ast.Expr.ArrayAccess(arrayName, index, lineNum);
 			}
 			else if( ahead.getKind() == TokenKind.Dot){
 				String arrayName = look.getLexeme();
 				int lineNum = look.getLineNumber();
 				move(); // consume id
-				match(".");
+				match(TokenKind.Dot);
 				if (!"length".equals(look.getLexeme())) {
 					error("数组属性只支持 length");
 				}
@@ -794,8 +744,9 @@ public class Parser {
 			return expr;
 		}
 		else if(look.getKind()==TokenKind.Not ){
+			int lineNumber = look.getLineNumber();
 			move();
-			expr = new Ast.Expr.Not(parseFactor());
+			expr = new Ast.Expr.Not(parseFactor(), lineNumber);
 			return expr;
 		}
 		else if(look.getKind()==TokenKind.True ){
@@ -818,28 +769,25 @@ public class Parser {
 
 
 	// methodCall->methodCall(Expr,Expr)
-	private Ast.Expr.T parseMethodCall() throws IOException {
-		Token ahead;
-		Ast.Expr.T expr;
+	private Ast.Expr.Base parseMethodCall() {
+		Ast.Expr.Base expr;
 		String methodName = look.getLexeme();
 		int lineNumber = look.getLineNumber();
 		move();
-		match("(");
-		ArrayList<Ast.Expr.T> args = null;
-		args = new ArrayList<Ast.Expr.T>();
-		ahead = lexer.lookahead(1);
+		match(TokenKind.Lparen);
+		ArrayList<Ast.Expr.Base> args = new ArrayList<Ast.Expr.Base>();
 		if( look.getKind() == TokenKind.Rparen){
 
 		}else{
-			Ast.Expr.T e = parseExpr();
+			Ast.Expr.Base e = parseExpr();
 			args.add(e);
 			while( look.getKind() == TokenKind.Comma){
-				match(",");
+				match(TokenKind.Comma);
 				args.add(parseExpr());
 			}
 		}
 
-		match(")");
+		match(TokenKind.Rparen);
 		expr = new Ast.Expr.Call(methodName, args, lineNumber);
 		return expr;
 	}

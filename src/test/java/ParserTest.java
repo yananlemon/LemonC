@@ -21,21 +21,21 @@ public class ParserTest {
     @Test
     public void testParseBasic() throws IOException {
         Parser parser = createParser("examples/BoolTest01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull("应成功解析程序", prog);
     }
 
     @Test
     public void testParseFloat() throws IOException {
         Parser parser = createParser("examples/FloatTest01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
     }
 
     @Test
     public void testParseIteration() throws IOException {
         Parser parser = createParser("examples/Iteration01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
     }
 
@@ -44,14 +44,14 @@ public class ParserTest {
     @Test
     public void testCompareOperators() throws IOException {
         Parser parser = createParser("examples/CompareTest.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull("应成功解析包含所有比较运算符的程序", prog);
     }
 
     @Test
     public void testGreaterThan() throws IOException {
         Parser parser = createParser("examples/If01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         // 验证AST中包含GT节点
@@ -62,7 +62,7 @@ public class ParserTest {
     @Test
     public void testLessThan() throws IOException {
         Parser parser = createParser("examples/If01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         // 验证AST中包含LT节点
@@ -73,7 +73,7 @@ public class ParserTest {
     @Test
     public void testGreaterThanOrEqual() throws IOException {
         Parser parser = createParser("examples/CompareTest.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         // 验证AST中包含GET节点 (>=)
@@ -84,7 +84,7 @@ public class ParserTest {
     @Test
     public void testLessThanOrEqual() throws IOException {
         Parser parser = createParser("examples/CompareTest.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         // 验证AST中包含LET节点 (<=)
@@ -95,7 +95,7 @@ public class ParserTest {
     @Test
     public void testEqual() throws IOException {
         Parser parser = createParser("examples/CompareTest.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         // 验证AST中包含EQ节点 (==)
@@ -106,7 +106,7 @@ public class ParserTest {
     @Test
     public void testNotEqual() throws IOException {
         Parser parser = createParser("examples/CompareTest.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         // 验证AST中包含NEQ节点 (!=)
@@ -119,7 +119,7 @@ public class ParserTest {
     @Test
     public void testLogicalAnd() throws IOException {
         Parser parser = createParser("examples/BoolTest01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         boolean hasAnd = containsExprType(prog, Ast.Expr.And.class);
@@ -129,7 +129,7 @@ public class ParserTest {
     @Test
     public void testLogicalOr() throws IOException {
         Parser parser = createParser("examples/BoolTest01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         boolean hasOr = containsExprType(prog, Ast.Expr.Or.class);
@@ -139,7 +139,7 @@ public class ParserTest {
     @Test
     public void testLogicalNot() throws IOException {
         Parser parser = createParser("examples/BoolTest01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         boolean hasNot = containsExprType(prog, Ast.Expr.Not.class);
@@ -151,7 +151,7 @@ public class ParserTest {
     @Test
     public void testMethodCall() throws IOException {
         Parser parser = createParser("examples/SimpleMethodCall.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         boolean hasCall = containsExprType(prog, Ast.Expr.Call.class);
@@ -161,7 +161,7 @@ public class ParserTest {
     @Test
     public void testRecursiveCall() throws IOException {
         Parser parser = createParser("examples/Cal.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull("应成功解析递归调用", prog);
     }
 
@@ -170,7 +170,7 @@ public class ParserTest {
     @Test
     public void testIfStatement() throws IOException {
         Parser parser = createParser("examples/If01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         boolean hasIf = containsStmtType(prog, Ast.Stmt.If.class);
@@ -180,7 +180,7 @@ public class ParserTest {
     @Test
     public void testWhileStatement() throws IOException {
         Parser parser = createParser("examples/Iteration01.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         boolean hasWhile = containsStmtType(prog, Ast.Stmt.While.class);
@@ -190,7 +190,7 @@ public class ParserTest {
     @Test
     public void testReturnStatement() throws IOException {
         Parser parser = createParser("examples/Cal.lemon");
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         assertNotNull(prog);
         
         boolean hasReturn = containsStmtType(prog, Ast.Stmt.Return.class);
@@ -207,15 +207,15 @@ public class ParserTest {
     /**
      * 检查AST中是否包含指定类型的表达式
      */
-    private boolean containsExprType(Ast.Program.T prog, Class<?> exprType) {
+    private boolean containsExprType(Ast.Program.Base prog, Class<?> exprType) {
         if (prog instanceof Ast.Program.ProgramSingle) {
             Ast.Program.ProgramSingle ps = (Ast.Program.ProgramSingle) prog;
             if (ps.getMainClass() instanceof Ast.MainClass.MainClassSingle) {
                 Ast.MainClass.MainClassSingle mc = (Ast.MainClass.MainClassSingle) ps.getMainClass();
-                for (Ast.Method.T method : mc.getMethods()) {
+                for (Ast.Method.Base method : mc.getMethods()) {
                     if (method instanceof Ast.Method.MethodSingle) {
                         Ast.Method.MethodSingle ms = (Ast.Method.MethodSingle) method;
-                        for (Ast.Stmt.T stmt : ms.getStms()) {
+                        for (Ast.Stmt.Base stmt : ms.getStms()) {
                             if (containsExprInStmt(stmt, exprType)) {
                                 return true;
                             }
@@ -227,7 +227,7 @@ public class ParserTest {
         return false;
     }
 
-    private boolean containsExprInStmt(Ast.Stmt.T stmt, Class<?> exprType) {
+    private boolean containsExprInStmt(Ast.Stmt.Base stmt, Class<?> exprType) {
         if (stmt instanceof Ast.Stmt.If) {
             Ast.Stmt.If ifStmt = (Ast.Stmt.If) stmt;
             if (containsExprInExpr(ifStmt.getCondition(), exprType)) return true;
@@ -242,7 +242,7 @@ public class ParserTest {
             if (containsExprInExpr(assign.getExpr(), exprType)) return true;
         } else if (stmt instanceof Ast.Stmt.Block) {
             Ast.Stmt.Block block = (Ast.Stmt.Block) stmt;
-            for (Ast.Stmt.T s : block.getStmts()) {
+            for (Ast.Stmt.Base s : block.getStmts()) {
                 if (containsExprInStmt(s, exprType)) return true;
             }
         } else if (stmt instanceof Ast.Stmt.Return) {
@@ -252,7 +252,7 @@ public class ParserTest {
         return false;
     }
 
-    private boolean containsExprInExpr(Ast.Expr.T expr, Class<?> exprType) {
+    private boolean containsExprInExpr(Ast.Expr.Base expr, Class<?> exprType) {
         if (expr == null) return false;
         if (exprType.isInstance(expr)) return true;
         
@@ -297,7 +297,7 @@ public class ParserTest {
             return containsExprInExpr(div.getLeft(), exprType) || containsExprInExpr(div.getRight(), exprType);
         } else if (expr instanceof Ast.Expr.Call) {
             Ast.Expr.Call call = (Ast.Expr.Call) expr;
-            for (Ast.Expr.T arg : call.getInputParams()) {
+            for (Ast.Expr.Base arg : call.getInputParams()) {
                 if (containsExprInExpr(arg, exprType)) return true;
             }
         }
@@ -307,15 +307,15 @@ public class ParserTest {
     /**
      * 检查AST中是否包含指定类型的语句
      */
-    private boolean containsStmtType(Ast.Program.T prog, Class<?> stmtType) {
+    private boolean containsStmtType(Ast.Program.Base prog, Class<?> stmtType) {
         if (prog instanceof Ast.Program.ProgramSingle) {
             Ast.Program.ProgramSingle ps = (Ast.Program.ProgramSingle) prog;
             if (ps.getMainClass() instanceof Ast.MainClass.MainClassSingle) {
                 Ast.MainClass.MainClassSingle mc = (Ast.MainClass.MainClassSingle) ps.getMainClass();
-                for (Ast.Method.T method : mc.getMethods()) {
+                for (Ast.Method.Base method : mc.getMethods()) {
                     if (method instanceof Ast.Method.MethodSingle) {
                         Ast.Method.MethodSingle ms = (Ast.Method.MethodSingle) method;
-                        for (Ast.Stmt.T stmt : ms.getStms()) {
+                        for (Ast.Stmt.Base stmt : ms.getStms()) {
                             if (containsStmtInStmt(stmt, stmtType)) {
                                 return true;
                             }
@@ -327,7 +327,7 @@ public class ParserTest {
         return false;
     }
 
-    private boolean containsStmtInStmt(Ast.Stmt.T stmt, Class<?> stmtType) {
+    private boolean containsStmtInStmt(Ast.Stmt.Base stmt, Class<?> stmtType) {
         if (stmt == null) return false;
         if (stmtType.isInstance(stmt)) return true;
         
@@ -338,7 +338,7 @@ public class ParserTest {
         } else if (stmt instanceof Ast.Stmt.While) {
             return containsStmtInStmt(((Ast.Stmt.While) stmt).getBody(), stmtType);
         } else if (stmt instanceof Ast.Stmt.Block) {
-            for (Ast.Stmt.T s : ((Ast.Stmt.Block) stmt).getStmts()) {
+            for (Ast.Stmt.Base s : ((Ast.Stmt.Block) stmt).getStmts()) {
                 if (containsStmtInStmt(s, stmtType)) return true;
             }
         }

@@ -11,26 +11,26 @@ public class AstOptimizerTest {
 
     @Test
     public void foldsConstantArithmetic() {
-        Ast.Expr.T expr = new Ast.Expr.Mul(
+        Ast.Expr.Base expr = new Ast.Expr.Mul(
                 new Ast.Expr.Add(num(2), num(3), 1),
                 num(4),
                 1);
 
-        Ast.Expr.T optimized = optimizeAssignExpr(expr);
+        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
 
-        assertTrue(optimized instanceof Ast.Expr.Number);
-        assertEquals(20, ((Ast.Expr.Number) optimized).getValue());
+        assertTrue(optimized instanceof Ast.Expr.IntLiteral);
+        assertEquals(Integer.valueOf(20), ((Ast.Expr.IntLiteral) optimized).getValue());
     }
 
     @Test
     public void simplifiesAlgebraicIdentity() {
         Ast.Expr.Id x = new Ast.Expr.Id("x", new Ast.Type.Int(), 1);
-        Ast.Expr.T expr = new Ast.Expr.Add(
+        Ast.Expr.Base expr = new Ast.Expr.Add(
                 new Ast.Expr.Mul(x, num(1), 1),
                 num(0),
                 1);
 
-        Ast.Expr.T optimized = optimizeAssignExpr(expr);
+        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
 
         assertTrue(optimized instanceof Ast.Expr.Id);
         assertEquals("x", ((Ast.Expr.Id) optimized).getId());
@@ -38,31 +38,71 @@ public class AstOptimizerTest {
 
     @Test
     public void doesNotDiscardMethodCallInArithmeticIdentity() {
-        Ast.Expr.T expr = new Ast.Expr.Mul(call("side", new Ast.Type.Int()), num(0), 1);
+        Ast.Expr.Base expr = new Ast.Expr.Mul(call("side", new Ast.Type.Int()), num(0), 1);
 
-        Ast.Expr.T optimized = optimizeAssignExpr(expr);
+        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
 
         assertTrue(optimized instanceof Ast.Expr.Mul);
         assertTrue(((Ast.Expr.Mul) optimized).getLeft() instanceof Ast.Expr.Call);
     }
 
     @Test
-    public void zeroMultiplicationPreservesPromotedNumericType() {
+    public void doesNotApplyZeroMultiplicationToFloatingPoint() {
         Ast.Expr.Id f = new Ast.Expr.Id("f", new Ast.Type.Float(), 1);
-        Ast.Expr.T expr = new Ast.Expr.Mul(num(0.0f), f, 1);
+        Ast.Expr.Base expr = new Ast.Expr.Mul(num(0.0f), f, 1);
 
-        Ast.Expr.T optimized = optimizeAssignExpr(expr);
+        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
 
-        assertTrue(optimized instanceof Ast.Expr.Number);
-        assertTrue(((Ast.Expr.Number) optimized).getType() instanceof Ast.Type.Float);
-        assertEquals(Float.valueOf(0.0f), ((Ast.Expr.Number) optimized).getValue());
+        assertTrue(optimized instanceof Ast.Expr.Mul);
+    }
+
+    @Test
+    public void doesNotDiscardIntegerDivisionThatMayTrap() {
+        Ast.Expr.Base division = new Ast.Expr.Div(num(1), num(0), 1);
+        Ast.Expr.Base expr = new Ast.Expr.Mul(num(0), division, 1);
+
+        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
+
+        assertTrue(optimized instanceof Ast.Expr.Mul);
+        assertTrue(((Ast.Expr.Mul) optimized).getRight() instanceof Ast.Expr.Div);
+    }
+
+    @Test
+    public void doesNotSimplifyZeroDividedByVariable() {
+        Ast.Expr.Id divisor = new Ast.Expr.Id("divisor", new Ast.Type.Int(), 1);
+        Ast.Expr.Base expr = new Ast.Expr.Div(num(0), divisor, 1);
+
+        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
+
+        assertTrue(optimized instanceof Ast.Expr.Div);
+    }
+
+    @Test
+    public void zeroMultiplicationStillSimplifiesPureIntegers() {
+        Ast.Expr.Id x = new Ast.Expr.Id("x", new Ast.Type.Int(), 1);
+        Ast.Expr.Base expr = new Ast.Expr.Mul(num(0), x, 1);
+
+        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
+
+        assertTrue(optimized instanceof Ast.Expr.IntLiteral);
+        assertEquals(Integer.valueOf(0), ((Ast.Expr.IntLiteral) optimized).getValue());
+    }
+
+    @Test
+    public void identityDoesNotChangePromotedResultType() {
+        Ast.Expr.Id x = new Ast.Expr.Id("x", new Ast.Type.Int(), 1);
+        Ast.Expr.Base expr = new Ast.Expr.Mul(num(1.0f), x, 1);
+
+        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
+
+        assertTrue(optimized instanceof Ast.Expr.Mul);
     }
 
     @Test
     public void doesNotDiscardMethodCallInBooleanIdentity() {
-        Ast.Expr.T expr = new Ast.Expr.Or(call("side", new Ast.Type.Bool()), new Ast.Expr.True(1), 1);
+        Ast.Expr.Base expr = new Ast.Expr.Or(call("side", new Ast.Type.Bool()), new Ast.Expr.True(1), 1);
 
-        Ast.Expr.T optimized = optimizeAssignExpr(expr);
+        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
 
         assertTrue(optimized instanceof Ast.Expr.Or);
         assertTrue(((Ast.Expr.Or) optimized).getLeft() instanceof Ast.Expr.Call);
@@ -76,28 +116,28 @@ public class AstOptimizerTest {
                 new Ast.Stmt.Assign(new Ast.Expr.Id("x", 1), num(9), 1),
                 1);
 
-        Ast.Stmt.T optimized = optimizeStmt(ifStmt);
+        Ast.Stmt.Base optimized = optimizeStmt(ifStmt);
 
         assertTrue(optimized instanceof Ast.Stmt.Assign);
-        assertEquals(7, ((Ast.Expr.Number) ((Ast.Stmt.Assign) optimized).getExpr()).getValue());
+        assertEquals(Integer.valueOf(7), ((Ast.Expr.IntLiteral) ((Ast.Stmt.Assign) optimized).getExpr()).getValue());
     }
 
-    private Ast.Expr.T optimizeAssignExpr(Ast.Expr.T expr) {
+    private Ast.Expr.Base optimizeAssignExpr(Ast.Expr.Base expr) {
         Ast.Stmt.Assign optimized = (Ast.Stmt.Assign) optimizeStmt(
                 new Ast.Stmt.Assign(new Ast.Expr.Id("x", 1), expr, 1));
         return optimized.getExpr();
     }
 
-    private Ast.Stmt.T optimizeStmt(Ast.Stmt.T stmt) {
-        ArrayList<Ast.Stmt.T> statements = new ArrayList<Ast.Stmt.T>();
+    private Ast.Stmt.Base optimizeStmt(Ast.Stmt.Base stmt) {
+        ArrayList<Ast.Stmt.Base> statements = new ArrayList<Ast.Stmt.Base>();
         statements.add(stmt);
         Ast.Method.MethodSingle method = new Ast.Method.MethodSingle(new Ast.Type.Void(), "main",
-                new ArrayList<Ast.Declare.T>(), new ArrayList<Ast.Declare.T>(),
+                new ArrayList<Ast.Declare.Base>(), new ArrayList<Ast.Declare.Base>(),
                 statements, null, 1);
-        ArrayList<Ast.Method.T> methods = new ArrayList<Ast.Method.T>();
+        ArrayList<Ast.Method.Base> methods = new ArrayList<Ast.Method.Base>();
         methods.add(method);
-        Ast.Program.T program = new Ast.Program.ProgramSingle(
-                new Ast.MainClass.MainClassSingle("Test", new ArrayList<Ast.Declare.T>(), methods));
+        Ast.Program.Base program = new Ast.Program.ProgramSingle(
+                new Ast.MainClass.MainClassSingle("Test", methods));
         Ast.Program.ProgramSingle optimizedProgram =
                 (Ast.Program.ProgramSingle) new AstOptimizer().optimize(program);
         Ast.MainClass.MainClassSingle mainClass =
@@ -107,15 +147,15 @@ public class AstOptimizerTest {
         return optimizedMethod.getStms().get(0);
     }
 
-    private Ast.Expr.Number num(int value) {
-        return new Ast.Expr.Number(new Ast.Type.Int(), value, 1);
+    private Ast.Expr.IntLiteral num(int value) {
+        return new Ast.Expr.IntLiteral(value, 1);
     }
 
-    private Ast.Expr.Number num(float value) {
-        return new Ast.Expr.Number(new Ast.Type.Float(), value, 1);
+    private Ast.Expr.FloatLiteral num(float value) {
+        return new Ast.Expr.FloatLiteral(value, 1);
     }
 
-    private Ast.Expr.Call call(String name, Ast.Type.T returnType) {
-        return new Ast.Expr.Call(name, new ArrayList<Ast.Expr.T>(), 1, returnType);
+    private Ast.Expr.Call call(String name, Ast.Type.Base returnType) {
+        return new Ast.Expr.Call(name, new ArrayList<Ast.Expr.Base>(), 1, returnType);
     }
 }

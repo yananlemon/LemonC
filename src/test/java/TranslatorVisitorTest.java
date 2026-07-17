@@ -77,7 +77,7 @@ public class TranslatorVisitorTest {
     @Test
     public void testDoubleDispatchExprAcceptExists() {
         // 验证表达式节点的 accept 方法存在
-        Ast.Expr.Number num = new Ast.Expr.Number(new Ast.Type.Int(), 42, 1);
+        Ast.Expr.IntLiteral num = new Ast.Expr.IntLiteral(42, 1);
         Ast.Expr.Add add = new Ast.Expr.Add(num, num, 1);
         Ast.Expr.Sub sub = new Ast.Expr.Sub(num, num, 1);
         Ast.Expr.Mul mul = new Ast.Expr.Mul(num, num, 1);
@@ -109,7 +109,7 @@ public class TranslatorVisitorTest {
     @Test
     public void testDoubleDispatchCompareExprAcceptExists() {
         // 验证比较表达式节点的 accept 方法存在
-        Ast.Expr.Number num = new Ast.Expr.Number(new Ast.Type.Int(), 1, 1);
+        Ast.Expr.IntLiteral num = new Ast.Expr.IntLiteral(1, 1);
         Ast.Expr.GT gt = new Ast.Expr.GT(num, num, 1);
         Ast.Expr.LT lt = new Ast.Expr.LT(num, num, 1);
         Ast.Expr.GTE gte = new Ast.Expr.GTE(num, num, 1);
@@ -129,7 +129,7 @@ public class TranslatorVisitorTest {
     public void testDoubleDispatchStmtAcceptExists() {
         // 验证语句节点的 accept 方法存在
         Ast.Expr.Id id = new Ast.Expr.Id("x", new Ast.Type.Int(), 1);
-        Ast.Expr.Number num = new Ast.Expr.Number(new Ast.Type.Int(), 1, 1);
+        Ast.Expr.IntLiteral num = new Ast.Expr.IntLiteral(1, 1);
         Ast.Stmt.Assign assign = new Ast.Stmt.Assign(id, num, 1);
         
         assertNotNull("Assign语句应存在", assign);
@@ -207,6 +207,39 @@ public class TranslatorVisitorTest {
         assertEquals(2, visitor.prog.mainClass.methods.get(0).locals.size());
     }
 
+    @Test
+    public void testLegacyDoubleComparisonUsesContiguousTemporarySlots() throws IOException {
+        File sourceFile = writeSource("LegacyTempSlots",
+                "class LegacyTempSlots {\n" +
+                "    void main() {\n" +
+                "        bool less;\n" +
+                "        less = 1.0d < 2.0d;\n" +
+                "    }\n" +
+                "}\n");
+
+        TranslatorVisitor visitor = translate(sourceFile);
+        site.ilemon.codegen.ast.Ast.Method.MethodSingle method =
+                visitor.prog.mainClass.methods.get(0);
+        boolean hasLeftDoubleTemp = false;
+        boolean hasRightDoubleTemp = false;
+        boolean hasComparisonTemp = false;
+        for (site.ilemon.codegen.ast.Ast.Stmt.T statement : method.stms) {
+            if (statement instanceof site.ilemon.codegen.ast.Ast.Stmt.Dstore) {
+                int slot = ((site.ilemon.codegen.ast.Ast.Stmt.Dstore) statement).index;
+                hasLeftDoubleTemp |= slot == 1;
+                hasRightDoubleTemp |= slot == 3;
+            }
+            if (statement instanceof site.ilemon.codegen.ast.Ast.Stmt.Istore) {
+                hasComparisonTemp |= ((site.ilemon.codegen.ast.Ast.Stmt.Istore) statement).index == 5;
+            }
+        }
+
+        assertTrue("left double temporary should start at the first free slot", hasLeftDoubleTemp);
+        assertTrue("right double temporary should not overlap the left temporary", hasRightDoubleTemp);
+        assertTrue("comparison result should use the next free slot", hasComparisonTemp);
+        assertEquals("index should remain the next free local slot", 6, method.index);
+    }
+
     // ==================== 辅助方法 ====================
 
     private TranslatorVisitor translate(String filename) throws IOException {
@@ -216,7 +249,7 @@ public class TranslatorVisitorTest {
     private TranslatorVisitor translate(File sourceFile) throws IOException {
         Lexer lexer = new Lexer(sourceFile);
         Parser parser = new Parser(lexer);
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         SemanticVisitor semantic = new SemanticVisitor();
         semantic.visit(prog);
         

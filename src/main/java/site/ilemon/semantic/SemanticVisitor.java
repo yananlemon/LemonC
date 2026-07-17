@@ -41,13 +41,13 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     private final ArrayList<Integer> errorLineNumbers = new ArrayList<Integer>();
 
-    private java.util.Stack<Ast.Type.T> typeStack = new java.util.Stack<>();
+    private java.util.Stack<Ast.Type.Base> typeStack = new java.util.Stack<>();
 
     private String currMethodName;
 
     private HashMap<String,MethodVarTable> methodVarTable;
 
-    private HashMap<String,Ast.Type.T> methodNameRetTypeMap;
+    private HashMap<String,Ast.Type.Base> methodNameRetTypeMap;
 
     private HashSet<String> currMethodLocalVar;
 
@@ -57,7 +57,7 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     private HashMap<String,Ast.Method.MethodSingle> methodMap;
 
-    private Ast.Type.T typeOfMethodDeclared;
+    private Ast.Type.Base typeOfMethodDeclared;
 
     public SemanticVisitor(){
         this(false);
@@ -68,7 +68,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.collectErrors = collectErrors;
         this.methodVarTable = new HashMap<String,MethodVarTable>();
         this.methodMap = new HashMap<String, Ast.Method.MethodSingle>();
-        this.methodNameRetTypeMap = new HashMap<String, Ast.Type.T>();
+        this.methodNameRetTypeMap = new HashMap<String, Ast.Type.Base>();
     }
 
     public static SemanticVisitor collecting() {
@@ -87,11 +87,36 @@ public class SemanticVisitor implements ISemanticVisitor {
         return pass;
     }
 
-    private Ast.Type.T unknownType() {
-        return new Ast.Type.Int();
+    private Ast.Type.Base errorType() {
+        return Ast.Type.Error.INSTANCE;
     }
 
-    private String typeName(Ast.Type.T type) {
+    private boolean isErrorType(Ast.Type.Base type) {
+        return type != null && type.getKind() == TypeKind.ERROR;
+    }
+
+    private Ast.Type.Base analyzeExpression(Ast.Expr.Base expression) {
+        if (expression == null) {
+            return errorType();
+        }
+        int initialDepth = this.typeStack.size();
+        expression.accept(this);
+        if (this.typeStack.size() <= initialDepth) {
+            error(expression.getLineNum(), "internal error: expression analysis produced no type");
+            return errorType();
+        }
+        Ast.Type.Base result = this.typeStack.pop();
+        while (this.typeStack.size() > initialDepth) {
+            this.typeStack.pop();
+        }
+        return result == null ? errorType() : result;
+    }
+
+    private void pushType(Ast.Type.Base type) {
+        this.typeStack.push(type == null ? errorType() : type);
+    }
+
+    private String typeName(Ast.Type.Base type) {
         if (type == null) {
             return "未知";
         }
@@ -99,72 +124,91 @@ public class SemanticVisitor implements ISemanticVisitor {
         return name.startsWith("@") ? name.substring(1) : name;
     }
 
-    private void checkSameOperandTypes(int lineNum, String operator, Ast.Type.T leftType, Ast.Type.T rightType) {
+    private void checkSameOperandTypes(int lineNum, String operator, Ast.Type.Base leftType, Ast.Type.Base rightType) {
+        if (isErrorType(leftType) || isErrorType(rightType)) {
+            pushType(errorType());
+            return;
+        }
         if (isArrayType(leftType) || isArrayType(rightType)) {
             error(lineNum, String.format(
                     "运算符 '%s' 不支持数组操作数：左侧为 %s，右侧为 %s",
                     operator, typeName(leftType), typeName(rightType)));
+            pushType(errorType());
+            return;
         }
-        Ast.Type.T promoted = promoteNumeric(leftType, rightType);
+        Ast.Type.Base promoted = promoteNumeric(leftType, rightType);
         if (promoted != null) {
-            this.typeStack.push(promoted);
+            pushType(promoted);
             return;
         }
         if (!isMatch(leftType, rightType)) {
             error(lineNum, String.format(
                     "运算符 '%s' 的左右操作数类型不匹配：左侧为 %s，右侧为 %s",
                     operator, typeName(leftType), typeName(rightType)));
+            pushType(errorType());
+            return;
         }
-        this.typeStack.push(leftType);
+        pushType(leftType);
     }
 
-    private void checkBooleanOperandTypes(int lineNum, String operator, Ast.Type.T leftType, Ast.Type.T rightType) {
-        if (leftType == null || rightType == null ||
-                leftType.getKind() != TypeKind.BOOL || rightType.getKind() != TypeKind.BOOL) {
+    private void checkBooleanOperandTypes(int lineNum, String operator, Ast.Type.Base leftType, Ast.Type.Base rightType) {
+        if (isErrorType(leftType) || isErrorType(rightType)) {
+            pushType(errorType());
+            return;
+        }
+        if (leftType.getKind() != TypeKind.BOOL || rightType.getKind() != TypeKind.BOOL) {
             error(lineNum, String.format(
                     "运算符 '%s' 要求左右操作数都是 bool：左侧为 %s，右侧为 %s",
                     operator, typeName(leftType), typeName(rightType)));
+            pushType(errorType());
+            return;
         }
-        this.typeStack.push(new Ast.Type.Bool());
+        pushType(new Ast.Type.Bool());
     }
 
     @Override
     public void visit(Ast.Expr.Add obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T leftType = this.typeStack.pop();
-        this.visit(obj.getRight());
-        checkSameOperandTypes(obj.getLineNum(), "+", leftType, this.typeStack.pop());
+        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
+        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
+        checkSameOperandTypes(obj.getLineNum(), "+", leftType, rightType);
     }
 
     @Override
     public void visit(Ast.Expr.And obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T leftType = this.typeStack.pop();
-        this.visit(obj.getRight());
-        checkBooleanOperandTypes(obj.getLineNum(), "&&", leftType, this.typeStack.pop());
+        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
+        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
+        checkBooleanOperandTypes(obj.getLineNum(), "&&", leftType, rightType);
     }
 
     @Override
     public void visit(Ast.Type.Bool obj) {
-        this.typeStack.push(obj);
+        pushType(obj);
     }
 
     @Override
     public void visit(Ast.Stmt.Assign obj) {
-        if(obj.getExpr() instanceof Ast.Expr.T){
-            this.visit((Ast.Expr.T)obj.getExpr());
-            Ast.Type.T exprType = null;
-            if( obj.getExpr() instanceof Ast.Expr.Call)
-                exprType = ((Ast.Expr.Call) obj.getExpr()).getReturnType();
-            else
-                exprType = this.typeStack.pop();
-            if( this.currMethodLocalVar.contains(obj.getId().getId()))
+        if(obj.getExpr() instanceof Ast.Expr.Base){
+            Ast.Type.Base exprType = analyzeExpression(obj.getExpr());
+            boolean wasUnassigned = this.currMethodLocalVar.contains(obj.getId().getId());
+            if (wasUnassigned)
                 this.currMethodLocalVar.remove(obj.getId().getId());
-            this.visit(obj.getId());
-            Ast.Type.T destType = this.typeStack.pop();
+            Ast.Type.Base destType = analyzeExpression(obj.getId());
+            if (isErrorType(destType) || isErrorType(exprType)) {
+                if (wasUnassigned) {
+                    this.currMethodLocalVar.add(obj.getId().getId());
+                }
+                return;
+            }
             if (isArrayType(destType) || isArrayType(exprType)) {
                 error(obj.getLineNum(), String.format("数组不支持整体赋值：不能将 %s 赋值给 %s",
                         typeName(exprType), typeName(destType)));
+                if (wasUnassigned) {
+                    this.currMethodLocalVar.add(obj.getId().getId());
+                }
+                return;
+            }
+            if (!isMatch(destType, exprType) && wasUnassigned) {
+                this.currMethodLocalVar.add(obj.getId().getId());
             }
             if( !isMatch(destType,exprType))
                 error(obj.getLineNum(),String.format("不能将 %s 类型的表达式赋值给 %s 类型的变量 '%s'",
@@ -188,12 +232,15 @@ public class SemanticVisitor implements ISemanticVisitor {
             return;
         }
 
-        this.visit(obj.getInitializer());
-        Ast.Type.T initializerType = this.typeStack.pop();
+        Ast.Type.Base initializerType = analyzeExpression(obj.getInitializer());
+        if (isErrorType(initializerType)) {
+            return;
+        }
         if (!isMatch(declaration.getType(), initializerType)) {
             error(obj.getLineNum(), String.format(
                     "不能用 %s 类型初始化 %s 类型的变量 '%s'",
                     typeName(initializerType), typeName(declaration.getType()), declaration.getId()));
+            return;
         }
         this.currMethodLocalVar.remove(declaration.getId());
     }
@@ -201,7 +248,7 @@ public class SemanticVisitor implements ISemanticVisitor {
     @Override
     public void visit(Ast.Stmt.Block obj) {
         enterVariableScope();
-        for( Ast.Stmt.T stmt : obj.getStmts()){
+        for( Ast.Stmt.Base stmt : obj.getStmts()){
             this.visit(stmt);
         }
         exitVariableScope();
@@ -209,61 +256,57 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.Call obj) {
-        Ast.Type.T returnType = validateMethodCall(obj.getName(), obj.getInputParams(), obj.getLineNum());
-        if (returnType.getKind() == TypeKind.VOID) {
+        Ast.Type.Base returnType = validateMethodCall(obj.getName(), obj.getInputParams(), obj.getLineNum());
+        if (!isErrorType(returnType) && returnType.getKind() == TypeKind.VOID) {
             error(obj.getLineNum(), "void 方法 '" + obj.getName() + "' 不能作为表达式使用");
+            returnType = errorType();
         }
         obj.setReturnType(returnType);
-        this.typeStack.push(returnType);
+        pushType(returnType);
     }
 
     @Override
-    public void visit(Ast.Declare.T obj) {
+    public void visit(Ast.Declare.Base obj) {
         if (obj instanceof Ast.Declare.DeclareSingle) {
-            this.typeStack.push(((Ast.Declare.DeclareSingle) obj).getType());
+            pushType(((Ast.Declare.DeclareSingle) obj).getType());
         }
     }
 
     @Override
     public void visit(Ast.Expr.Div obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T leftType = this.typeStack.pop();
-        this.visit(obj.getRight());
-        checkSameOperandTypes(obj.getLineNum(), "/", leftType, this.typeStack.pop());
+        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
+        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
+        checkSameOperandTypes(obj.getLineNum(), "/", leftType, rightType);
     }
 
     @Override
     public void visit(Ast.Expr.Mod obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T leftType = this.typeStack.pop();
-        this.visit(obj.getRight());
-        Ast.Type.T rightType = this.typeStack.pop();
-        if (leftType == null || rightType == null
-                || leftType.getKind() != TypeKind.INT
+        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
+        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
+        if (isErrorType(leftType) || isErrorType(rightType)) {
+            pushType(errorType());
+            return;
+        }
+        if (leftType.getKind() != TypeKind.INT
                 || rightType.getKind() != TypeKind.INT) {
             error(obj.getLineNum(), String.format(
                     "运算符 '%%' 只支持 int 操作数：左侧为 %s，右侧为 %s",
                     typeName(leftType), typeName(rightType)));
+            pushType(errorType());
+            return;
         }
-        this.typeStack.push(new Ast.Type.Int());
+        pushType(new Ast.Type.Int());
     }
 
     @Override
     public void visit(Ast.Type.Float obj) {
-        this.typeStack.push(obj);
+        pushType(obj);
     }
 
     @Override
     public void visit(Ast.Type.Double obj) {
-        this.typeStack.push(obj);
-    }
-
-    @Override
-    public void visit(Ast.Expr obj) {
-
-    }
-
-    @Override
+        pushType(obj);
+    }@Override
     public void visit(Ast.Expr.GT obj) {
         checkOrderComparison(obj.getLeft(), obj.getRight(), ">", obj.getLineNum());
     }
@@ -271,34 +314,34 @@ public class SemanticVisitor implements ISemanticVisitor {
     @Override
     public void visit(Ast.Expr.Id obj) {
         MethodVarTable mTable = this.methodVarTable.get(currMethodName);
-        if( mTable == null )
-            error( obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
         if (mTable == null) {
-            this.typeStack.push(unknownType());
-            obj.setType(this.typeStack.peek());
+            error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
+            obj.setType(errorType());
+            pushType(errorType());
             return;
         }
-        if (!isVariableVisible(obj.getId()))
-            error( obj.getLineNum(), "未定义的变量: " + obj.getId());
-        if (!isVariableVisible(obj.getId()) || mTable.get(obj.getId()) == null) {
-            this.typeStack.push(unknownType());
-            obj.setType(this.typeStack.peek());
+        boolean visible = isVariableVisible(obj.getId());
+        Ast.Type.Base declaredType = visible ? mTable.get(obj.getId()) : null;
+        if (declaredType == null) {
+            error(obj.getLineNum(), "未定义的变量: " + obj.getId());
+            obj.setType(errorType());
+            pushType(errorType());
             return;
         }
-        if( currMethodLocalVar.contains(obj.getId()))
-            error(obj.getLineNum(),String.format("变量 '%s' 在使用前未赋值",obj.getId()));
-        if( obj.getType() == null ) {
-            // 类型可能在 Parser 阶段未成功解析（变量未在 varTable 中注册）
-            obj.setType(mTable.get(obj.getId()));
+        if (currMethodLocalVar.contains(obj.getId())) {
+            error(obj.getLineNum(), String.format("变量 '%s' 在使用前未赋值", obj.getId()));
+            obj.setType(errorType());
+            pushType(errorType());
+            return;
         }
-        this.typeStack.push(obj.getType());
+        obj.setType(declaredType);
+        pushType(obj.getType());
     }
 
     @Override
     public void visit(Ast.Stmt.If obj) {
-        this.visit(obj.getCondition());
-        Ast.Type.T condType = this.typeStack.pop();
-        if (condType.getKind() != TypeKind.BOOL)
+        Ast.Type.Base condType = analyzeExpression(obj.getCondition());
+        if (!isErrorType(condType) && condType.getKind() != TypeKind.BOOL)
             error(obj.getCondition().getLineNum(),
                     "if 条件必须是 bool，实际为 " + typeName(condType));
 
@@ -320,11 +363,11 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Type.Int obj) {
-        this.typeStack.push(obj);
+        pushType(obj);
     }
 
     @Override
-    public void visit(Ast.Program.T programSingle) {
+    public void visit(Ast.Program.Base programSingle) {
         this.visit(((Ast.Program.ProgramSingle)programSingle).getMainClass());
     }
 
@@ -354,7 +397,7 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     @Override
-    public void visit(Ast.MainClass.T obj) {
+    public void visit(Ast.MainClass.Base obj) {
         Ast.MainClass.MainClassSingle mainClassSingle = (Ast.MainClass.MainClassSingle) obj;
         for(int i = 0; i < mainClassSingle.getMethods().size(); i++){
             Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) mainClassSingle.getMethods().get(i);
@@ -391,6 +434,7 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Method.MethodSingle obj) {
+        this.typeStack.clear();
         MethodVarTable mTable = new MethodVarTable();
         this.currMethodLocalVar = new HashSet<String>();
         mTable.put(obj.getFormals(),obj.getLocals());
@@ -399,16 +443,12 @@ public class SemanticVisitor implements ISemanticVisitor {
         this.typeOfMethodDeclared = obj.getRetType();
 		this.variableScopes = new ArrayDeque<HashSet<String>>();
 		enterVariableScope();
-		for (Ast.Declare.T formal : obj.getFormals()) {
+		for (Ast.Declare.Base formal : obj.getFormals()) {
 			this.variableScopes.peek().add(((Ast.Declare.DeclareSingle) formal).getId());
 		}
 
-        if( obj.getId().equals("main")){
-            if( obj.getRetType().getKind() != TypeKind.VOID)
-                error(obj.getLineNum(), "main 方法的返回类型必须是 void，实际声明为: " + typeName(obj.getRetType()));
-        }
         for( int i = 0; i < obj.getStms().size(); i++){
-            Ast.Stmt.T stmt = obj.getStms().get(i);
+            Ast.Stmt.Base stmt = obj.getStms().get(i);
             this.visit(stmt);
         }
         if( !obj.getId().equals("main")
@@ -416,69 +456,69 @@ public class SemanticVisitor implements ISemanticVisitor {
                 && !statementsMustReturn(obj.getStms()) ){
             error(obj.getLineNum(), "非 void 方法 '" + obj.getId() + "' 不是所有路径都有 return");
         }
+		if (!this.typeStack.isEmpty()) {
+			error(obj.getLineNum(), "internal error: semantic type stack is not balanced");
+			this.typeStack.clear();
+		}
 		exitVariableScope();
 		this.variableScopes = null;
     }
 
     @Override
     public void visit(Ast.Expr.Mul obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T leftType = this.typeStack.pop();
-        this.visit(obj.getRight());
-        checkSameOperandTypes(obj.getLineNum(), "*", leftType, this.typeStack.pop());
+        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
+        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
+        checkSameOperandTypes(obj.getLineNum(), "*", leftType, rightType);
 
 
     }
 
     @Override
-    public void visit(Ast.Expr.Number obj) {
-        if(obj.getType() instanceof Ast.Type.Int){
-            this.typeStack.push(new Ast.Type.Int());
-        }else if(obj.getType() instanceof Ast.Type.Float){
-            this.typeStack.push(new Ast.Type.Float());
-        }else if(obj.getType() instanceof Ast.Type.Double){
-            this.typeStack.push(new Ast.Type.Double());
-        }else{
-            // 不支持的数字类型
-            error(obj.getLineNum(),"不支持的数字类型: " + typeName(obj.getType()));
-        }
+    public void visit(Ast.Expr.IntLiteral obj) {
+        pushType(new Ast.Type.Int());
+    }
+
+    @Override
+    public void visit(Ast.Expr.FloatLiteral obj) {
+        pushType(new Ast.Type.Float());
+    }
+
+    @Override
+    public void visit(Ast.Expr.DoubleLiteral obj) {
+        pushType(new Ast.Type.Double());
     }
 
     @Override
     public void visit(Ast.Expr.Or obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T leftType = this.typeStack.pop();
-        this.visit(obj.getRight());
-        checkBooleanOperandTypes(obj.getLineNum(), "||", leftType, this.typeStack.pop());
+        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
+        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
+        checkBooleanOperandTypes(obj.getLineNum(), "||", leftType, rightType);
     }
 
 
 
     @Override
     public void visit(Ast.Type.Str obj) {
-        this.typeStack.push(obj);
+        pushType(obj);
     }
 
     @Override
     public void visit(Ast.Expr.Sub obj) {
-        this.visit(obj.getLeft());
-        Ast.Type.T leftType = this.typeStack.pop();
-        this.visit(obj.getRight());
-        checkSameOperandTypes(obj.getLineNum(), "-", leftType, this.typeStack.pop());
-    }
-
-    @Override
-    public void visit(Ast.Type obj) {
-
-    }
-
-    @Override
+        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
+        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
+        checkSameOperandTypes(obj.getLineNum(), "-", leftType, rightType);
+    }@Override
     public void visit(Ast.Type.Void obj) {
-        this.typeStack.push(obj);
+        pushType(obj);
     }
 
     @Override
-    public void visit(Ast.Stmt.T obj) {
+    public void visit(Ast.Type.Error obj) {
+        pushType(obj);
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Base obj) {
         obj.accept(this);
     }
 
@@ -492,10 +532,12 @@ public class SemanticVisitor implements ISemanticVisitor {
                     placeholders.size(), argCount));
         }
         for (int i = 0; i < argCount; i++) {
-            Ast.Expr.T expr = obj.getExprs().get(i);
-            this.visit(expr);
+            Ast.Expr.Base expr = obj.getExprs().get(i);
+            Ast.Type.Base argType = analyzeExpression(expr);
+            if (isErrorType(argType) || i >= placeholders.size()) {
+                continue;
+            }
             char placeholder = placeholders.get(i);
-                Ast.Type.T argType = this.typeStack.pop();
             if (placeholder == 'd' && argType.getKind() != TypeKind.INT) {
                 error(expr.getLineNum(), String.format(
                         "printf 占位符 %%d 需要 int，实际为 %s", typeName(argType)));
@@ -515,46 +557,52 @@ public class SemanticVisitor implements ISemanticVisitor {
     }
 
     @Override
-    public void visit(Ast.Expr.T obj) {
+    public void visit(Ast.Expr.Base obj) {
         obj.accept(this);
     }
 
     @Override
     public void visit(Ast.Expr.True obj) {
-        this.typeStack.push(new Ast.Type.Bool());
+        pushType(new Ast.Type.Bool());
     }
 
     @Override
     public void visit(Ast.Expr.False obj) {
-        this.typeStack.push(new Ast.Type.Bool());
+        pushType(new Ast.Type.Bool());
     }
 
     @Override
     public void visit(Ast.Expr.UnaryMinus obj) {
-        this.visit(obj.getExpr());
-        Ast.Type.T type = this.typeStack.pop();
+        Ast.Type.Base type = analyzeExpression(obj.getExpr());
+        if (isErrorType(type)) {
+            pushType(errorType());
+            return;
+        }
         if (type.getKind() != TypeKind.INT && type.getKind() != TypeKind.FLOAT && type.getKind() != TypeKind.DOUBLE) {
             error(obj.getLineNum(), "一元负号不能用于类型 " + typeName(type));
         }
-        this.typeStack.push(type);
+        pushType(isNumberType(type) ? type : errorType());
     }
 
     @Override
     public void visit(Ast.Expr.Not obj) {
-        this.visit(obj.getExpr());
-        Ast.Type.T condType = this.typeStack.pop();
+        Ast.Type.Base condType = analyzeExpression(obj.getExpr());
+        if (isErrorType(condType)) {
+            pushType(errorType());
+            return;
+        }
         if( condType.getKind() != TypeKind.BOOL)
             error(obj.getLineNum(),"! 运算符要求操作数是 bool，实际为 " + typeName(condType));
-        this.typeStack.push(new Ast.Type.Bool());
+        pushType(condType.getKind() == TypeKind.BOOL ? new Ast.Type.Bool() : errorType());
     }
 
     @Override
     public void visit(Ast.Expr.Str obj) {
-        this.typeStack.push(new Ast.Type.Str());
+        pushType(new Ast.Type.Str());
     }
 
     @Override
-    public void visit(Ast.Type.T obj) {
+    public void visit(Ast.Type.Base obj) {
 
     }
 
@@ -568,13 +616,12 @@ public class SemanticVisitor implements ISemanticVisitor {
             }
             return;
         }
-        this.visit(obj.getExpr());
+        Ast.Type.Base retType = analyzeExpression(obj.getExpr());
         if (voidMethod) {
             error(obj.getLineNum(), "void 方法不能返回值");
             return;
         }
-        Ast.Type.T retType = this.typeStack.pop();
-        if( !isMatch(typeOfMethodDeclared,retType))
+        if(!isErrorType(retType) && !isMatch(typeOfMethodDeclared,retType))
             error(obj.getLineNum(),String.format("返回值类型不匹配：期望 %s，实际 %s",
                     typeName(typeOfMethodDeclared), typeName(retType)));
     }
@@ -582,9 +629,8 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.While obj) {
-        this.visit(obj.getCondition());
-        Ast.Type.T condType = this.typeStack.pop();
-        if( condType.getKind() != TypeKind.BOOL )
+        Ast.Type.Base condType = analyzeExpression(obj.getCondition());
+        if(!isErrorType(condType) && condType.getKind() != TypeKind.BOOL )
             error(obj.getCondition().getLineNum(), "while 条件必须是 bool，实际为 " + typeName(condType));
         HashSet<String> before = new HashSet<String>(this.currMethodLocalVar);
         loopDepth++;
@@ -599,9 +645,8 @@ public class SemanticVisitor implements ISemanticVisitor {
         if (obj.getInit() != null) {
             this.visit(obj.getInit());
         }
-        this.visit(obj.getCondition());
-        Ast.Type.T condType = this.typeStack.pop();
-        if( condType.getKind() != TypeKind.BOOL )
+        Ast.Type.Base condType = analyzeExpression(obj.getCondition());
+        if(!isErrorType(condType) && condType.getKind() != TypeKind.BOOL )
             error(obj.getCondition().getLineNum(), "for 条件必须是 bool，实际为 " + typeName(condType));
         HashSet<String> before = new HashSet<String>(this.currMethodLocalVar);
         loopDepth++;
@@ -628,9 +673,8 @@ public class SemanticVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.Call obj) {
-        Ast.Type.T returnType = validateMethodCall(obj.getName(), obj.getInputParams(), obj.getLineNum());
+        Ast.Type.Base returnType = validateMethodCall(obj.getName(), obj.getInputParams(), obj.getLineNum());
         obj.setReturnType(returnType);
-        this.typeStack.push(returnType);
     }
 
     private static class FlowResult {
@@ -643,16 +687,16 @@ public class SemanticVisitor implements ISemanticVisitor {
         }
     }
 
-    private boolean statementsMustReturn(ArrayList<Ast.Stmt.T> statements) {
+    private boolean statementsMustReturn(ArrayList<Ast.Stmt.Base> statements) {
         return flowOfStatements(statements).mustReturn;
     }
 
-    private FlowResult flowOfStatements(ArrayList<Ast.Stmt.T> statements) {
+    private FlowResult flowOfStatements(ArrayList<Ast.Stmt.Base> statements) {
         if (statements == null || statements.isEmpty()) {
             return new FlowResult(true, false);
         }
         boolean canCompleteNormally = true;
-        for (Ast.Stmt.T statement : statements) {
+        for (Ast.Stmt.Base statement : statements) {
             if (!canCompleteNormally) {
                 break;
             }
@@ -665,7 +709,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         return new FlowResult(canCompleteNormally, false);
     }
 
-    private FlowResult flowOfStatement(Ast.Stmt.T statement) {
+    private FlowResult flowOfStatement(Ast.Stmt.Base statement) {
         if (statement instanceof Ast.Stmt.Return) {
             return new FlowResult(false, true);
         }
@@ -694,6 +738,7 @@ public class SemanticVisitor implements ISemanticVisitor {
             }
             if (i + 1 >= format.length()) {
                 error(lineNum, "printf 格式串中的 % 缺少占位符");
+                break;
             }
             char placeholder = format.charAt(++i);
             if (placeholder == 'd' || placeholder == 'f') {
@@ -736,7 +781,9 @@ public class SemanticVisitor implements ISemanticVisitor {
         return false;
     }
 
-    private boolean isMatch(Ast.Type.T target,Ast.Type.T curr){
+    private boolean isMatch(Ast.Type.Base target,Ast.Type.Base curr){
+        if (isErrorType(target) || isErrorType(curr))
+            return true;
         if( target == null || curr == null )
             return false;
         if(target.getKind() == curr.getKind())
@@ -751,7 +798,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         return false;
     }
 
-    private Ast.Type.T promoteNumeric(Ast.Type.T left, Ast.Type.T right) {
+    private Ast.Type.Base promoteNumeric(Ast.Type.Base left, Ast.Type.Base right) {
         if (!isNumberType(left) || !isNumberType(right)) {
             return null;
         }
@@ -764,7 +811,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         return new Ast.Type.Int();
     }
 
-    private boolean isNumberType(Ast.Type.T type) {
+    private boolean isNumberType(Ast.Type.Base type) {
         if (type == null) {
             return false;
         }
@@ -772,7 +819,7 @@ public class SemanticVisitor implements ISemanticVisitor {
         return kind == TypeKind.INT || kind == TypeKind.FLOAT || kind == TypeKind.DOUBLE;
     }
 
-    private boolean isArrayType(Ast.Type.T type) {
+    private boolean isArrayType(Ast.Type.Base type) {
         if (type == null) {
             return false;
         }
@@ -784,35 +831,45 @@ public class SemanticVisitor implements ISemanticVisitor {
     /**
      * 校验比较运算符（== / !=）：只要左右类型匹配即可
      */
-    private void checkComparison(Ast.Expr.T left, Ast.Expr.T right, String op, int lineNum) {
-        this.visit(left);
-        Ast.Type.T leftType = this.typeStack.pop();
-        this.visit(right);
-        Ast.Type.T rightType = this.typeStack.pop();
+    private void checkComparison(Ast.Expr.Base left, Ast.Expr.Base right, String op, int lineNum) {
+        Ast.Type.Base leftType = analyzeExpression(left);
+        Ast.Type.Base rightType = analyzeExpression(right);
+        if (isErrorType(leftType) || isErrorType(rightType)) {
+            pushType(errorType());
+            return;
+        }
         if (isArrayType(leftType) || isArrayType(rightType)) {
             error(lineNum, String.format("比较运算符 '%s' 不支持数组操作数：左侧为 %s，右侧为 %s",
                     op, typeName(leftType), typeName(rightType)));
+            pushType(errorType());
+            return;
         }
         if (promoteNumeric(leftType, rightType) == null && !isMatch(leftType, rightType)) {
             error(lineNum, String.format("比较运算符 '%s' 的左右操作数类型不匹配：左侧为 %s，右侧为 %s",
                     op, typeName(leftType), typeName(rightType)));
+            pushType(errorType());
+            return;
         }
-        this.typeStack.push(new Ast.Type.Bool());
+        pushType(new Ast.Type.Bool());
     }
 
     /**
      * 校验序比较运算符（> / < / >= / <=）：除了类型匹配，还要求是数值类型
      */
-    private void checkOrderComparison(Ast.Expr.T left, Ast.Expr.T right, String op, int lineNum) {
-        this.visit(left);
-        Ast.Type.T leftType = this.typeStack.pop();
-        this.visit(right);
-        Ast.Type.T rightType = this.typeStack.pop();
+    private void checkOrderComparison(Ast.Expr.Base left, Ast.Expr.Base right, String op, int lineNum) {
+        Ast.Type.Base leftType = analyzeExpression(left);
+        Ast.Type.Base rightType = analyzeExpression(right);
+        if (isErrorType(leftType) || isErrorType(rightType)) {
+            pushType(errorType());
+            return;
+        }
         if (promoteNumeric(leftType, rightType) == null) {
             error(lineNum, String.format("比较运算符 '%s' 只支持同类型数值操作数：左侧为 %s，右侧为 %s",
                     op, typeName(leftType), typeName(rightType)));
+            pushType(errorType());
+            return;
         }
-        this.typeStack.push(new Ast.Type.Bool());
+        pushType(new Ast.Type.Bool());
     }
 
     /**
@@ -820,90 +877,117 @@ public class SemanticVisitor implements ISemanticVisitor {
      * 校验方法是否存在、参数个数是否匹配、参数类型是否匹配。
      * @return 方法的返回类型
      */
-    private Ast.Type.T validateMethodCall(String methodName, ArrayList<Ast.Expr.T> inputParams, int lineNum) {
+    private Ast.Type.Base validateMethodCall(String methodName, ArrayList<Ast.Expr.Base> inputParams, int lineNum) {
+        ArrayList<Ast.Type.Base> actualTypes = new ArrayList<Ast.Type.Base>();
+        if (inputParams != null) {
+            for (Ast.Expr.Base inputParam : inputParams) {
+                actualTypes.add(analyzeExpression(inputParam));
+            }
+        }
         Ast.Method.MethodSingle method = this.methodMap.get(methodName);
         if (method == null) {
             error(lineNum, "未定义的方法: " + methodName);
-            return unknownType();
+            return errorType();
         }
-        if (inputParams.size() != method.getFormals().size()) {
+        boolean callHasError = false;
+        if (actualTypes.size() != method.getFormals().size()) {
+            callHasError = true;
             error(lineNum, String.format("方法 '%s' 的参数个数不正确：期望 %d 个，实际 %d 个",
-                    methodName, method.getFormals().size(), inputParams.size()));
+                    methodName, method.getFormals().size(), actualTypes.size()));
         }
-        int checkedArgCount = Math.min(inputParams.size(), method.getFormals().size());
+        int checkedArgCount = Math.min(actualTypes.size(), method.getFormals().size());
         for (int i = 0; i < checkedArgCount; i++) {
-            this.visit(inputParams.get(i));
-            Ast.Type.T actualType = this.typeStack.pop();
-            this.visit(method.getFormals().get(i));
-            Ast.Type.T expectedType = this.typeStack.pop();
+            Ast.Type.Base actualType = actualTypes.get(i);
+            Ast.Type.Base expectedType = ((Ast.Declare.DeclareSingle) method.getFormals().get(i)).getType();
+            if (isErrorType(actualType)) {
+                callHasError = true;
+                continue;
+            }
             if (!isMatch(expectedType, actualType)) {
+                callHasError = true;
                 error(lineNum, String.format("方法 '%s' 的第 %d 个参数类型不匹配：期望 %s，实际 %s",
                         methodName, i + 1, typeName(expectedType), typeName(actualType)));
             }
         }
-        return this.methodNameRetTypeMap.get(methodName);
+        if (callHasError) {
+            return errorType();
+        }
+        Ast.Type.Base returnType = this.methodNameRetTypeMap.get(methodName);
+        return returnType == null ? errorType() : returnType;
     }
 
     // ========== 数组相关的 visit 方法 ==========
 
     @Override
     public void visit(Ast.Type.IntArray obj) {
-        this.typeStack.push(obj);
+        pushType(obj);
     }
 
     @Override
     public void visit(Ast.Type.FloatArray obj) {
-        this.typeStack.push(obj);
+        pushType(obj);
     }
 
     @Override
     public void visit(Ast.Type.DoubleArray obj) {
-        this.typeStack.push(obj);
+        pushType(obj);
     }
 
     @Override
     public void visit(Ast.Type.BoolArray obj) {
-        this.typeStack.push(obj);
+        pushType(obj);
     }
 
     @Override
     public void visit(Ast.Expr.ArrayAccess obj) {
+        Ast.Type.Base idxType = analyzeExpression(obj.getIndex());
         // 检查数组是否已声明
         MethodVarTable mTable = this.methodVarTable.get(currMethodName);
         if (mTable == null) {
             error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
         }
         if (mTable == null) {
-            this.typeStack.push(unknownType());
+            obj.setElementType(errorType());
+            pushType(errorType());
             return;
         }
-        Ast.Type.T arrayType = isVariableVisible(obj.getArrayName())
+        Ast.Type.Base arrayType = isVariableVisible(obj.getArrayName())
                 ? mTable.get(obj.getArrayName()) : null;
         if (arrayType == null) {
             error(obj.getLineNum(), "未定义的数组: " + obj.getArrayName());
         }
         if (arrayType == null) {
-            this.typeStack.push(unknownType());
+            obj.setElementType(errorType());
+            pushType(errorType());
             return;
         }
-        Ast.Type.T elementType = getElementType(arrayType);
+        Ast.Type.Base elementType = getElementType(arrayType);
         if (elementType == null) {
             error(obj.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
                     obj.getArrayName(), typeName(arrayType)));
         }
         // 检查下标类型必须是int
         if (elementType == null) {
-            this.typeStack.push(unknownType());
+            obj.setElementType(errorType());
+            pushType(errorType());
             return;
         }
-        this.visit(obj.getIndex());
-        Ast.Type.T idxType = this.typeStack.pop();
+        if (isErrorType(idxType)) {
+            obj.setElementType(errorType());
+            pushType(errorType());
+            return;
+        }
         if (idxType.getKind() != TypeKind.INT) {
             error(obj.getIndex().getLineNum(), "数组下标必须是 int，实际为 " + typeName(idxType));
         }
         // 设置元素类型
+        if (idxType.getKind() != TypeKind.INT) {
+            obj.setElementType(errorType());
+            pushType(errorType());
+            return;
+        }
         obj.setElementType(elementType);
-        this.typeStack.push(obj.getElementType());
+        pushType(obj.getElementType());
     }
 
     @Override
@@ -911,69 +995,64 @@ public class SemanticVisitor implements ISemanticVisitor {
         MethodVarTable mTable = this.methodVarTable.get(currMethodName);
         if (mTable == null) {
             error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
-            this.typeStack.push(unknownType());
+            pushType(errorType());
             return;
         }
-        Ast.Type.T arrayType = isVariableVisible(obj.getArrayName())
+        Ast.Type.Base arrayType = isVariableVisible(obj.getArrayName())
                 ? mTable.get(obj.getArrayName()) : null;
         if (arrayType == null) {
             error(obj.getLineNum(), "未定义的数组: " + obj.getArrayName());
         }
         if (arrayType == null) {
-            this.typeStack.push(unknownType());
+            pushType(errorType());
             return;
         }
         if (getElementType(arrayType) == null) {
             error(obj.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
                     obj.getArrayName(), typeName(arrayType)));
-            this.typeStack.push(unknownType());
+            pushType(errorType());
             return;
         }
-        this.typeStack.push(new Ast.Type.Int());
+        pushType(new Ast.Type.Int());
     }
 
     @Override
     public void visit(Ast.Stmt.ArrayAssign obj) {
+        Ast.Type.Base idxType = analyzeExpression(obj.getIndex());
+        Ast.Type.Base elemType = analyzeExpression(obj.getExpr());
         // 检查数组是否已声明
         MethodVarTable mTable = this.methodVarTable.get(currMethodName);
         if (mTable == null) {
             error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
-            this.typeStack.push(unknownType());
             return;
         }
-        Ast.Type.T arrayType = isVariableVisible(obj.getArrayName())
+        Ast.Type.Base arrayType = isVariableVisible(obj.getArrayName())
                 ? mTable.get(obj.getArrayName()) : null;
         if (arrayType == null) {
             error(obj.getLineNum(), "未定义的数组: " + obj.getArrayName());
-            this.typeStack.push(unknownType());
             return;
         }
         // 设置元素类型
-        Ast.Type.T elementType = getElementType(arrayType);
+        Ast.Type.Base elementType = getElementType(arrayType);
         if (elementType == null) {
             error(obj.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
                     obj.getArrayName(), typeName(arrayType)));
-            this.typeStack.push(unknownType());
             return;
         }
         obj.setElementType(elementType);
         // 检查下标类型
-        this.visit(obj.getIndex());
-        Ast.Type.T idxType = this.typeStack.pop();
-        if (idxType.getKind() != TypeKind.INT) {
+        if (!isErrorType(idxType) && idxType.getKind() != TypeKind.INT) {
             error(obj.getIndex().getLineNum(), "数组下标必须是 int，实际为 " + typeName(idxType));
         }
         // 检查赋值类型
-        this.visit(obj.getExpr());
-        Ast.Type.T elemType = this.typeStack.pop();
-        if (!isMatch(elementType, elemType)) {
+        if (!isErrorType(elemType) && !isMatch(elementType, elemType)) {
             error(obj.getLineNum(), String.format("不能将 %s 类型的表达式赋值给 %s 数组元素",
                     typeName(elemType), typeName(elementType)));
         }
     }
 
     // 获取数组元素类型
-    private Ast.Type.T getElementType(Ast.Type.T arrayType) {
+    private Ast.Type.Base getElementType(Ast.Type.Base arrayType) {
         if (arrayType instanceof Ast.Type.IntArray) {
             return new Ast.Type.Int();
         } else if (arrayType instanceof Ast.Type.FloatArray) {

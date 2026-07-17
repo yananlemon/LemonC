@@ -239,6 +239,23 @@ public class LemonVmTest {
         assertEquals("eq", output);
     }
 
+    @Test
+    public void testSignedZeroComparesLikeJvmFloatingPoint() {
+        String output = runSimple(0,
+                instr(Opcode.JE, immf(-0.0f), immf(0.0f), jmp(3)),
+                instr(Opcode.PRINT, imms("not-equal")),
+                instr(Opcode.JMP, jmp(4)),
+                instr(Opcode.PRINT, imms("equal")),
+                instr(Opcode.JL, immd(-0.0d), immd(0.0d), jmp(7)),
+                instr(Opcode.PRINT, imms("-not-less")),
+                instr(Opcode.JMP, jmp(8)),
+                instr(Opcode.PRINT, imms("-less")),
+                instr(Opcode.RET)
+        );
+
+        assertEquals("equal-not-less", output);
+    }
+
     // =====================================================================
     // C. 编程式测试 — 函数调用
     // =====================================================================
@@ -458,6 +475,39 @@ public class LemonVmTest {
                 ".end\n";
         String output = runLbc(lbc);
         assertEquals("x=42\n", output);
+    }
+
+    @Test
+    public void testLbcLabelsAreScopedToTheirFunction() {
+        String lbc =
+                ".version 1\n" +
+                ".class ScopedLabels\n" +
+                ".func main 0 0 void\n" +
+                "    Jmp _done\n" +
+                "    Print \"bad-main\"\n" +
+                "_done:\n" +
+                "    Call helper\n" +
+                "    Ret\n" +
+                ".end\n" +
+                ".func helper 0 0 void\n" +
+                "    Jmp _done\n" +
+                "    Print \"bad-helper\"\n" +
+                "_done:\n" +
+                "    Print \"ok\"\n" +
+                "    Ret\n" +
+                ".end\n";
+
+        assertEquals("ok", runLbc(lbc));
+    }
+
+    @Test(expected = VmException.class)
+    public void testLbcRejectsDuplicateLabelInFunction() {
+        runLbc(".func main 0 0 void\n_same:\n_same:\nRet\n.end\n");
+    }
+
+    @Test(expected = VmException.class)
+    public void testLbcRejectsWrongOperandCount() {
+        runLbc(".func main 0 0 void\nPrint\nRet\n.end\n");
     }
 
     // =====================================================================

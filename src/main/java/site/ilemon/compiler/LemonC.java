@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 
 /**
@@ -41,7 +42,7 @@ public class LemonC {
         }
     }
 
-    public static int run(String[] args, PrintStream out, PrintStream err) {
+    public static synchronized int run(String[] args, PrintStream out, PrintStream err) {
         try {
             CompilerOptions options = CompilerOptions.parse(args, err);
             if (options == null) {
@@ -79,7 +80,7 @@ public class LemonC {
                 }
                 return 1;
             }
-            Ast.Program.T program = parseResult.getProgram();
+            Ast.Program.Base program = parseResult.getProgram();
 
             SemanticVisitor semantic = SemanticVisitor.collecting();
             semantic.visit(program);
@@ -93,7 +94,7 @@ public class LemonC {
                 out.print(AstPrinter.print(program));
             }
 
-            Ast.Program.T optimizedProgram = new AstOptimizer().optimize(program);
+            Ast.Program.Base optimizedProgram = new AstOptimizer().optimize(program);
             IrProgram irProgram = buildLemonIr(optimizedProgram);
             if (options.target == Target.VM) {
                 return runVmBackend(irProgram, options, out);
@@ -109,8 +110,9 @@ public class LemonC {
             ByteCodeGenerator generator = new ByteCodeGenerator();
             generator.visit(jvmProgram);
             File ilFile = generator.getOutputFile();
-            assembleWithJasmin(generator.getOutputDir(), ilFile, out, err, options.verbose);
             File classFile = generator.getClassFile(jvmProgram.mainClass.id);
+            Files.deleteIfExists(classFile.toPath());
+            assembleWithJasmin(generator.getOutputDir(), ilFile, out, err, options.verbose);
             if (!classFile.isFile() || classFile.length() == 0) {
                 throw new CompilerException("Jasmin did not generate class file: " + classFile.getPath());
             }
@@ -124,7 +126,7 @@ public class LemonC {
         }
     }
 
-    private static IrProgram buildLemonIr(Ast.Program.T optimizedProgram) {
+    private static IrProgram buildLemonIr(Ast.Program.Base optimizedProgram) {
         AstToIrTranslator astToIr = new AstToIrTranslator();
         optimizedProgram.accept(astToIr);
         IrProgram irProgram = astToIr.getProgram();

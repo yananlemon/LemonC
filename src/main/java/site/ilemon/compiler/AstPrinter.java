@@ -12,7 +12,7 @@ public final class AstPrinter {
     private AstPrinter() {
     }
 
-    public static String print(Ast.Program.T program) {
+    public static String print(Ast.Program.Base program) {
         AstPrinter printer = new AstPrinter();
         printer.program(program);
         return printer.out.toString();
@@ -20,7 +20,7 @@ public final class AstPrinter {
 
     private final StringBuilder out = new StringBuilder();
 
-    private void program(Ast.Program.T program) {
+    private void program(Ast.Program.Base program) {
         line(0, "Program");
         if (program instanceof Ast.Program.ProgramSingle) {
             mainClass(((Ast.Program.ProgramSingle) program).getMainClass(), 1);
@@ -29,12 +29,12 @@ public final class AstPrinter {
         }
     }
 
-    private void mainClass(Ast.MainClass.T mainClass, int depth) {
+    private void mainClass(Ast.MainClass.Base mainClass, int depth) {
         if (mainClass instanceof Ast.MainClass.MainClassSingle) {
             Ast.MainClass.MainClassSingle node = (Ast.MainClass.MainClassSingle) mainClass;
             line(depth, "Class " + node.getClassId());
             if (node.getMethods() != null) {
-                for (Ast.Method.T method : node.getMethods()) {
+                for (Ast.Method.Base method : node.getMethods()) {
                     method(method, depth + 1);
                 }
             }
@@ -43,14 +43,14 @@ public final class AstPrinter {
         }
     }
 
-    private void method(Ast.Method.T method, int depth) {
+    private void method(Ast.Method.Base method, int depth) {
         if (method instanceof Ast.Method.MethodSingle) {
             Ast.Method.MethodSingle node = (Ast.Method.MethodSingle) method;
             line(depth, "Method " + node.getId() + " : " + type(node.getRetType()));
             declarations("Params", node.getFormals(), depth + 1);
             declarations("Locals", node.getLocals(), depth + 1);
             line(depth + 1, "Body");
-            for (Ast.Stmt.T stmt : node.getStms()) {
+            for (Ast.Stmt.Base stmt : node.getStms()) {
                 stmt(stmt, depth + 2);
             }
             if (node.getRetExp() != null) {
@@ -62,13 +62,13 @@ public final class AstPrinter {
         }
     }
 
-    private void declarations(String title, List<Ast.Declare.T> declarations, int depth) {
+    private void declarations(String title, List<Ast.Declare.Base> declarations, int depth) {
         line(depth, title);
         if (declarations == null || declarations.isEmpty()) {
             line(depth + 1, "(none)");
             return;
         }
-        for (Ast.Declare.T declaration : declarations) {
+        for (Ast.Declare.Base declaration : declarations) {
             if (declaration instanceof Ast.Declare.DeclareSingle) {
                 Ast.Declare.DeclareSingle node = (Ast.Declare.DeclareSingle) declaration;
                 line(depth + 1, type(node.getType()) + " " + node.getId());
@@ -78,7 +78,7 @@ public final class AstPrinter {
         }
     }
 
-    private void stmt(Ast.Stmt.T stmt, int depth) {
+    private void stmt(Ast.Stmt.Base stmt, int depth) {
         if (stmt instanceof Ast.Stmt.Assign) {
             Ast.Stmt.Assign node = (Ast.Stmt.Assign) stmt;
             line(depth, "Assign " + node.getId().getId());
@@ -99,7 +99,7 @@ public final class AstPrinter {
             expr(node.getExpr(), depth + 2);
         } else if (stmt instanceof Ast.Stmt.Block) {
             line(depth, "Block");
-            for (Ast.Stmt.T child : ((Ast.Stmt.Block) stmt).getStmts()) {
+            for (Ast.Stmt.Base child : ((Ast.Stmt.Block) stmt).getStmts()) {
                 stmt(child, depth + 1);
             }
         } else if (stmt instanceof Ast.Stmt.If) {
@@ -137,13 +137,13 @@ public final class AstPrinter {
         } else if (stmt instanceof Ast.Stmt.Printf) {
             Ast.Stmt.Printf node = (Ast.Stmt.Printf) stmt;
             line(depth, "Printf \"" + escape(node.getFormat()) + "\"");
-            for (Ast.Expr.T expr : node.getExprs()) {
+            for (Ast.Expr.Base expr : node.getExprs()) {
                 expr(expr, depth + 1);
             }
         } else if (stmt instanceof Ast.Stmt.Call) {
             Ast.Stmt.Call node = (Ast.Stmt.Call) stmt;
             line(depth, "Call " + node.getName());
-            for (Ast.Expr.T arg : node.getInputParams()) {
+            for (Ast.Expr.Base arg : node.getInputParams()) {
                 expr(arg, depth + 1);
             }
         } else if (stmt instanceof Ast.Stmt.PrintLine) {
@@ -157,7 +157,7 @@ public final class AstPrinter {
         }
     }
 
-    private void expr(Ast.Expr.T expr, int depth) {
+    private void expr(Ast.Expr.Base expr, int depth) {
         if (expr == null) {
             line(depth, "(null)");
         } else if (binary(expr, depth)) {
@@ -168,15 +168,21 @@ public final class AstPrinter {
         } else if (expr instanceof Ast.Expr.Call) {
             Ast.Expr.Call node = (Ast.Expr.Call) expr;
             line(depth, "Call " + node.getName() + " : " + type(node.getReturnType()));
-            for (Ast.Expr.T arg : node.getInputParams()) {
+            for (Ast.Expr.Base arg : node.getInputParams()) {
                 expr(arg, depth + 1);
             }
         } else if (expr instanceof Ast.Expr.Id) {
             Ast.Expr.Id node = (Ast.Expr.Id) expr;
             line(depth, "Id " + node.getId() + " : " + type(node.getType()));
-        } else if (expr instanceof Ast.Expr.Number) {
-            Ast.Expr.Number node = (Ast.Expr.Number) expr;
-            line(depth, "Number " + node.getValue() + " : " + type(node.getType()));
+        } else if (expr instanceof Ast.Expr.IntLiteral) {
+            Ast.Expr.IntLiteral node = (Ast.Expr.IntLiteral) expr;
+            line(depth, "IntLiteral " + node.getValue() + " : Int");
+        } else if (expr instanceof Ast.Expr.FloatLiteral) {
+            Ast.Expr.FloatLiteral node = (Ast.Expr.FloatLiteral) expr;
+            line(depth, "FloatLiteral " + node.getValue() + " : Float");
+        } else if (expr instanceof Ast.Expr.DoubleLiteral) {
+            Ast.Expr.DoubleLiteral node = (Ast.Expr.DoubleLiteral) expr;
+            line(depth, "DoubleLiteral " + node.getValue() + " : Double");
         } else if (expr instanceof Ast.Expr.Str) {
             line(depth, "String \"" + escape(((Ast.Expr.Str) expr).getValue()) + "\"");
         } else if (expr instanceof Ast.Expr.True) {
@@ -194,9 +200,9 @@ public final class AstPrinter {
         }
     }
 
-    private boolean binary(Ast.Expr.T expr, int depth) {
-        Ast.Expr.T left;
-        Ast.Expr.T right;
+    private boolean binary(Ast.Expr.Base expr, int depth) {
+        Ast.Expr.Base left;
+        Ast.Expr.Base right;
         if (expr instanceof Ast.Expr.Add) {
             left = ((Ast.Expr.Add) expr).getLeft();
             right = ((Ast.Expr.Add) expr).getRight();
@@ -246,7 +252,7 @@ public final class AstPrinter {
         return true;
     }
 
-    private String type(Ast.Type.T type) {
+    private String type(Ast.Type.Base type) {
         return type == null ? "?" : type.toString();
     }
 

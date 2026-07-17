@@ -48,7 +48,7 @@ public class ParserRobustnessTest {
 
     @Test
     public void stillAcceptsMainKeywordAsEntryMethodName() throws Exception {
-        Ast.Program.T program = parse("ValidMain", "class ValidMain { void main() {} }");
+        Ast.Program.Base program = parse("ValidMain", "class ValidMain { void main() {} }");
         Ast.MainClass.MainClassSingle mainClass =
                 (Ast.MainClass.MainClassSingle) ((Ast.Program.ProgramSingle) program).getMainClass();
 
@@ -56,7 +56,7 @@ public class ParserRobustnessTest {
         assertEquals("main", ((Ast.Method.MethodSingle) mainClass.getMethods().get(0)).getId());
     }
 
-    private static Ast.Program.T parse(String className, String source) throws Exception {
+    private static Ast.Program.Base parse(String className, String source) throws Exception {
         return new Parser(new Lexer(writeSource(className, source))).parse();
     }
 

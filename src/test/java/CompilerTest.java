@@ -321,7 +321,7 @@ public class CompilerTest {
 
         // 2. 语法分析
         Parser parser = new Parser(lexer);
-        Ast.Program.T program = parser.parse();
+        Ast.Program.Base program = parser.parse();
         assertNotNull("AST 不应为 null", program);
 
         // 3. 语义分析

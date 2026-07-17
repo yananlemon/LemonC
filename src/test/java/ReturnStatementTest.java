@@ -17,7 +17,7 @@ public class ReturnStatementTest {
 
     @Test
     public void parserRepresentsEmptyReturnWithNullExpression() throws Exception {
-        Ast.Program.T program = parse("EmptyReturnAst",
+        Ast.Program.Base program = parse("EmptyReturnAst",
                 "class EmptyReturnAst { void main() { return; } }");
         Ast.Method.MethodSingle main = method(program, "main");
         Ast.Stmt.Return returnStmt = (Ast.Stmt.Return) main.getStms().get(0);
@@ -54,20 +54,20 @@ public class ReturnStatementTest {
     }
 
     private static SemanticVisitor analyze(String className, String source) throws Exception {
-        Ast.Program.T program = parse(className, source);
+        Ast.Program.Base program = parse(className, source);
         SemanticVisitor semantic = SemanticVisitor.collecting();
         semantic.visit(program);
         return semantic;
     }
 
-    private static Ast.Program.T parse(String className, String source) throws Exception {
+    private static Ast.Program.Base parse(String className, String source) throws Exception {
         return new Parser(new Lexer(writeSource(className, source))).parse();
     }
 
-    private static Ast.Method.MethodSingle method(Ast.Program.T program, String name) {
+    private static Ast.Method.MethodSingle method(Ast.Program.Base program, String name) {
         Ast.MainClass.MainClassSingle mainClass = (Ast.MainClass.MainClassSingle)
                 ((Ast.Program.ProgramSingle) program).getMainClass();
-        for (Ast.Method.T candidate : mainClass.getMethods()) {
+        for (Ast.Method.Base candidate : mainClass.getMethods()) {
             Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) candidate;
             if (name.equals(method.getId())) {
                 return method;

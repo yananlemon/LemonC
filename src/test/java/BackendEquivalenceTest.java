@@ -80,6 +80,46 @@ public class BackendEquivalenceTest {
     }
 
     @Test
+    public void allPathReturnFunctionCompilesAcrossBackends() throws Exception {
+        File sourceFile = writeSource("AllPathReturnIntegration",
+                "class AllPathReturnIntegration {\n" +
+                "    void main() { printf(\"%d %d\\n\", choose(true), choose(false)); }\n" +
+                "    int choose(bool value) {\n" +
+                "        if (value) { return 1; } else { return 2; }\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("1 2\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void signedZeroComparisonsMatchAcrossBackends() throws Exception {
+        File sourceFile = writeSource("SignedZeroIntegration",
+                "class SignedZeroIntegration {\n" +
+                "    void main() {\n" +
+                "        float f;\n" +
+                "        double d;\n" +
+                "        f = -0.0f;\n" +
+                "        d = -0.0;\n" +
+                "        if (f == 0.0f) { printf(\"float-equal\\n\"); }\n" +
+                "        if (d < 0.0) { printf(\"double-less\\n\"); } else { printf(\"double-not-less\\n\"); }\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("float-equal\ndouble-not-less\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
     public void hexadecimalAndOctalLiteralsMatchAcrossBackends() throws Exception {
         File sourceFile = writeSource("RadixIntegration",
                 "class RadixIntegration {\n" +
@@ -121,7 +161,7 @@ public class BackendEquivalenceTest {
         Label.resetCounter();
         Lexer lexer = new Lexer(sourceFile);
         Parser parser = new Parser(lexer);
-        Ast.Program.T program = parser.parse();
+        Ast.Program.Base program = parser.parse();
 
         SemanticVisitor semantic = new SemanticVisitor();
         semantic.visit(program);

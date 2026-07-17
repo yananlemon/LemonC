@@ -2,283 +2,334 @@ package site.ilemon.vm;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-/**
- * LemonVM 字节码解析器 — 将 .lbc 文本格式解析为 Script 对象。
- *
- * 支持的格式：
- * <pre>
- * .version 1
- * .class Test
- *
- * .func main 0 2 void
- *     Mov -1, 1
- *     Add -1, 2
- *     Print -1
- *     PrintNL
- *     Ret
- * .end
- * </pre>
- */
+/** Parses LemonVM textual bytecode into an executable script. */
 public class VmBytecodeParser {
 
-    /**
-     * 从文本内容解析出 Script 对象。
-     */
     public static Script parse(String lbcContent) {
-        Script script = new Script();
+        if (lbcContent == null) {
+            throw new VmException("bytecode content is null");
+        }
+
         String[] lines = lbcContent.split("\\r?\\n");
-
-        // 第一遍：收集所有函数和指令，解析标签
         List<VmFunction> functions = new ArrayList<VmFunction>();
-        List<Instruction> allInstructions = new ArrayList<Instruction>();
-        Map<String, Integer> labelMap = new HashMap<String, Integer>(); // 标签名 -> 指令索引
+        Map<String, Map<String, Integer>> labelsByFunction =
+                new HashMap<String, Map<String, Integer>>();
+        Set<String> functionNames = new HashSet<String>();
 
-        int currentInstrIndex = 0;
-        boolean inFunc = false;
-        String funcName = null;
-        int funcParamCount = 0;
-        int funcLocalCount = 0;
-        int funcEntryPoint = 0;
+        int instructionIndex = 0;
+        boolean inFunction = false;
+        String functionName = null;
+        int parameterCount = 0;
+        int localCount = 0;
+        int entryPoint = 0;
+        Map<String, Integer> currentLabels = null;
 
-        for (int lineNum = 0; lineNum < lines.length; lineNum++) {
-            String line = lines[lineNum].trim();
-
-            // 跳过空行和注释
-            if (line.isEmpty() || line.startsWith(";")) {
+        for (int lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+            String line = stripInlineComment(lines[lineNumber]).trim();
+            if (line.length() == 0) {
                 continue;
             }
-
-            // 元指令
-            if (line.startsWith(".version") || line.startsWith(".class")) {
+            if (isMetadata(line)) {
                 continue;
             }
-
-            // 函数开始
-            if (line.startsWith(".func ")) {
-                inFunc = true;
-                String[] parts = line.split("\\s+");
-                // .func <name> <paramCount> <localCount> <returnType>
-                funcName = parts[1];
-                funcParamCount = Integer.parseInt(parts[2]);
-                funcLocalCount = Integer.parseInt(parts[3]);
-                funcEntryPoint = currentInstrIndex;
-                continue;
-            }
-
-            // 函数结束
-            if (line.equals(".end")) {
-                if (inFunc && funcName != null) {
-                    int funcIndex = functions.size();
-                    functions.add(new VmFunction(funcName, funcEntryPoint, funcParamCount, funcLocalCount));
+            if (line.startsWith(".func")) {
+                if (inFunction) {
+                    throw parseError(lineNumber, "nested .func declaration");
                 }
-                inFunc = false;
-                funcName = null;
+                String[] parts = line.split("\\s+");
+                if (parts.length != 5 || !".func".equals(parts[0])) {
+                    throw parseError(lineNumber,
+                            "expected .func <name> <paramCount> <localCount> <returnType>");
+                }
+                functionName = parts[1];
+                if (functionName.length() == 0 || !functionNames.add(functionName)) {
+                    throw parseError(lineNumber, "duplicate or empty function name: " + functionName);
+                }
+                parameterCount = parseNonNegative(parts[2], lineNumber, "parameter count");
+                localCount = parseNonNegative(parts[3], lineNumber, "local count");
+                entryPoint = instructionIndex;
+                currentLabels = new HashMap<String, Integer>();
+                labelsByFunction.put(functionName, currentLabels);
+                inFunction = true;
                 continue;
             }
-
-            if (!inFunc) {
+            if (".end".equals(line)) {
+                if (!inFunction || functionName == null) {
+                    throw parseError(lineNumber, ".end without matching .func");
+                }
+                functions.add(new VmFunction(functionName, entryPoint, parameterCount, localCount));
+                inFunction = false;
+                functionName = null;
+                currentLabels = null;
                 continue;
             }
-
-            // 标签定义（以冒号结尾，如 _loop_cond:）
+            if (!inFunction) {
+                throw parseError(lineNumber, "instruction or label outside a function");
+            }
             if (line.endsWith(":")) {
-                String labelName = line.substring(0, line.length() - 1).trim();
-                labelMap.put(labelName, currentInstrIndex);
+                String label = line.substring(0, line.length() - 1).trim();
+                if (label.length() == 0 || currentLabels.containsKey(label)) {
+                    throw parseError(lineNumber,
+                            "duplicate or empty label in function " + functionName + ": " + label);
+                }
+                currentLabels.put(label, instructionIndex);
                 continue;
             }
-
-            // 普通指令
-            currentInstrIndex++;
+            instructionIndex++;
         }
 
-        // 第二遍：生成指令对象
-        currentInstrIndex = 0;
-        inFunc = false;
-        // 构建函数名到索引的映射
-        Map<String, Integer> funcNameToIndex = new HashMap<String, Integer>();
+        if (inFunction) {
+            throw parseError(Math.max(0, lines.length - 1), "unterminated function: " + functionName);
+        }
+        if (functions.isEmpty()) {
+            throw new VmException("bytecode contains no functions");
+        }
+
+        Map<String, Integer> functionIndexes = new HashMap<String, Integer>();
         for (int i = 0; i < functions.size(); i++) {
-            funcNameToIndex.put(functions.get(i).getName(), i);
+            functionIndexes.put(functions.get(i).getName(), i);
+        }
+        if (!functionIndexes.containsKey("main")) {
+            throw new VmException("bytecode has no main function");
         }
 
-        for (int lineNum = 0; lineNum < lines.length; lineNum++) {
-            String line = lines[lineNum].trim();
-
-            if (line.isEmpty() || line.startsWith(";")) continue;
-            if (line.startsWith(".version") || line.startsWith(".class")) continue;
-            if (line.startsWith(".func ")) { inFunc = true; continue; }
-            if (line.equals(".end")) { inFunc = false; continue; }
-            if (!inFunc) continue;
-            if (line.endsWith(":")) continue; // 标签
-
-            // 解析指令
-            Instruction instr = parseInstruction(line, labelMap, funcNameToIndex);
-            allInstructions.add(instr);
-            currentInstrIndex++;
+        List<Instruction> instructions = new ArrayList<Instruction>();
+        inFunction = false;
+        functionName = null;
+        for (int lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+            String line = stripInlineComment(lines[lineNumber]).trim();
+            if (line.length() == 0 || isMetadata(line)) {
+                continue;
+            }
+            if (line.startsWith(".func")) {
+                inFunction = true;
+                functionName = line.split("\\s+")[1];
+                continue;
+            }
+            if (".end".equals(line)) {
+                inFunction = false;
+                functionName = null;
+                continue;
+            }
+            if (!inFunction || line.endsWith(":")) {
+                continue;
+            }
+            instructions.add(parseInstruction(
+                    line, labelsByFunction.get(functionName), functionIndexes, lineNumber));
         }
 
-        // 组装 Script
-        script.setInstrStream(allInstructions.toArray(new Instruction[0]));
+        Script script = new Script();
+        script.setInstrStream(instructions.toArray(new Instruction[0]));
         script.setFuncTable(functions.toArray(new VmFunction[0]));
-
-        // 查找 main 函数
-        if (funcNameToIndex.containsKey("main")) {
-            script.setMainFuncName("main");
-        }
-
+        script.setMainFuncName("main");
         return script;
     }
 
-    /**
-     * 解析一行指令文本。
-     */
     private static Instruction parseInstruction(String line,
-                                                 Map<String, Integer> labelMap,
-                                                 Map<String, Integer> funcNameToIndex) {
-        // 去掉行内注释
-        int commentIdx = line.indexOf(';');
-        if (commentIdx >= 0) {
-            line = line.substring(0, commentIdx).trim();
-        }
-
-        // 分割助记符和操作数
+                                                Map<String, Integer> labels,
+                                                Map<String, Integer> functionIndexes,
+                                                int lineNumber) {
         String mnemonic;
-        String operandStr = "";
-        int firstSpace = line.indexOf(' ');
+        String operandsText = "";
+        int firstSpace = firstWhitespace(line);
         if (firstSpace < 0) {
             mnemonic = line;
         } else {
             mnemonic = line.substring(0, firstSpace);
-            operandStr = line.substring(firstSpace + 1).trim();
+            operandsText = line.substring(firstSpace + 1).trim();
         }
 
-        Opcode opcode = Opcode.fromMnemonic(mnemonic);
+        Opcode opcode;
+        try {
+            opcode = Opcode.fromMnemonic(mnemonic);
+        } catch (VmException e) {
+            throw parseError(lineNumber, e.getMessage());
+        }
 
         List<Value> operands = new ArrayList<Value>();
-        if (!operandStr.isEmpty()) {
-            String[] parts = splitOperands(operandStr);
-            for (String part : parts) {
-                operands.add(parseOperand(part.trim(), labelMap, funcNameToIndex));
+        if (operandsText.length() > 0) {
+            for (String operand : splitOperands(operandsText, lineNumber)) {
+                operands.add(parseOperand(operand.trim(), labels, functionIndexes, lineNumber));
             }
         }
-
+        if (operands.size() != opcode.getOperandCount()) {
+            throw parseError(lineNumber, opcode.getMnemonic() + " expects "
+                    + opcode.getOperandCount() + " operands, got " + operands.size());
+        }
         return new Instruction(opcode, operands);
     }
 
-    /**
-     * 按逗号分割操作数，但要考虑字符串中可能包含逗号。
-     */
-    private static String[] splitOperands(String operandStr) {
+    private static String[] splitOperands(String text, int lineNumber) {
         List<String> result = new ArrayList<String>();
         boolean inQuote = false;
+        boolean escaped = false;
         StringBuilder current = new StringBuilder();
-
-        for (int i = 0; i < operandStr.length(); i++) {
-            char c = operandStr.charAt(i);
-            if (c == '"') {
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (escaped) {
+                current.append(ch);
+                escaped = false;
+            } else if (ch == '\\' && inQuote) {
+                current.append(ch);
+                escaped = true;
+            } else if (ch == '"') {
+                current.append(ch);
                 inQuote = !inQuote;
-                current.append(c);
-            } else if (c == ',' && !inQuote) {
-                result.add(current.toString());
-                current = new StringBuilder();
+            } else if (ch == ',' && !inQuote) {
+                addOperand(result, current, lineNumber);
+                current.setLength(0);
             } else {
-                current.append(c);
+                current.append(ch);
             }
         }
-        result.add(current.toString());
+        if (inQuote || escaped) {
+            throw parseError(lineNumber, "unterminated string operand");
+        }
+        addOperand(result, current, lineNumber);
         return result.toArray(new String[0]);
     }
 
-    /**
-     * 解析单个操作数。
-     *
-     * 规则：
-     * - 纯数字 / 负数 → 栈索引（isStackRef=true）
-     * - 带有 # 前缀的数字（如 #42, #3.14）→ 字面量
-     * - 以 _ 开头的标识符 → 标签引用（跳转目标）或 _RetVal
-     * - 以 _Func 或小写字母开头 → 函数引用
-     * - 双引号包围 → 字符串字面量
-     * - true/false → 布尔字面量
-     */
-    private static Value parseOperand(String token,
-                                       Map<String, Integer> labelMap,
-                                       Map<String, Integer> funcNameToIndex) {
-        // _RetVal 寄存器
-        if (token.equals("_RetVal")) {
-            return Value.ofRetValRef();
+    private static void addOperand(List<String> operands, StringBuilder current, int lineNumber) {
+        String value = current.toString().trim();
+        if (value.length() == 0) {
+            throw parseError(lineNumber, "empty operand");
         }
-
-        // 字符串字面量
-        if (token.startsWith("\"") && token.endsWith("\"")) {
-            String str = token.substring(1, token.length() - 1);
-            // 处理转义
-            str = str.replace("\\n", "\n").replace("\\t", "\t").replace("\\\\", "\\");
-            return Value.ofString(str);
-        }
-
-        // 布尔字面量
-        if (token.equals("true")) return Value.ofBool(true);
-        if (token.equals("false")) return Value.ofBool(false);
-
-        // 标签引用（跳转目标）— 以 _ 开头但不是 _RetVal
-        if (token.startsWith("_") && labelMap.containsKey(token)) {
-            int instrIndex = labelMap.get(token);
-            return Value.ofInstrIndex(instrIndex);
-        }
-
-        // 函数引用 — 以 _ 开头并在函数表中找到
-        if (token.startsWith("_") && funcNameToIndex.containsKey(token.substring(1))) {
-            int funcIndex = funcNameToIndex.get(token.substring(1));
-            return Value.ofFuncIndex(funcIndex);
-        }
-
-        // 直接函数名引用
-        if (funcNameToIndex.containsKey(token)) {
-            int funcIndex = funcNameToIndex.get(token);
-            return Value.ofFuncIndex(funcIndex);
-        }
-
-        // 数字字面量 — 以 # 开头表示立即数
-        if (token.startsWith("#")) {
-            String numStr = token.substring(1);
-            return parseLiteral(numStr);
-        }
-
-        // 纯数字（无 # 前缀）→ 栈索引
-        try {
-            int index = Integer.parseInt(token);
-            return Value.ofStackRef(index);
-        } catch (NumberFormatException e) {
-            // 不是整数
-        }
-
-        // 浮点数立即数（包含小数点）
-        if (token.contains(".")) {
-            return parseLiteral(token);
-        }
-
-        throw new VmException("无法解析操作数: " + token);
+        operands.add(value);
     }
 
-    /**
-     * 解析数字字面量（区分 int / float / double）。
-     */
-    private static Value parseLiteral(String numStr) {
-        try {
-            // 如果以 f 或 F 结尾，解析为 float
-            if (numStr.endsWith("f") || numStr.endsWith("F")) {
-                return Value.ofFloat(Float.parseFloat(numStr.substring(0, numStr.length() - 1)));
-            }
-            // 如果包含小数点，解析为 double
-            if (numStr.contains(".")) {
-                return Value.ofDouble(Double.parseDouble(numStr));
-            }
-            // 否则解析为 int
-            return Value.ofInt(Integer.parseInt(numStr));
-        } catch (NumberFormatException e) {
-            throw new VmException("无法解析数字字面量: " + numStr);
+    private static Value parseOperand(String token,
+                                      Map<String, Integer> labels,
+                                      Map<String, Integer> functionIndexes,
+                                      int lineNumber) {
+        if ("_RetVal".equals(token)) {
+            return Value.ofRetValRef();
         }
+        if (token.startsWith("\"") && token.endsWith("\"") && token.length() >= 2) {
+            return Value.ofString(unescape(token.substring(1, token.length() - 1), lineNumber));
+        }
+        if ("true".equals(token)) {
+            return Value.ofBool(true);
+        }
+        if ("false".equals(token)) {
+            return Value.ofBool(false);
+        }
+        if (labels != null && labels.containsKey(token)) {
+            return Value.ofInstrIndex(labels.get(token));
+        }
+        if (token.startsWith("_") && functionIndexes.containsKey(token.substring(1))) {
+            return Value.ofFuncIndex(functionIndexes.get(token.substring(1)));
+        }
+        if (functionIndexes.containsKey(token)) {
+            return Value.ofFuncIndex(functionIndexes.get(token));
+        }
+        if (token.startsWith("#")) {
+            return parseLiteral(token.substring(1), lineNumber);
+        }
+        try {
+            return Value.ofStackRef(Integer.parseInt(token));
+        } catch (NumberFormatException ignored) {
+            // Continue with floating-point literal parsing.
+        }
+        if (looksFloatingPoint(token)) {
+            return parseLiteral(token, lineNumber);
+        }
+        throw parseError(lineNumber, "cannot parse operand: " + token);
+    }
+
+    private static Value parseLiteral(String text, int lineNumber) {
+        try {
+            if (text.endsWith("f") || text.endsWith("F")) {
+                return Value.ofFloat(Float.parseFloat(text.substring(0, text.length() - 1)));
+            }
+            if (text.endsWith("d") || text.endsWith("D")) {
+                return Value.ofDouble(Double.parseDouble(text.substring(0, text.length() - 1)));
+            }
+            if (looksFloatingPoint(text)) {
+                return Value.ofDouble(Double.parseDouble(text));
+            }
+            return Value.ofInt(Integer.parseInt(text));
+        } catch (NumberFormatException e) {
+            throw parseError(lineNumber, "invalid numeric literal: " + text);
+        }
+    }
+
+    private static String unescape(String text, int lineNumber) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (ch != '\\') {
+                result.append(ch);
+                continue;
+            }
+            if (++i >= text.length()) {
+                throw parseError(lineNumber, "dangling escape in string operand");
+            }
+            char escaped = text.charAt(i);
+            if (escaped == 'n') result.append('\n');
+            else if (escaped == 't') result.append('\t');
+            else if (escaped == 'r') result.append('\r');
+            else if (escaped == '"') result.append('"');
+            else if (escaped == '\\') result.append('\\');
+            else throw parseError(lineNumber, "unsupported string escape: \\" + escaped);
+        }
+        return result.toString();
+    }
+
+    private static String stripInlineComment(String line) {
+        boolean inQuote = false;
+        boolean escaped = false;
+        for (int i = 0; i < line.length(); i++) {
+            char ch = line.charAt(i);
+            if (escaped) {
+                escaped = false;
+            } else if (ch == '\\' && inQuote) {
+                escaped = true;
+            } else if (ch == '"') {
+                inQuote = !inQuote;
+            } else if (ch == ';' && !inQuote) {
+                return line.substring(0, i);
+            }
+        }
+        return line;
+    }
+
+    private static boolean looksFloatingPoint(String text) {
+        return text.indexOf('.') >= 0 || text.indexOf('e') >= 0 || text.indexOf('E') >= 0
+                || text.endsWith("f") || text.endsWith("F")
+                || text.endsWith("d") || text.endsWith("D");
+    }
+
+    private static boolean isMetadata(String line) {
+        return line.startsWith(".version") || line.startsWith(".class");
+    }
+
+    private static int firstWhitespace(String line) {
+        for (int i = 0; i < line.length(); i++) {
+            if (Character.isWhitespace(line.charAt(i))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static int parseNonNegative(String text, int lineNumber, String role) {
+        try {
+            int value = Integer.parseInt(text);
+            if (value < 0) {
+                throw parseError(lineNumber, role + " must be non-negative: " + text);
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            throw parseError(lineNumber, "invalid " + role + ": " + text);
+        }
+    }
+
+    private static VmException parseError(int zeroBasedLine, String message) {
+        return new VmException("line " + (zeroBasedLine + 1) + ": " + message);
     }
 }

@@ -25,7 +25,7 @@ public class SemanticTest {
 
     @org.junit.Test
     public void testParser() throws IOException{
-        Ast.Program.T prog = parser.parse();
+        Ast.Program.Base prog = parser.parse();
         SemanticVisitor visitor = new SemanticVisitor();
         visitor.visit(prog);
         Assert.assertTrue(visitor.passOrNot());

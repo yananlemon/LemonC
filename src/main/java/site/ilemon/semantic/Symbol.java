@@ -10,11 +10,11 @@ public class Symbol {
     }
 
     private final String name;
-    private final Ast.Type.T type;
+    private final Ast.Type.Base type;
     private final Kind kind;
     private final int lineNumber;
 
-    public Symbol(String name, Ast.Type.T type, Kind kind, int lineNumber) {
+    public Symbol(String name, Ast.Type.Base type, Kind kind, int lineNumber) {
         this.name = name;
         this.type = type;
         this.kind = kind;
@@ -25,7 +25,7 @@ public class Symbol {
         return name;
     }
 
-    public Ast.Type.T getType() {
+    public Ast.Type.Base getType() {
         return type;
     }
 

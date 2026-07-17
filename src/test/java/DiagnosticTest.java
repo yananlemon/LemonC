@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -64,6 +65,24 @@ public class DiagnosticTest {
     }
 
     @Test
+    public void parserPreservesLogicalNotSourceLine() throws Exception {
+        File file = writeSource("NotLine",
+                "class NotLine {\n" +
+                "    void main() {\n" +
+                "        if (!false) {}\n" +
+                "    }\n" +
+                "}\n");
+        Ast.Program.ProgramSingle program = (Ast.Program.ProgramSingle)
+                new Parser(new Lexer(file)).parse();
+        Ast.MainClass.MainClassSingle mainClass =
+                (Ast.MainClass.MainClassSingle) program.getMainClass();
+        Ast.Method.MethodSingle main = (Ast.Method.MethodSingle) mainClass.getMethods().get(0);
+        Ast.Stmt.If ifStatement = (Ast.Stmt.If) main.getStms().get(0);
+
+        assertEquals(3, ifStatement.getCondition().getLineNum());
+    }
+
+    @Test
     public void semanticCollectingModeReportsMultipleErrors() throws Exception {
         File file = writeSource("Test",
                 "class Test {\n" +
@@ -74,7 +93,7 @@ public class DiagnosticTest {
                 "    }\n" +
                 "}\n");
         Parser parser = new Parser(new Lexer(file));
-        Ast.Program.T program = parser.parse();
+        Ast.Program.Base program = parser.parse();
 
         SemanticVisitor semantic = SemanticVisitor.collecting();
         semantic.visit(program);
@@ -84,6 +103,166 @@ public class DiagnosticTest {
                 semantic.getErrors().size() >= 2);
         assertTrue(contains(semantic.getErrors(), "y"));
         assertTrue(contains(semantic.getErrors(), "bool"));
+    }
+
+    @Test
+    public void semanticErrorTypePropagatesWithoutCascadingDiagnostics() throws Exception {
+        File file = writeSource("ErrorPropagation",
+                "class ErrorPropagation {\n" +
+                "    void main() {\n" +
+                "        int x;\n" +
+                "        x = missingValue + true;\n" +
+                "        x = missingArray[0];\n" +
+                "        if (missingCondition) {}\n" +
+                "        printf(\"%d\", missingPrint);\n" +
+                "    }\n" +
+                "}\n");
+        Ast.Program.Base program = new Parser(new Lexer(file)).parse();
+
+        SemanticVisitor semantic = SemanticVisitor.collecting();
+        semantic.visit(program);
+
+        assertEquals(semantic.getErrors().toString(), 4, semantic.getErrors().size());
+        assertTrue(contains(semantic.getErrors(), "missingValue"));
+        assertTrue(contains(semantic.getErrors(), "missingArray"));
+        assertTrue(contains(semantic.getErrors(), "missingCondition"));
+        assertTrue(contains(semantic.getErrors(), "missingPrint"));
+
+        Ast.MainClass.MainClassSingle mainClass = (Ast.MainClass.MainClassSingle)
+                ((Ast.Program.ProgramSingle) program).getMainClass();
+        Ast.Method.MethodSingle main = (Ast.Method.MethodSingle) mainClass.getMethods().get(0);
+        Ast.Stmt.Assign assignment = (Ast.Stmt.Assign) main.getStms().get(1);
+        Ast.Expr.Add addition = (Ast.Expr.Add) assignment.getExpr();
+        Ast.Expr.Id missing = (Ast.Expr.Id) addition.getLeft();
+        assertSame(Ast.Type.Error.INSTANCE, missing.getType());
+        assertEquals(Ast.Type.TypeKind.ERROR, missing.getType().getKind());
+
+        Ast.Stmt.Assign arrayAssignment = (Ast.Stmt.Assign) main.getStms().get(2);
+        Ast.Expr.ArrayAccess arrayAccess = (Ast.Expr.ArrayAccess) arrayAssignment.getExpr();
+        assertSame(Ast.Type.Error.INSTANCE, arrayAccess.getElementType());
+    }
+
+    @Test
+    public void semanticCollectingModeAnalyzesArgumentsOfUndefinedMethod() throws Exception {
+        File file = writeSource("UndefinedCallArguments",
+                "class UndefinedCallArguments {\n" +
+                "    void main() { missing(unknownArgument, 1); }\n" +
+                "}\n");
+        Ast.Program.Base program = new Parser(new Lexer(file)).parse();
+
+        SemanticVisitor semantic = SemanticVisitor.collecting();
+        semantic.visit(program);
+
+        assertEquals(semantic.getErrors().toString(), 2, semantic.getErrors().size());
+        assertTrue(contains(semantic.getErrors(), "unknownArgument"));
+        assertTrue(contains(semantic.getErrors(), "missing"));
+    }
+
+    @Test
+    public void semanticRootErrorsDoNotProduceDerivedTypeMismatches() throws Exception {
+        File file = writeSource("RootErrorRecovery",
+                "class RootErrorRecovery {\n" +
+                "    void main() {\n" +
+                "        int uninitialized;\n" +
+                "        if (uninitialized) {}\n" +
+                "        bool result;\n" +
+                "        result = takesInt(true);\n" +
+                "    }\n" +
+                "    int takesInt(int value) { return value; }\n" +
+                "}\n");
+        Ast.Program.Base program = new Parser(new Lexer(file)).parse();
+
+        SemanticVisitor semantic = SemanticVisitor.collecting();
+        semantic.visit(program);
+
+        assertEquals(semantic.getErrors().toString(), 2, semantic.getErrors().size());
+        assertTrue(contains(semantic.getErrors(), "uninitialized"));
+        assertTrue(contains(semantic.getErrors(), "takesInt"));
+    }
+
+    @Test
+    public void failedAssignmentDoesNotInitializeItsTarget() throws Exception {
+        File file = writeSource("FailedAssignmentInitialization",
+                "class FailedAssignmentInitialization {\n" +
+                "    void main() {\n" +
+                "        int value;\n" +
+                "        value = missing;\n" +
+                "        printf(\"%d\", value);\n" +
+                "    }\n" +
+                "}\n");
+        Ast.Program.Base program = new Parser(new Lexer(file)).parse();
+
+        SemanticVisitor semantic = SemanticVisitor.collecting();
+        semantic.visit(program);
+
+        assertEquals(semantic.getErrors().toString(), 2, semantic.getErrors().size());
+        assertTrue(contains(semantic.getErrors(), "missing"));
+        assertTrue(contains(semantic.getErrors(), "value"));
+    }
+
+    @Test
+    public void semanticCollectingModeKeepsArrayAssignmentStackBalanced() throws Exception {
+        File file = writeSource("ArrayAssignmentRecovery",
+                "class ArrayAssignmentRecovery {\n" +
+                "    void main() {\n" +
+                "        int scalar;\n" +
+                "        scalar[missingIndex] = missingValue;\n" +
+                "    }\n" +
+                "}\n");
+        Ast.Program.Base program = new Parser(new Lexer(file)).parse();
+
+        SemanticVisitor semantic = SemanticVisitor.collecting();
+        semantic.visit(program);
+
+        assertEquals(semantic.getErrors().toString(), 3, semantic.getErrors().size());
+        assertTrue(contains(semantic.getErrors(), "missingIndex"));
+        assertTrue(contains(semantic.getErrors(), "missingValue"));
+        assertTrue(contains(semantic.getErrors(), "scalar"));
+    }
+
+    @Test
+    public void semanticCollectingModeHandlesDanglingPrintfPercent() throws Exception {
+        File file = writeSource("DanglingPrintfPercent",
+                "class DanglingPrintfPercent {\n" +
+                "    void main() { printf(\"x=%\", 1); }\n" +
+                "}\n");
+        Ast.Program.Base program = new Parser(new Lexer(file)).parse();
+
+        SemanticVisitor semantic = SemanticVisitor.collecting();
+        semantic.visit(program);
+
+        assertEquals(semantic.getErrors().toString(), 2, semantic.getErrors().size());
+    }
+
+    @Test
+    public void semanticCollectingModeHandlesExtraPrintfArguments() throws Exception {
+        File file = writeSource("PrintfDiagnostics",
+                "class PrintfDiagnostics {\n" +
+                "    void main() { printf(\"plain text\", 1); }\n" +
+                "}\n");
+        Ast.Program.Base program = new Parser(new Lexer(file)).parse();
+
+        SemanticVisitor semantic = SemanticVisitor.collecting();
+        semantic.visit(program);
+
+        assertTrue("collecting visitor should report the count mismatch", !semantic.passOrNot());
+        assertEquals(1, semantic.getErrors().size());
+    }
+
+    @Test
+    public void semanticCollectingModeReportsNonVoidMainOnce() throws Exception {
+        File file = writeSource("NonVoidMain",
+                "class NonVoidMain {\n" +
+                "    int main() { return 1; }\n" +
+                "}\n");
+        Ast.Program.Base program = new Parser(new Lexer(file)).parse();
+
+        SemanticVisitor semantic = SemanticVisitor.collecting();
+        semantic.visit(program);
+
+        assertEquals(semantic.getErrors().toString(), 1, semantic.getErrors().size());
+        assertTrue(contains(semantic.getErrors(), "main"));
+        assertTrue(contains(semantic.getErrors(), "void"));
     }
 
     @Test

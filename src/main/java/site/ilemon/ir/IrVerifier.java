@@ -2,6 +2,8 @@ package site.ilemon.ir;
 
 import site.ilemon.exception.CompilerException;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,6 +19,9 @@ public final class IrVerifier {
 
     private IrFunction currentFunction;
     private Set<String> blockLabels;
+    private Map<String, IrBlock> blocksByLabel;
+    private Map<String, Set<String>> predecessors;
+    private Set<String> reachableBlocks;
     private Map<Integer, IrType> vregTypes;
 
     private IrVerifier(IrProgram program) {
@@ -68,6 +73,9 @@ public final class IrVerifier {
     private void verifyFunction(IrFunction function) {
         this.currentFunction = function;
         this.blockLabels = new HashSet<String>();
+        this.blocksByLabel = new HashMap<String, IrBlock>();
+        this.predecessors = new HashMap<String, Set<String>>();
+        this.reachableBlocks = new HashSet<String>();
         this.vregTypes = new HashMap<Integer, IrType>();
 
         if (function.getReturnType() == null) {
@@ -102,9 +110,12 @@ public final class IrVerifier {
             if (!blockLabels.add(block.getLabel())) {
                 fail("duplicate block label: " + block.getLabel());
             }
+            blocksByLabel.put(block.getLabel(), block);
+            predecessors.put(block.getLabel(), new HashSet<String>());
         }
 
         for (IrBlock block : function.getBlocks()) {
+            verifyBlockStructure(block);
             for (IrInstruction instruction : block.getInstructions()) {
                 collectInstructionTypes(instruction);
             }
@@ -115,9 +126,14 @@ public final class IrVerifier {
                 verifyInstruction(instruction);
             }
         }
+        buildControlFlowGraph(function);
+        verifyDefinitions(function);
 
         this.currentFunction = null;
         this.blockLabels = null;
+        this.blocksByLabel = null;
+        this.predecessors = null;
+        this.reachableBlocks = null;
         this.vregTypes = null;
     }
 
@@ -126,9 +142,180 @@ public final class IrVerifier {
             fail("block contains null instruction");
         }
         putVRegType(instruction.getResult());
-        for (IrValue operand : instruction.getOperands()) {
-            putVRegType(operand);
+    }
+
+    private void verifyBlockStructure(IrBlock block) {
+        List<IrInstruction> instructions = block.getInstructions();
+        if (instructions.isEmpty()) {
+            fail("block " + block.getLabel() + " is empty and has no terminator");
         }
+        for (int i = 0; i < instructions.size(); i++) {
+            IrInstruction instruction = instructions.get(i);
+            if (instruction == null) {
+                fail("block " + block.getLabel() + " contains null instruction");
+            }
+            IrOpcode opcode = instruction.getOpcode();
+            if (opcode == null) {
+                fail("block " + block.getLabel() + " contains instruction with null opcode");
+            }
+            boolean last = i == instructions.size() - 1;
+            if ((opcode == IrOpcode.JMP || opcode == IrOpcode.RET || opcode == IrOpcode.EXIT) && !last) {
+                fail(instruction, "terminator must be the last instruction in block " + block.getLabel());
+            }
+            if (opcode == IrOpcode.BR_TRUE || opcode == IrOpcode.BR_FALSE) {
+                boolean followedByFinalJump = i == instructions.size() - 2
+                        && instructions.get(i + 1) != null
+                        && instructions.get(i + 1).getOpcode() == IrOpcode.JMP;
+                if (!followedByFinalJump) {
+                    fail(instruction, "conditional branch must be followed by a final JMP in block "
+                            + block.getLabel());
+                }
+            }
+        }
+        if (!block.isTerminated()) {
+            fail("block " + block.getLabel() + " has no terminator");
+        }
+    }
+
+    private void buildControlFlowGraph(IrFunction function) {
+        for (IrBlock block : function.getBlocks()) {
+            List<IrInstruction> instructions = block.getInstructions();
+            int lastIndex = instructions.size() - 1;
+            IrInstruction last = instructions.get(lastIndex);
+            if (last.getOpcode() == IrOpcode.JMP) {
+                addPredecessor(block.getLabel(), last.getLabelTarget());
+            }
+            if (lastIndex > 0) {
+                IrInstruction possibleBranch = instructions.get(lastIndex - 1);
+                if (possibleBranch.getOpcode() == IrOpcode.BR_TRUE
+                        || possibleBranch.getOpcode() == IrOpcode.BR_FALSE) {
+                    addPredecessor(block.getLabel(), possibleBranch.getLabelTarget());
+                }
+            }
+        }
+
+        String entryLabel = function.getBlocks().get(0).getLabel();
+        Deque<String> work = new ArrayDeque<String>();
+        reachableBlocks.add(entryLabel);
+        work.add(entryLabel);
+        while (!work.isEmpty()) {
+            String label = work.removeFirst();
+            for (String successor : successorsOf(blocksByLabel.get(label))) {
+                if (reachableBlocks.add(successor)) {
+                    work.addLast(successor);
+                }
+            }
+        }
+    }
+
+    private void addPredecessor(String source, String target) {
+        Set<String> targetPredecessors = predecessors.get(target);
+        if (targetPredecessors != null) {
+            targetPredecessors.add(source);
+        }
+    }
+
+    private Set<String> successorsOf(IrBlock block) {
+        Set<String> successors = new HashSet<String>();
+        List<IrInstruction> instructions = block.getInstructions();
+        int lastIndex = instructions.size() - 1;
+        IrInstruction last = instructions.get(lastIndex);
+        if (last.getOpcode() == IrOpcode.JMP && blocksByLabel.containsKey(last.getLabelTarget())) {
+            successors.add(last.getLabelTarget());
+        }
+        if (lastIndex > 0) {
+            IrInstruction branch = instructions.get(lastIndex - 1);
+            if ((branch.getOpcode() == IrOpcode.BR_TRUE || branch.getOpcode() == IrOpcode.BR_FALSE)
+                    && blocksByLabel.containsKey(branch.getLabelTarget())) {
+                successors.add(branch.getLabelTarget());
+            }
+        }
+        return successors;
+    }
+
+    private void verifyDefinitions(IrFunction function) {
+        Set<Integer> parameterDefinitions = new HashSet<Integer>();
+        for (IrValue parameter : function.getParameters()) {
+            parameterDefinitions.add(parameter.getId());
+        }
+        Set<Integer> allDefinitions = new HashSet<Integer>(vregTypes.keySet());
+        Map<String, Set<Integer>> in = new HashMap<String, Set<Integer>>();
+        Map<String, Set<Integer>> out = new HashMap<String, Set<Integer>>();
+        String entryLabel = function.getBlocks().get(0).getLabel();
+
+        for (IrBlock block : function.getBlocks()) {
+            if (!reachableBlocks.contains(block.getLabel())) {
+                continue;
+            }
+            if (entryLabel.equals(block.getLabel())) {
+                in.put(block.getLabel(), new HashSet<Integer>(parameterDefinitions));
+                out.put(block.getLabel(), definitionsAfter(block, parameterDefinitions));
+            } else {
+                in.put(block.getLabel(), new HashSet<Integer>(allDefinitions));
+                out.put(block.getLabel(), new HashSet<Integer>(allDefinitions));
+            }
+        }
+
+        boolean changed;
+        do {
+            changed = false;
+            for (IrBlock block : function.getBlocks()) {
+                String label = block.getLabel();
+                if (!reachableBlocks.contains(label) || entryLabel.equals(label)) {
+                    continue;
+                }
+                Set<Integer> newIn = null;
+                for (String predecessor : predecessors.get(label)) {
+                    if (!reachableBlocks.contains(predecessor)) {
+                        continue;
+                    }
+                    if (newIn == null) {
+                        newIn = new HashSet<Integer>(out.get(predecessor));
+                    } else {
+                        newIn.retainAll(out.get(predecessor));
+                    }
+                }
+                if (newIn == null) {
+                    newIn = new HashSet<Integer>();
+                }
+                Set<Integer> newOut = definitionsAfter(block, newIn);
+                if (!newIn.equals(in.get(label)) || !newOut.equals(out.get(label))) {
+                    in.put(label, newIn);
+                    out.put(label, newOut);
+                    changed = true;
+                }
+            }
+        } while (changed);
+
+        for (IrBlock block : function.getBlocks()) {
+            if (!reachableBlocks.contains(block.getLabel())) {
+                continue;
+            }
+            Set<Integer> defined = new HashSet<Integer>(in.get(block.getLabel()));
+            for (IrInstruction instruction : block.getInstructions()) {
+                for (IrValue operand : instruction.getOperands()) {
+                    if (operand != null && operand.getKind() == IrValue.Kind.VREG
+                            && !defined.contains(operand.getId())) {
+                        fail(instruction, "v" + operand.getId() + " is used before it is defined");
+                    }
+                }
+                if (instruction.getResult() != null
+                        && instruction.getResult().getKind() == IrValue.Kind.VREG) {
+                    defined.add(instruction.getResult().getId());
+                }
+            }
+        }
+    }
+
+    private Set<Integer> definitionsAfter(IrBlock block, Set<Integer> incoming) {
+        Set<Integer> definitions = new HashSet<Integer>(incoming);
+        for (IrInstruction instruction : block.getInstructions()) {
+            if (instruction.getResult() != null
+                    && instruction.getResult().getKind() == IrValue.Kind.VREG) {
+                definitions.add(instruction.getResult().getId());
+            }
+        }
+        return definitions;
     }
 
     private void verifyInstruction(IrInstruction instruction) {

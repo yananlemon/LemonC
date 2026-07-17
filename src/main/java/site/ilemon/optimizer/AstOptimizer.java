@@ -8,7 +8,7 @@ import java.util.ArrayList;
 
 public class AstOptimizer {
 
-    public Ast.Program.T optimize(Ast.Program.T program) {
+    public Ast.Program.Base optimize(Ast.Program.Base program) {
         if (!(program instanceof Ast.Program.ProgramSingle)) {
             return program;
         }
@@ -16,30 +16,30 @@ public class AstOptimizer {
         return new Ast.Program.ProgramSingle(optimizeMainClass(single.getMainClass()));
     }
 
-    private Ast.MainClass.T optimizeMainClass(Ast.MainClass.T mainClass) {
+    private Ast.MainClass.Base optimizeMainClass(Ast.MainClass.Base mainClass) {
         Ast.MainClass.MainClassSingle single = (Ast.MainClass.MainClassSingle) mainClass;
-        ArrayList<Ast.Method.T> methods = new ArrayList<Ast.Method.T>();
-        for (Ast.Method.T method : single.getMethods()) {
+        ArrayList<Ast.Method.Base> methods = new ArrayList<Ast.Method.Base>();
+        for (Ast.Method.Base method : single.getMethods()) {
             methods.add(optimizeMethod(method));
         }
-        return new Ast.MainClass.MainClassSingle(single.getClassId(), single.getFields(), methods);
+        return new Ast.MainClass.MainClassSingle(single.getClassId(), methods);
     }
 
-    private Ast.Method.T optimizeMethod(Ast.Method.T method) {
+    private Ast.Method.Base optimizeMethod(Ast.Method.Base method) {
         Ast.Method.MethodSingle single = (Ast.Method.MethodSingle) method;
-        ArrayList<Ast.Stmt.T> statements = optimizeStatements(single.getStms());
-        Ast.Stmt.T retExp = single.getRetExp() == null ? null : optimizeStmt(single.getRetExp());
+        ArrayList<Ast.Stmt.Base> statements = optimizeStatements(single.getStms());
+        Ast.Stmt.Base retExp = single.getRetExp() == null ? null : optimizeStmt(single.getRetExp());
         return new Ast.Method.MethodSingle(single.getRetType(), single.getId(),
                 single.getFormals(), single.getLocals(), statements, retExp, single.getLineNum());
     }
 
-    private ArrayList<Ast.Stmt.T> optimizeStatements(ArrayList<Ast.Stmt.T> statements) {
-        ArrayList<Ast.Stmt.T> result = new ArrayList<Ast.Stmt.T>();
+    private ArrayList<Ast.Stmt.Base> optimizeStatements(ArrayList<Ast.Stmt.Base> statements) {
+        ArrayList<Ast.Stmt.Base> result = new ArrayList<Ast.Stmt.Base>();
         if (statements == null) {
             return result;
         }
-        for (Ast.Stmt.T statement : statements) {
-            Ast.Stmt.T optimized = optimizeStmt(statement);
+        for (Ast.Stmt.Base statement : statements) {
+            Ast.Stmt.Base optimized = optimizeStmt(statement);
             if (optimized == null) {
                 continue;
             }
@@ -54,7 +54,7 @@ public class AstOptimizer {
         return result;
     }
 
-    private Ast.Stmt.T optimizeStmt(Ast.Stmt.T stmt) {
+    private Ast.Stmt.Base optimizeStmt(Ast.Stmt.Base stmt) {
         if (stmt == null) {
             return null;
         }
@@ -81,32 +81,32 @@ public class AstOptimizer {
         }
         if (stmt instanceof Ast.Stmt.If) {
             Ast.Stmt.If ifStmt = (Ast.Stmt.If) stmt;
-            Ast.Expr.T condition = optimizeExpr(ifStmt.getCondition());
-            Ast.Stmt.T thenStmt = optimizeStmt(ifStmt.getThenStmt());
-            Ast.Stmt.T elseStmt = optimizeStmt(ifStmt.getElseStmt());
+            Ast.Expr.Base condition = optimizeExpr(ifStmt.getCondition());
+            Ast.Stmt.Base thenStmt = optimizeStmt(ifStmt.getThenStmt());
+            Ast.Stmt.Base elseStmt = optimizeStmt(ifStmt.getElseStmt());
             Boolean constant = boolValue(condition);
             if (Boolean.TRUE.equals(constant)) {
                 return thenStmt;
             }
             if (Boolean.FALSE.equals(constant)) {
-                return elseStmt == null ? new Ast.Stmt.Block(new ArrayList<Ast.Stmt.T>(), ifStmt.getLineNum()) : elseStmt;
+                return elseStmt == null ? new Ast.Stmt.Block(new ArrayList<Ast.Stmt.Base>(), ifStmt.getLineNum()) : elseStmt;
             }
             return new Ast.Stmt.If(condition, thenStmt, elseStmt, ifStmt.getLineNum());
         }
         if (stmt instanceof Ast.Stmt.While) {
             Ast.Stmt.While whileStmt = (Ast.Stmt.While) stmt;
-            Ast.Expr.T condition = optimizeExpr(whileStmt.getCondition());
+            Ast.Expr.Base condition = optimizeExpr(whileStmt.getCondition());
             if (Boolean.FALSE.equals(boolValue(condition))) {
-                return new Ast.Stmt.Block(new ArrayList<Ast.Stmt.T>(), whileStmt.getLineNum());
+                return new Ast.Stmt.Block(new ArrayList<Ast.Stmt.Base>(), whileStmt.getLineNum());
             }
             return new Ast.Stmt.While(condition, optimizeStmt(whileStmt.getBody()), whileStmt.getLineNum());
         }
         if (stmt instanceof Ast.Stmt.For) {
             Ast.Stmt.For forStmt = (Ast.Stmt.For) stmt;
-            Ast.Stmt.T init = optimizeStmt(forStmt.getInit());
-            Ast.Expr.T condition = optimizeExpr(forStmt.getCondition());
-            Ast.Stmt.T update = optimizeStmt(forStmt.getUpdate());
-            Ast.Stmt.T body = optimizeStmt(forStmt.getBody());
+            Ast.Stmt.Base init = optimizeStmt(forStmt.getInit());
+            Ast.Expr.Base condition = optimizeExpr(forStmt.getCondition());
+            Ast.Stmt.Base update = optimizeStmt(forStmt.getUpdate());
+            Ast.Stmt.Base body = optimizeStmt(forStmt.getBody());
             return new Ast.Stmt.For(init, condition, update, body, forStmt.getLineNum());
         }
         if (stmt instanceof Ast.Stmt.Return) {
@@ -115,15 +115,15 @@ public class AstOptimizer {
         }
         if (stmt instanceof Ast.Stmt.Printf) {
             Ast.Stmt.Printf printf = (Ast.Stmt.Printf) stmt;
-            ArrayList<Ast.Expr.T> exprs = new ArrayList<Ast.Expr.T>();
-            for (Ast.Expr.T expr : printf.getExprs()) {
+            ArrayList<Ast.Expr.Base> exprs = new ArrayList<Ast.Expr.Base>();
+            for (Ast.Expr.Base expr : printf.getExprs()) {
                 exprs.add(optimizeExpr(expr));
             }
             return new Ast.Stmt.Printf(printf.getFormat(), exprs, printf.getLineNum());
         }
         if (stmt instanceof Ast.Stmt.Call) {
             Ast.Stmt.Call call = (Ast.Stmt.Call) stmt;
-            ArrayList<Ast.Expr.T> args = optimizeExprList(call.getInputParams());
+            ArrayList<Ast.Expr.Base> args = optimizeExprList(call.getInputParams());
             Ast.Stmt.Call optimized = new Ast.Stmt.Call(call.getName(), args, call.getLineNum());
             optimized.setReturnType(call.getReturnType());
             return optimized;
@@ -131,31 +131,30 @@ public class AstOptimizer {
         return stmt;
     }
 
-    private ArrayList<Ast.Expr.T> optimizeExprList(ArrayList<Ast.Expr.T> exprs) {
-        ArrayList<Ast.Expr.T> result = new ArrayList<Ast.Expr.T>();
+    private ArrayList<Ast.Expr.Base> optimizeExprList(ArrayList<Ast.Expr.Base> exprs) {
+        ArrayList<Ast.Expr.Base> result = new ArrayList<Ast.Expr.Base>();
         if (exprs != null) {
-            for (Ast.Expr.T expr : exprs) {
+            for (Ast.Expr.Base expr : exprs) {
                 result.add(optimizeExpr(expr));
             }
         }
         return result;
     }
 
-    private Ast.Expr.T optimizeExpr(Ast.Expr.T expr) {
+    private Ast.Expr.Base optimizeExpr(Ast.Expr.Base expr) {
         if (expr == null) {
             return null;
         }
         if (expr instanceof Ast.Expr.UnaryMinus) {
             Ast.Expr.UnaryMinus node = (Ast.Expr.UnaryMinus) expr;
-            Ast.Expr.T inner = optimizeExpr(node.getExpr());
-            if (inner instanceof Ast.Expr.Number) {
-                Ast.Expr.Number num = (Ast.Expr.Number) inner;
-                if (num.getType() instanceof Ast.Type.Int) {
-                    return new Ast.Expr.Number(num.getType(), -((Integer) num.getValue()), node.getLineNum());
-                } else if (num.getType() instanceof Ast.Type.Float) {
-                    return new Ast.Expr.Number(num.getType(), -((Float) num.getValue()), node.getLineNum());
-                } else if (num.getType() instanceof Ast.Type.Double) {
-                    return new Ast.Expr.Number(num.getType(), -((Double) num.getValue()), node.getLineNum());
+            Ast.Expr.Base inner = optimizeExpr(node.getExpr());
+            if (isLiteral(inner)) {
+                if (inner instanceof Ast.Expr.IntLiteral) {
+                    return new Ast.Expr.IntLiteral(-((Ast.Expr.IntLiteral) inner).getValue(), node.getLineNum());
+                } else if (inner instanceof Ast.Expr.FloatLiteral) {
+                    return new Ast.Expr.FloatLiteral(-((Ast.Expr.FloatLiteral) inner).getValue(), node.getLineNum());
+                } else if (inner instanceof Ast.Expr.DoubleLiteral) {
+                    return new Ast.Expr.DoubleLiteral(-((Ast.Expr.DoubleLiteral) inner).getValue(), node.getLineNum());
                 }
             }
             return new Ast.Expr.UnaryMinus(inner, node.getLineNum());
@@ -182,8 +181,8 @@ public class AstOptimizer {
         }
         if (expr instanceof Ast.Expr.And) {
             Ast.Expr.And node = (Ast.Expr.And) expr;
-            Ast.Expr.T left = optimizeExpr(node.getLeft());
-            Ast.Expr.T right = optimizeExpr(node.getRight());
+            Ast.Expr.Base left = optimizeExpr(node.getLeft());
+            Ast.Expr.Base right = optimizeExpr(node.getRight());
             Boolean leftValue = boolValue(left);
             Boolean rightValue = boolValue(right);
             if (Boolean.FALSE.equals(leftValue)) return new Ast.Expr.False(node.getLineNum());
@@ -200,8 +199,8 @@ public class AstOptimizer {
         }
         if (expr instanceof Ast.Expr.Or) {
             Ast.Expr.Or node = (Ast.Expr.Or) expr;
-            Ast.Expr.T left = optimizeExpr(node.getLeft());
-            Ast.Expr.T right = optimizeExpr(node.getRight());
+            Ast.Expr.Base left = optimizeExpr(node.getLeft());
+            Ast.Expr.Base right = optimizeExpr(node.getRight());
             Boolean leftValue = boolValue(left);
             Boolean rightValue = boolValue(right);
             if (Boolean.TRUE.equals(leftValue)) return new Ast.Expr.True(node.getLineNum());
@@ -218,7 +217,7 @@ public class AstOptimizer {
         }
         if (expr instanceof Ast.Expr.Not) {
             Ast.Expr.Not node = (Ast.Expr.Not) expr;
-            Ast.Expr.T inner = optimizeExpr(node.getExpr());
+            Ast.Expr.Base inner = optimizeExpr(node.getExpr());
             Boolean value = boolValue(inner);
             if (value != null) {
                 return value ? new Ast.Expr.False(node.getLineNum()) : new Ast.Expr.True(node.getLineNum());
@@ -267,118 +266,143 @@ public class AstOptimizer {
         return expr;
     }
 
-    private Ast.Expr.T foldArithmetic(String op, Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
-        Ast.Expr.T simplified = simplifyArithmeticIdentity(op, left, right, lineNum);
-        if (simplified != null) {
-            return simplified;
-        }
-        if (left instanceof Ast.Expr.Number && right instanceof Ast.Expr.Number) {
-            Ast.Expr.Number l = (Ast.Expr.Number) left;
-            Ast.Expr.Number r = (Ast.Expr.Number) right;
-            if (("/".equals(op) || "%".equals(op)) && isZero(r)) {
+    private Ast.Expr.Base foldArithmetic(String op, Ast.Expr.Base left, Ast.Expr.Base right, int lineNum) {
+        if (isLiteral(left) && isLiteral(right)) {
+            if (("/".equals(op) || "%".equals(op)) && isZero(right)) {
                 return rebuildArithmetic(op, left, right, lineNum);
             }
-            return number(resultType(l, r), calculate(op, l, r), lineNum);
+            return number(resultType(left, right), calculate(op, left, right), lineNum);
+        }
+        Ast.Expr.Base simplified = simplifyArithmeticIdentity(op, left, right, lineNum);
+        if (simplified != null) {
+            return simplified;
         }
         return rebuildArithmetic(op, left, right, lineNum);
     }
 
-    private Ast.Expr.T simplifyArithmeticIdentity(String op, Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+    private Ast.Expr.Base simplifyArithmeticIdentity(String op, Ast.Expr.Base left, Ast.Expr.Base right, int lineNum) {
+        boolean integerOperation = isIntegerOperation(left, right);
         if ("+".equals(op)) {
-            if (isZero(left)) return right;
-            if (isZero(right)) return left;
+            if (integerOperation && isZero(left)) return right;
+            if (integerOperation && isZero(right)) return left;
         } else if ("-".equals(op)) {
-            if (isZero(right)) return left;
+            if (integerOperation && isZero(right)) return left;
         } else if ("*".equals(op)) {
-            if (isZero(left) && canDiscardEvaluation(right)) return zeroFor(left, right, lineNum);
-            if (isZero(right) && canDiscardEvaluation(left)) return zeroFor(left, right, lineNum);
-            if (isOne(left)) return right;
-            if (isOne(right)) return left;
+            if (integerOperation && isZero(left) && canDiscardEvaluation(right)) {
+                return zeroFor(left, right, lineNum);
+            }
+            if (integerOperation && isZero(right) && canDiscardEvaluation(left)) {
+                return zeroFor(left, right, lineNum);
+            }
+            if (isOne(left) && preservesResultType(right, left, right)) return right;
+            if (isOne(right) && preservesResultType(left, left, right)) return left;
         } else if ("/".equals(op)) {
-            if (isOne(right)) return left;
-            if (isZero(left) && !isZero(right) && canDiscardEvaluation(right)) return zeroFor(left, right, lineNum);
-        } else if ("%".equals(op)) {
-            if (isZero(left) && !isZero(right) && canDiscardEvaluation(right)) return zeroFor(left, right, lineNum);
+            if (isOne(right) && preservesResultType(left, left, right)) return left;
         }
         return null;
     }
 
-    private boolean canDiscardEvaluation(Ast.Expr.T expr) {
+    private boolean canDiscardEvaluation(Ast.Expr.Base expr) {
+        return evaluationEffect(expr) == EvaluationEffect.PURE;
+    }
+
+    private EvaluationEffect evaluationEffect(Ast.Expr.Base expr) {
         if (expr == null) {
-            return true;
+            return EvaluationEffect.PURE;
         }
-        if (expr instanceof Ast.Expr.Number
+        if (isLiteral(expr)
                 || expr instanceof Ast.Expr.True
                 || expr instanceof Ast.Expr.False
                 || expr instanceof Ast.Expr.Id
-                || expr instanceof Ast.Expr.Str
-                || expr instanceof Ast.Expr.ArrayLength) {
-            return true;
+                || expr instanceof Ast.Expr.Str) {
+            return EvaluationEffect.PURE;
         }
-        if (expr instanceof Ast.Expr.Call || expr instanceof Ast.Expr.ArrayAccess) {
-            return false;
+        if (expr instanceof Ast.Expr.Call) {
+            return EvaluationEffect.HAS_SIDE_EFFECT;
+        }
+        if (expr instanceof Ast.Expr.ArrayAccess || expr instanceof Ast.Expr.ArrayLength) {
+            return EvaluationEffect.MAY_TRAP;
         }
         if (expr instanceof Ast.Expr.Not) {
-            return canDiscardEvaluation(((Ast.Expr.Not) expr).getExpr());
+            return evaluationEffect(((Ast.Expr.Not) expr).getExpr());
         }
         if (expr instanceof Ast.Expr.Add) {
             Ast.Expr.Add node = (Ast.Expr.Add) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.Sub) {
             Ast.Expr.Sub node = (Ast.Expr.Sub) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.Mul) {
             Ast.Expr.Mul node = (Ast.Expr.Mul) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.Div) {
             Ast.Expr.Div node = (Ast.Expr.Div) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            EvaluationEffect children = combineEffects(node.getLeft(), node.getRight());
+            return isIntegerOperation(node.getLeft(), node.getRight())
+                    ? EvaluationEffect.combine(children, EvaluationEffect.MAY_TRAP)
+                    : children;
         }
         if (expr instanceof Ast.Expr.Mod) {
             Ast.Expr.Mod node = (Ast.Expr.Mod) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return EvaluationEffect.combine(
+                    combineEffects(node.getLeft(), node.getRight()), EvaluationEffect.MAY_TRAP);
         }
         if (expr instanceof Ast.Expr.And) {
             Ast.Expr.And node = (Ast.Expr.And) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.Or) {
             Ast.Expr.Or node = (Ast.Expr.Or) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.GT) {
             Ast.Expr.GT node = (Ast.Expr.GT) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.LT) {
             Ast.Expr.LT node = (Ast.Expr.LT) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.GTE) {
             Ast.Expr.GTE node = (Ast.Expr.GTE) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.LTE) {
             Ast.Expr.LTE node = (Ast.Expr.LTE) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.EQ) {
             Ast.Expr.EQ node = (Ast.Expr.EQ) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
         if (expr instanceof Ast.Expr.NEQ) {
             Ast.Expr.NEQ node = (Ast.Expr.NEQ) expr;
-            return canDiscardEvaluation(node.getLeft()) && canDiscardEvaluation(node.getRight());
+            return combineEffects(node.getLeft(), node.getRight());
         }
-        return false;
+        return EvaluationEffect.HAS_SIDE_EFFECT;
     }
 
-    private Ast.Expr.T foldComparison(String op, Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
-        if (left instanceof Ast.Expr.Number && right instanceof Ast.Expr.Number) {
-            boolean value = compare(op, (Ast.Expr.Number) left, (Ast.Expr.Number) right);
+    private EvaluationEffect combineEffects(Ast.Expr.Base left, Ast.Expr.Base right) {
+        return EvaluationEffect.combine(evaluationEffect(left), evaluationEffect(right));
+    }
+
+    private boolean isIntegerOperation(Ast.Expr.Base left, Ast.Expr.Base right) {
+        Ast.Type.Base type = promotedNumericType(numericTypeOf(left), numericTypeOf(right));
+        return type != null && type.getKind() == TypeKind.INT;
+    }
+
+    private boolean preservesResultType(Ast.Expr.Base candidate, Ast.Expr.Base left, Ast.Expr.Base right) {
+        Ast.Type.Base candidateType = numericTypeOf(candidate);
+        Ast.Type.Base result = promotedNumericType(numericTypeOf(left), numericTypeOf(right));
+        return candidateType != null && result != null && candidateType.getKind() == result.getKind();
+    }
+
+    private Ast.Expr.Base foldComparison(String op, Ast.Expr.Base left, Ast.Expr.Base right, int lineNum) {
+        if (isLiteral(left) && isLiteral(right)) {
+            boolean value = compare(op, left, right);
             return value ? new Ast.Expr.True(lineNum) : new Ast.Expr.False(lineNum);
         }
         if (left instanceof Ast.Expr.True || left instanceof Ast.Expr.False) {
@@ -392,7 +416,7 @@ public class AstOptimizer {
         return rebuildComparison(op, left, right, lineNum);
     }
 
-    private Ast.Expr.T rebuildArithmetic(String op, Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+    private Ast.Expr.Base rebuildArithmetic(String op, Ast.Expr.Base left, Ast.Expr.Base right, int lineNum) {
         if ("+".equals(op)) return new Ast.Expr.Add(left, right, lineNum);
         if ("-".equals(op)) return new Ast.Expr.Sub(left, right, lineNum);
         if ("*".equals(op)) return new Ast.Expr.Mul(left, right, lineNum);
@@ -400,7 +424,7 @@ public class AstOptimizer {
         return new Ast.Expr.Mod(left, right, lineNum);
     }
 
-    private Ast.Expr.T rebuildComparison(String op, Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
+    private Ast.Expr.Base rebuildComparison(String op, Ast.Expr.Base left, Ast.Expr.Base right, int lineNum) {
         if (">".equals(op)) return new Ast.Expr.GT(left, right, lineNum);
         if ("<".equals(op)) return new Ast.Expr.LT(left, right, lineNum);
         if (">=".equals(op)) return new Ast.Expr.GTE(left, right, lineNum);
@@ -409,31 +433,31 @@ public class AstOptimizer {
         return new Ast.Expr.NEQ(left, right, lineNum);
     }
 
-    private Boolean boolValue(Ast.Expr.T expr) {
+    private Boolean boolValue(Ast.Expr.Base expr) {
         if (expr instanceof Ast.Expr.True) return Boolean.TRUE;
         if (expr instanceof Ast.Expr.False) return Boolean.FALSE;
         return null;
     }
 
-    private boolean isZero(Ast.Expr.T expr) {
-        return expr instanceof Ast.Expr.Number && numericValue((Ast.Expr.Number) expr).doubleValue() == 0.0d;
+    private boolean isZero(Ast.Expr.Base expr) {
+        return isLiteral(expr) && numericValue(expr).doubleValue() == 0.0d;
     }
 
-    private boolean isOne(Ast.Expr.T expr) {
-        return expr instanceof Ast.Expr.Number && numericValue((Ast.Expr.Number) expr).doubleValue() == 1.0d;
+    private boolean isOne(Ast.Expr.Base expr) {
+        return isLiteral(expr) && numericValue(expr).doubleValue() == 1.0d;
     }
 
-    private Ast.Expr.T zeroFor(Ast.Expr.T left, Ast.Expr.T right, int lineNum) {
-        Ast.Type.T type = promotedNumericType(numericTypeOf(left), numericTypeOf(right));
+    private Ast.Expr.Base zeroFor(Ast.Expr.Base left, Ast.Expr.Base right, int lineNum) {
+        Ast.Type.Base type = promotedNumericType(numericTypeOf(left), numericTypeOf(right));
         if (type == null) {
             type = new Ast.Type.Int();
         }
         return number(type, 0, lineNum);
     }
 
-    private Ast.Type.T numericTypeOf(Ast.Expr.T expr) {
-        if (expr instanceof Ast.Expr.Number) {
-            return ((Ast.Expr.Number) expr).getType();
+    private Ast.Type.Base numericTypeOf(Ast.Expr.Base expr) {
+        if (isLiteral(expr)) {
+            return typeOfLiteral(expr);
         }
         if (expr instanceof Ast.Expr.Id) {
             return numericOrNull(((Ast.Expr.Id) expr).getType());
@@ -466,7 +490,7 @@ public class AstOptimizer {
         return null;
     }
 
-    private Ast.Type.T numericOrNull(Ast.Type.T type) {
+    private Ast.Type.Base numericOrNull(Ast.Type.Base type) {
         if (type == null) {
             return null;
         }
@@ -477,7 +501,7 @@ public class AstOptimizer {
         return null;
     }
 
-    private Ast.Type.T promotedNumericType(Ast.Type.T left, Ast.Type.T right) {
+    private Ast.Type.Base promotedNumericType(Ast.Type.Base left, Ast.Type.Base right) {
         if (left == null || right == null) {
             return left != null ? left : right;
         }
@@ -490,31 +514,40 @@ public class AstOptimizer {
         return new Ast.Type.Int();
     }
 
-    private Ast.Type.T resultType(Ast.Expr.Number left, Ast.Expr.Number right) {
-        if (left.getType().getKind() == TypeKind.DOUBLE || right.getType().getKind() == TypeKind.DOUBLE) {
-            return new Ast.Type.Double();
-        }
-        if (left.getType().getKind() == TypeKind.FLOAT || right.getType().getKind() == TypeKind.FLOAT) {
-            return new Ast.Type.Float();
-        }
+    private Ast.Type.Base typeOfLiteral(Ast.Expr.Base expr) {
+        if (expr instanceof Ast.Expr.IntLiteral) return new Ast.Type.Int();
+        if (expr instanceof Ast.Expr.FloatLiteral) return new Ast.Type.Float();
+        return new Ast.Type.Double();
+    }
+
+    private Ast.Type.Base resultType(Ast.Expr.Base left, Ast.Expr.Base right) {
+        if (left instanceof Ast.Expr.DoubleLiteral || right instanceof Ast.Expr.DoubleLiteral) return new Ast.Type.Double();
+        if (left instanceof Ast.Expr.FloatLiteral || right instanceof Ast.Expr.FloatLiteral) return new Ast.Type.Float();
         return new Ast.Type.Int();
     }
 
-    private Ast.Expr.Number number(Ast.Type.T type, Object value, int lineNum) {
-        if (type.getKind() == TypeKind.DOUBLE) {
-            return new Ast.Expr.Number(type, Double.valueOf(asDouble(value)), lineNum);
-        }
-        if (type.getKind() == TypeKind.FLOAT) {
-            return new Ast.Expr.Number(type, Float.valueOf((float) asDouble(value)), lineNum);
-        }
-        return new Ast.Expr.Number(type, Integer.valueOf((int) asDouble(value)), lineNum);
+
+    private Ast.Expr.Base number(Ast.Type.Base type, Object value, int lineNum) {
+        if (type.getKind() == TypeKind.DOUBLE) return new Ast.Expr.DoubleLiteral(Double.valueOf(asDouble(value)), lineNum);
+        if (type.getKind() == TypeKind.FLOAT) return new Ast.Expr.FloatLiteral(Float.valueOf((float) asDouble(value)), lineNum);
+        return new Ast.Expr.IntLiteral(Integer.valueOf((int) asDouble(value)), lineNum);
     }
 
-    private Object calculate(String op, Ast.Expr.Number left, Ast.Expr.Number right) {
-        Ast.Type.T type = resultType(left, right);
+
+    private Object calculate(String op, Ast.Expr.Base left, Ast.Expr.Base right) {
+        Ast.Type.Base type = resultType(left, right);
         if (type.getKind() == TypeKind.INT) {
             int l = numericValue(left).intValue();
             int r = numericValue(right).intValue();
+            if ("+".equals(op)) return l + r;
+            if ("-".equals(op)) return l - r;
+            if ("*".equals(op)) return l * r;
+            if ("/".equals(op)) return l / r;
+            return l % r;
+        }
+        if (type.getKind() == TypeKind.FLOAT) {
+            float l = numericValue(left).floatValue();
+            float r = numericValue(right).floatValue();
             if ("+".equals(op)) return l + r;
             if ("-".equals(op)) return l - r;
             if ("*".equals(op)) return l * r;
@@ -530,7 +563,7 @@ public class AstOptimizer {
         return l % r;
     }
 
-    private boolean compare(String op, Ast.Expr.Number left, Ast.Expr.Number right) {
+    private boolean compare(String op, Ast.Expr.Base left, Ast.Expr.Base right) {
         double l = numericValue(left).doubleValue();
         double r = numericValue(right).doubleValue();
         if (">".equals(op)) return l > r;
@@ -541,21 +574,28 @@ public class AstOptimizer {
         return l != r;
     }
 
-    private Number numericValue(Ast.Expr.Number number) {
-        Object value = number.getValue();
-        if (value instanceof Number) {
-            return (Number) value;
-        }
-        if (number.getType().getKind() == TypeKind.INT) {
-            return Integer.valueOf(IntegerLiterals.parse(value.toString()));
-        }
-        if (number.getType().getKind() == TypeKind.FLOAT) {
-            return Float.valueOf(value.toString());
-        }
-        return Double.valueOf(value.toString());
+    private Number numericValue(Ast.Expr.Base number) {
+        if (number instanceof Ast.Expr.IntLiteral) return ((Ast.Expr.IntLiteral)number).getValue();
+        if (number instanceof Ast.Expr.FloatLiteral) return ((Ast.Expr.FloatLiteral)number).getValue();
+        return ((Ast.Expr.DoubleLiteral)number).getValue();
+    }
+
+
+    private boolean isLiteral(Ast.Expr.Base expr) {
+        return expr instanceof Ast.Expr.IntLiteral || expr instanceof Ast.Expr.FloatLiteral || expr instanceof Ast.Expr.DoubleLiteral;
     }
 
     private double asDouble(Object value) {
         return value instanceof Number ? ((Number) value).doubleValue() : Double.parseDouble(value.toString());
+    }
+
+    private enum EvaluationEffect {
+        PURE,
+        MAY_TRAP,
+        HAS_SIDE_EFFECT;
+
+        private static EvaluationEffect combine(EvaluationEffect left, EvaluationEffect right) {
+            return left.ordinal() >= right.ordinal() ? left : right;
+        }
     }
 }

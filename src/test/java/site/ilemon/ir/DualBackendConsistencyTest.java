@@ -20,7 +20,7 @@ public class DualBackendConsistencyTest {
         File file = new File("examples/" + testFile + ".lemon");
         Lexer lexer = new Lexer(file);
         Parser parser = new Parser(lexer);
-        Ast.Program.T root = parser.parse();
+        Ast.Program.Base root = parser.parse();
 
         SemanticVisitor semanticVisitor = new SemanticVisitor();
         root.accept(semanticVisitor);

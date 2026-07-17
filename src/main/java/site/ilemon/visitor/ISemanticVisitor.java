@@ -1,73 +1,75 @@
 package site.ilemon.visitor;
 
-
 import site.ilemon.ast.Ast;
 
 /**
- * 语义分析访问者接口
- * @author andy
+ * 璇箟鍒嗘瀽璁块棶鑰呮帴鍙? * @author andy
  *
  */
 public interface ISemanticVisitor {
 
-	void visit(Ast.Expr.T obj);
-	void visit(Ast.Expr.Add obj);
-	void visit(Ast.Expr.And obj);
-	void visit(Ast.Expr.Call obj);
-	void visit(Ast.Expr obj);
-	void visit(Ast.Expr.GT obj);
-	void visit(Ast.Expr.LT obj);
-	void visit(Ast.Expr.LTE obj);
-	void visit(Ast.Expr.GTE obj);
-	void visit(Ast.Expr.EQ obj);
-	void visit(Ast.Expr.NEQ obj);
-	void visit(Ast.Expr.Id obj);
-	void visit(Ast.Expr.Div obj);
-	void visit(Ast.Expr.Mod obj);
-	void visit(Ast.Expr.Mul obj);
-	void visit(Ast.Expr.Number obj);
+    // --- Base class dispatchers (default null-safe delegates) ---
+    default void visit(Ast.Expr.Base obj) { if (obj != null) obj.accept(this); }
+    default void visit(Ast.Stmt.Base obj) { if (obj != null) obj.accept(this); }
+    default void visit(Ast.Type.Base obj) { if (obj != null) obj.accept(this); }
+    default void visit(Ast.Declare.Base obj) { if (obj != null) obj.accept(this); }
+    default void visit(Ast.MainClass.Base obj) { if (obj != null) obj.accept(this); }
+    default void visit(Ast.Program.Base obj) { if (obj != null) obj.accept(this); }
+    default void visit(Ast.Method.MethodSingle obj) { if (obj != null) obj.accept(this); }
 
-	void visit(Ast.Expr.Sub obj);
-	void visit(Ast.Expr.Or obj);
-	void visit(Ast.Expr.True obj);
-	void visit(Ast.Expr.False obj);
-	void visit(Ast.Expr.Not obj);
-	void visit(Ast.Expr.UnaryMinus obj);
-	void visit(Ast.Expr.Str obj);
-	void visit(Ast.Expr.ArrayAccess obj);
-	void visit(Ast.Expr.ArrayLength obj);
+    // --- Expr Leaves ---
+    void visit(Ast.Expr.Add obj);
+    void visit(Ast.Expr.And obj);
+    void visit(Ast.Expr.Call obj);
+    void visit(Ast.Expr.GT obj);
+    void visit(Ast.Expr.LT obj);
+    void visit(Ast.Expr.LTE obj);
+    void visit(Ast.Expr.GTE obj);
+    void visit(Ast.Expr.EQ obj);
+    void visit(Ast.Expr.NEQ obj);
+    void visit(Ast.Expr.Id obj);
+    void visit(Ast.Expr.Div obj);
+    void visit(Ast.Expr.Mod obj);
+    void visit(Ast.Expr.Mul obj);
+    void visit(Ast.Expr.IntLiteral obj);
+    void visit(Ast.Expr.FloatLiteral obj);
+    void visit(Ast.Expr.DoubleLiteral obj);
+    void visit(Ast.Expr.Sub obj);
+    void visit(Ast.Expr.Or obj);
+    void visit(Ast.Expr.True obj);
+    void visit(Ast.Expr.False obj);
+    void visit(Ast.Expr.Not obj);
+    void visit(Ast.Expr.UnaryMinus obj);
+    void visit(Ast.Expr.Str obj);
+    void visit(Ast.Expr.ArrayAccess obj);
+    void visit(Ast.Expr.ArrayLength obj);
 
-	void visit(Ast.Type.T obj);
-	void visit(Ast.Type.Bool obj);
-	void visit(Ast.Type.Float obj);
-	void visit(Ast.Type.Double obj);
-	void visit(Ast.Type.Str obj);
-	void visit(Ast.Type obj);
-	void visit(Ast.Type.Void obj);
-	void visit(Ast.Type.Int obj);
-	void visit(Ast.Type.IntArray obj);
-	void visit(Ast.Type.FloatArray obj);
-	void visit(Ast.Type.DoubleArray obj);
-	void visit(Ast.Type.BoolArray obj);
+    // --- Type Leaves (default empty) ---
+    default void visit(Ast.Type.Bool obj) {}
+    default void visit(Ast.Type.Float obj) {}
+    default void visit(Ast.Type.Double obj) {}
+    default void visit(Ast.Type.Str obj) {}
+    default void visit(Ast.Type.Void obj) {}
+    default void visit(Ast.Type.Error obj) {}
+    default void visit(Ast.Type.Int obj) {}
+    default void visit(Ast.Type.IntArray obj) {}
+    default void visit(Ast.Type.FloatArray obj) {}
+    default void visit(Ast.Type.DoubleArray obj) {}
+    default void visit(Ast.Type.BoolArray obj) {}
 
-	void visit(Ast.Program.T programSingle);
-	void visit(Ast.Declare.T obj);
-	void visit(Ast.MainClass.T obj);
-	void visit(Ast.Method.MethodSingle obj);
-
-	void visit(Ast.Stmt.If obj);
-	void visit(Ast.Stmt.T obj);
-	void visit(Ast.Stmt.Assign obj);
-	void visit(Ast.Stmt.VarDecl obj);
-	void visit(Ast.Stmt.Block obj);
-	void visit(Ast.Stmt.Printf obj);
-	void visit(Ast.Stmt.PrintLine obj);
-	void visit(Ast.Stmt.Return obj);
-	void visit(Ast.Stmt.While obj);
-	void visit(Ast.Stmt.For obj);
-	void visit(Ast.Stmt.Break obj);
-	void visit(Ast.Stmt.Continue obj);
-	void visit(Ast.Stmt.Call obj);
-	void visit(Ast.Stmt.ArrayAssign obj);
+    // --- Stmt Leaves ---
+    void visit(Ast.Stmt.If obj);
+    void visit(Ast.Stmt.Assign obj);
+    void visit(Ast.Stmt.VarDecl obj);
+    void visit(Ast.Stmt.Block obj);
+    void visit(Ast.Stmt.Printf obj);
+    void visit(Ast.Stmt.PrintLine obj);
+    void visit(Ast.Stmt.Return obj);
+    void visit(Ast.Stmt.While obj);
+    void visit(Ast.Stmt.For obj);
+    void visit(Ast.Stmt.Break obj);
+    void visit(Ast.Stmt.Continue obj);
+    void visit(Ast.Stmt.Call obj);
+    void visit(Ast.Stmt.ArrayAssign obj);
 
 }

@@ -395,8 +395,8 @@ public class LemonVm {
     private int compareValues(Value a, Value b) {
         switch (a.type) {
             case INT:    return Integer.compare(a.intValue, b.coerceToInt());
-            case FLOAT:  return Float.compare(a.floatValue, b.coerceToFloat());
-            case DOUBLE: return Double.compare(a.doubleValue, b.coerceToDouble());
+            case FLOAT:  return compareFloating(a.floatValue, b.coerceToFloat());
+            case DOUBLE: return compareFloating(a.doubleValue, b.coerceToDouble());
             case BOOL:
                 int ai = a.boolValue ? 1 : 0;
                 int bi = b.boolValue ? 1 : 0;
@@ -406,6 +406,16 @@ public class LemonVm {
             default:
                 return 0;
         }
+    }
+
+    private int compareFloating(double left, double right) {
+        if (left < right) {
+            return -1;
+        }
+        if (left > right) {
+            return 1;
+        }
+        return 0;
     }
 
     private Boolean compareNaN(Value a, Value b, Opcode op) {

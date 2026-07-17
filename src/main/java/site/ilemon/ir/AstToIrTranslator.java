@@ -48,7 +48,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
         if (value == null) {
             IrType type = varTypes.get(name);
             if (type == null) {
-                type = IrType.INT;
+                throw new CompilerException("Unregistered variable reached IR translation: " + name);
             }
             value = newVReg(type);
             varMap.put(name, value);
@@ -61,9 +61,13 @@ public class AstToIrTranslator implements ISemanticVisitor {
     }
 
     private void emit(IrInstruction instr) {
-        if (currentBlock != null) {
-            currentBlock.addInstruction(instr);
+        if (currentBlock == null) {
+            throw new CompilerException("Cannot emit LemonIR without an active basic block");
         }
+        if (currentBlock.isTerminated()) {
+            throw new CompilerException("Cannot emit LemonIR after terminator in block " + currentBlock.getLabel());
+        }
+        currentBlock.addInstruction(instr);
     }
 
     private IrBlock startBlock(String label) {
@@ -73,7 +77,17 @@ public class AstToIrTranslator implements ISemanticVisitor {
         return block;
     }
 
-    private IrType toIrType(Ast.Type.T type) {
+    private boolean hasOpenBlock() {
+        return currentBlock != null && !currentBlock.isTerminated();
+    }
+
+    private void emitJump(String target) {
+        IrInstruction jump = new IrInstruction(IrOpcode.JMP);
+        jump.setLabelTarget(target);
+        emit(jump);
+    }
+
+    private IrType toIrType(Ast.Type.Base type) {
         if (type instanceof Ast.Type.Int) return IrType.INT;
         if (type instanceof Ast.Type.Float) return IrType.FLOAT;
         if (type instanceof Ast.Type.Double) return IrType.DOUBLE;
@@ -87,7 +101,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
         throw new CompilerException("Unsupported Lemon type in IR translator: " + type);
     }
 
-    private int arraySize(Ast.Type.T type) {
+    private int arraySize(Ast.Type.Base type) {
         if (type instanceof Ast.Type.IntArray) return ((Ast.Type.IntArray) type).getSize();
         if (type instanceof Ast.Type.FloatArray) return ((Ast.Type.FloatArray) type).getSize();
         if (type instanceof Ast.Type.DoubleArray) return ((Ast.Type.DoubleArray) type).getSize();
@@ -128,13 +142,17 @@ public class AstToIrTranslator implements ISemanticVisitor {
         return result;
     }
 
-    private IrValue numericLiteralForTarget(Ast.Expr.T expr, IrType targetType) {
-        if (!(expr instanceof Ast.Expr.Number) || targetType == null) {
+    private IrValue numericLiteralForTarget(Ast.Expr.Base expr, IrType targetType) {
+        if (!((expr instanceof Ast.Expr.IntLiteral) || (expr instanceof Ast.Expr.FloatLiteral) || (expr instanceof Ast.Expr.DoubleLiteral)) || targetType == null) {
             return null;
         }
-        Ast.Expr.Number number = (Ast.Expr.Number) expr;
-        String text = number.getValue().toString();
-        if (number.getType() instanceof Ast.Type.Int) {
+
+        String text = "";
+        if (expr instanceof Ast.Expr.IntLiteral) text = ((Ast.Expr.IntLiteral)expr).getRawValue();
+        else if (expr instanceof Ast.Expr.FloatLiteral) text = ((Ast.Expr.FloatLiteral)expr).getRawValue();
+        else if (expr instanceof Ast.Expr.DoubleLiteral) text = ((Ast.Expr.DoubleLiteral)expr).getRawValue();
+
+        if (expr instanceof Ast.Expr.IntLiteral) {
             int value = IntegerLiterals.parse(text);
             if (targetType == IrType.DOUBLE) {
                 return IrValue.constDouble((double) value);
@@ -165,7 +183,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
         return instr;
     }
 
-    private void visitBinary(Ast.Expr.T left, Ast.Expr.T right, IrOpcode opcode) {
+    private void visitBinary(Ast.Expr.Base left, Ast.Expr.Base right, IrOpcode opcode) {
         left.accept(this);
         IrValue l = this.lastValue;
         right.accept(this);
@@ -185,7 +203,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
         this.lastValue = result;
     }
 
-    private void visitCompare(Ast.Expr.T left, Ast.Expr.T right, IrOpcode opcode) {
+    private void visitCompare(Ast.Expr.Base left, Ast.Expr.Base right, IrOpcode opcode) {
         left.accept(this);
         IrValue l = this.lastValue;
         right.accept(this);
@@ -202,7 +220,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
         this.lastValue = result;
     }
 
-    private IrValue emitCall(String name, List<Ast.Expr.T> args, boolean needsResult) {
+    private IrValue emitCall(String name, List<Ast.Expr.Base> args, boolean needsResult) {
         IrType returnType = functionReturnTypes.get(name);
         if (returnType == null) {
             returnType = IrType.INT;
@@ -239,25 +257,25 @@ public class AstToIrTranslator implements ISemanticVisitor {
     }
 
     @Override
-    public void visit(Ast.Program.T obj) {
+    public void visit(Ast.Program.Base obj) {
         ((Ast.Program.ProgramSingle) obj).getMainClass().accept(this);
     }
 
     @Override
-    public void visit(Ast.MainClass.T obj) {
+    public void visit(Ast.MainClass.Base obj) {
         Ast.MainClass.MainClassSingle mainClass = (Ast.MainClass.MainClassSingle) obj;
         program.setClassName(mainClass.getClassId());
-        for (Ast.Method.T method : mainClass.getMethods()) {
+        for (Ast.Method.Base method : mainClass.getMethods()) {
             Ast.Method.MethodSingle methodSingle = (Ast.Method.MethodSingle) method;
             functionReturnTypes.put(methodSingle.getId(), toIrType(methodSingle.getRetType()));
             List<IrType> params = new ArrayList<IrType>();
-            for (Ast.Declare.T formal : methodSingle.getFormals()) {
+            for (Ast.Declare.Base formal : methodSingle.getFormals()) {
                 Ast.Declare.DeclareSingle decl = (Ast.Declare.DeclareSingle) formal;
                 params.add(toIrType(decl.getType()));
             }
             functionParamTypes.put(methodSingle.getId(), params);
         }
-        for (Ast.Method.T method : mainClass.getMethods()) {
+        for (Ast.Method.Base method : mainClass.getMethods()) {
             method.accept(this);
         }
     }
@@ -272,7 +290,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
         this.varTypes.clear();
         this.nextVRegId = 0;
 
-        for (Ast.Declare.T formal : obj.getFormals()) {
+        for (Ast.Declare.Base formal : obj.getFormals()) {
             Ast.Declare.DeclareSingle decl = (Ast.Declare.DeclareSingle) formal;
             IrType type = toIrType(decl.getType());
             IrValue param = newVReg(type);
@@ -281,7 +299,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
             func.addParameter(param);
         }
 
-        for (Ast.Declare.T local : obj.getLocals()) {
+        for (Ast.Declare.Base local : obj.getLocals()) {
             Ast.Declare.DeclareSingle decl = (Ast.Declare.DeclareSingle) local;
             IrType type = toIrType(decl.getType());
             IrValue localReg = newVReg(type);
@@ -291,12 +309,17 @@ public class AstToIrTranslator implements ISemanticVisitor {
 
         startBlock(obj.getId() + "_entry");
 
-        for (Ast.Stmt.T stmt : obj.getStms()) {
+        for (Ast.Stmt.Base stmt : obj.getStms()) {
+            if (!hasOpenBlock()) {
+                break;
+            }
             stmt.accept(this);
         }
 
-        List<IrInstruction> instrs = currentBlock.getInstructions();
-        if (instrs.isEmpty() || instrs.get(instrs.size() - 1).getOpcode() != IrOpcode.RET) {
+        if (hasOpenBlock()) {
+            if (func.getReturnType() != IrType.VOID) {
+                throw new CompilerException("Non-void function can reach its end without returning: " + func.getName());
+            }
             emit(new IrInstruction(IrOpcode.RET));
         }
 
@@ -336,7 +359,10 @@ public class AstToIrTranslator implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Stmt.Block obj) {
-        for (Ast.Stmt.T stmt : obj.getStmts()) {
+        for (Ast.Stmt.Base stmt : obj.getStmts()) {
+            if (!hasOpenBlock()) {
+                break;
+            }
             stmt.accept(this);
         }
     }
@@ -361,7 +387,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
             if (placeholder != 'd' && placeholder != 'f') {
                 throw new CompilerException("unsupported printf placeholder %" + placeholder);
             }
-            Ast.Expr.T expr = obj.getExprs().get(argIndex++);
+            Ast.Expr.Base expr = obj.getExprs().get(argIndex++);
             expr.accept(this);
             IrInstruction print = new IrInstruction(IrOpcode.PRINT);
             print.setType(this.lastValue.getType());
@@ -407,16 +433,24 @@ public class AstToIrTranslator implements ISemanticVisitor {
 
         startBlock(trueLabel);
         obj.getThenStmt().accept(this);
-        IrInstruction thenEnd = new IrInstruction(IrOpcode.JMP);
-        thenEnd.setLabelTarget(endLabel);
-        emit(thenEnd);
+        boolean thenFallsThrough = hasOpenBlock();
+        if (thenFallsThrough) {
+            emitJump(endLabel);
+        }
 
         if (obj.getElseStmt() != null) {
             startBlock(falseLabel);
             obj.getElseStmt().accept(this);
-            IrInstruction elseEnd = new IrInstruction(IrOpcode.JMP);
-            elseEnd.setLabelTarget(endLabel);
-            emit(elseEnd);
+            boolean elseFallsThrough = hasOpenBlock();
+            if (elseFallsThrough) {
+                emitJump(endLabel);
+            }
+            if (thenFallsThrough || elseFallsThrough) {
+                startBlock(endLabel);
+            } else {
+                currentBlock = null;
+            }
+            return;
         }
 
         startBlock(endLabel);
@@ -450,9 +484,9 @@ public class AstToIrTranslator implements ISemanticVisitor {
         breakStack.pop();
         continueStack.pop();
 
-        IrInstruction back = new IrInstruction(IrOpcode.JMP);
-        back.setLabelTarget(condLabel);
-        emit(back);
+        if (hasOpenBlock()) {
+            emitJump(condLabel);
+        }
 
         startBlock(endLabel);
     }
@@ -490,17 +524,17 @@ public class AstToIrTranslator implements ISemanticVisitor {
         breakStack.pop();
         continueStack.pop();
 
-        IrInstruction jmpUpdate = new IrInstruction(IrOpcode.JMP);
-        jmpUpdate.setLabelTarget(updateLabel);
-        emit(jmpUpdate);
+        if (hasOpenBlock()) {
+            emitJump(updateLabel);
+        }
 
         startBlock(updateLabel);
         if (obj.getUpdate() != null) {
             obj.getUpdate().accept(this);
         }
-        IrInstruction back = new IrInstruction(IrOpcode.JMP);
-        back.setLabelTarget(condLabel);
-        emit(back);
+        if (hasOpenBlock()) {
+            emitJump(condLabel);
+        }
 
         startBlock(endLabel);
     }
@@ -556,6 +590,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.And obj) {
+        String rightLabel = newLabel("and_right");
         String falseLabel = newLabel("and_false");
         String endLabel = newLabel("and_end");
         IrValue result = newVReg(IrType.BOOL);
@@ -565,16 +600,16 @@ public class AstToIrTranslator implements ISemanticVisitor {
         brFalse.addOperand(this.lastValue);
         brFalse.setLabelTarget(falseLabel);
         emit(brFalse);
+        emitJump(rightLabel);
 
+        startBlock(rightLabel);
         obj.getRight().accept(this);
         emit(instruction(IrOpcode.MOV, IrType.BOOL, result, this.lastValue));
-
-        IrInstruction jmpEnd = new IrInstruction(IrOpcode.JMP);
-        jmpEnd.setLabelTarget(endLabel);
-        emit(jmpEnd);
+        emitJump(endLabel);
 
         startBlock(falseLabel);
         emit(instruction(IrOpcode.MOV, IrType.BOOL, result, IrValue.constBool(false)));
+        emitJump(endLabel);
 
         startBlock(endLabel);
         this.lastValue = result;
@@ -582,6 +617,7 @@ public class AstToIrTranslator implements ISemanticVisitor {
 
     @Override
     public void visit(Ast.Expr.Or obj) {
+        String rightLabel = newLabel("or_right");
         String trueLabel = newLabel("or_true");
         String endLabel = newLabel("or_end");
         IrValue result = newVReg(IrType.BOOL);
@@ -591,16 +627,16 @@ public class AstToIrTranslator implements ISemanticVisitor {
         brTrue.addOperand(this.lastValue);
         brTrue.setLabelTarget(trueLabel);
         emit(brTrue);
+        emitJump(rightLabel);
 
+        startBlock(rightLabel);
         obj.getRight().accept(this);
         emit(instruction(IrOpcode.MOV, IrType.BOOL, result, this.lastValue));
-
-        IrInstruction jmpEnd = new IrInstruction(IrOpcode.JMP);
-        jmpEnd.setLabelTarget(endLabel);
-        emit(jmpEnd);
+        emitJump(endLabel);
 
         startBlock(trueLabel);
         emit(instruction(IrOpcode.MOV, IrType.BOOL, result, IrValue.constBool(true)));
+        emitJump(endLabel);
 
         startBlock(endLabel);
         this.lastValue = result;
@@ -640,18 +676,18 @@ public class AstToIrTranslator implements ISemanticVisitor {
     }
 
     @Override
-    public void visit(Ast.Expr.Number obj) {
-        Object val = obj.getValue();
-        String strVal = val.toString();
-        if (obj.getType() instanceof Ast.Type.Int) {
-            this.lastValue = IrValue.constInt(IntegerLiterals.parse(strVal));
-        } else if (obj.getType() instanceof Ast.Type.Float) {
-            this.lastValue = IrValue.constFloat(Float.parseFloat(strVal));
-        } else if (obj.getType() instanceof Ast.Type.Double) {
-            this.lastValue = IrValue.constDouble(Double.parseDouble(strVal));
-        } else {
-            throw new CompilerException("Unsupported numeric literal type: " + obj.getType());
-        }
+    public void visit(Ast.Expr.IntLiteral obj) {
+        this.lastValue = IrValue.constInt(obj.getValue());
+    }
+
+    @Override
+    public void visit(Ast.Expr.FloatLiteral obj) {
+        this.lastValue = IrValue.constFloat(obj.getValue());
+    }
+
+    @Override
+    public void visit(Ast.Expr.DoubleLiteral obj) {
+        this.lastValue = IrValue.constDouble(obj.getValue());
     }
 
     @Override public void visit(Ast.Expr.True obj) { this.lastValue = IrValue.constBool(true); }
@@ -675,20 +711,6 @@ public class AstToIrTranslator implements ISemanticVisitor {
         this.lastValue = result;
     }
 
-    @Override public void visit(Ast.Expr.T obj) { obj.accept(this); }
-    @Override public void visit(Ast.Stmt.T obj) { obj.accept(this); }
-    @Override public void visit(Ast.Expr obj) {}
-    @Override public void visit(Ast.Type.T obj) {}
-    @Override public void visit(Ast.Type.Bool obj) {}
-    @Override public void visit(Ast.Type.Float obj) {}
-    @Override public void visit(Ast.Type.Double obj) {}
-    @Override public void visit(Ast.Type.Str obj) {}
-    @Override public void visit(Ast.Type obj) {}
-    @Override public void visit(Ast.Type.Void obj) {}
-    @Override public void visit(Ast.Type.Int obj) {}
-    @Override public void visit(Ast.Type.IntArray obj) {}
-    @Override public void visit(Ast.Type.FloatArray obj) {}
-    @Override public void visit(Ast.Type.DoubleArray obj) {}
-    @Override public void visit(Ast.Type.BoolArray obj) {}
-    @Override public void visit(Ast.Declare.T obj) {}
+    @Override public void visit(Ast.Expr.Base obj) { obj.accept(this); }
+    @Override public void visit(Ast.Stmt.Base obj) { obj.accept(this); }@Override public void visit(Ast.Declare.Base obj) {}
 }

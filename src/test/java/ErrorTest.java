@@ -343,7 +343,7 @@ public class ErrorTest {
 
             Lexer lexer = new Lexer(tempFile);
             Parser parser = new Parser(lexer);
-            Ast.Program.T program = parser.parse();
+            Ast.Program.Base program = parser.parse();
 
             SemanticVisitor semantic = new SemanticVisitor();
             semantic.visit(program);

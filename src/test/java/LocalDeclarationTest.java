@@ -18,7 +18,7 @@ public class LocalDeclarationTest {
 
     @Test
     public void parserKeepsDeclarationOrderAndCollectsAllLocals() throws Exception {
-        Ast.Program.T program = parse("DeclarationAst",
+        Ast.Program.Base program = parse("DeclarationAst",
                 "class DeclarationAst {\n" +
                 "    void main() {\n" +
                 "        printLine();\n" +
@@ -71,7 +71,7 @@ public class LocalDeclarationTest {
 
     @Test
     public void semanticRejectsDuplicateLocalsAcrossNestedBlocks() throws Exception {
-        Ast.Program.T program = parse("DuplicateBlockLocal",
+        Ast.Program.Base program = parse("DuplicateBlockLocal",
                 "class DuplicateBlockLocal { void main() { int x; { int x; } } }");
         try {
             new SemanticVisitor().visit(program);
@@ -82,20 +82,20 @@ public class LocalDeclarationTest {
     }
 
     private static SemanticVisitor analyze(String className, String source) throws Exception {
-        Ast.Program.T program = parse(className, source);
+        Ast.Program.Base program = parse(className, source);
         SemanticVisitor semantic = SemanticVisitor.collecting();
         semantic.visit(program);
         return semantic;
     }
 
-    private static Ast.Program.T parse(String className, String source) throws Exception {
+    private static Ast.Program.Base parse(String className, String source) throws Exception {
         return new Parser(new Lexer(writeSource(className, source))).parse();
     }
 
-    private static Ast.Method.MethodSingle method(Ast.Program.T program, String name) {
+    private static Ast.Method.MethodSingle method(Ast.Program.Base program, String name) {
         Ast.MainClass.MainClassSingle mainClass = (Ast.MainClass.MainClassSingle)
                 ((Ast.Program.ProgramSingle) program).getMainClass();
-        for (Ast.Method.T candidate : mainClass.getMethods()) {
+        for (Ast.Method.Base candidate : mainClass.getMethods()) {
             Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) candidate;
             if (name.equals(method.getId())) {
                 return method;
