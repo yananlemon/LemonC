@@ -8,6 +8,7 @@ import site.ilemon.lexer.Token;
 import site.ilemon.lexer.TokenKind;
 import site.ilemon.parser.Parser;
 import site.ilemon.semantic.SemanticVisitor;
+import site.ilemon.typedast.TypedAst;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -134,12 +135,13 @@ public class DiagnosticTest {
         Ast.Stmt.Assign assignment = (Ast.Stmt.Assign) main.getStms().get(1);
         Ast.Expr.Add addition = (Ast.Expr.Add) assignment.getExpr();
         Ast.Expr.Id missing = (Ast.Expr.Id) addition.getLeft();
-        assertSame(Ast.Type.Error.INSTANCE, missing.getType());
-        assertEquals(Ast.Type.TypeKind.ERROR, missing.getType().getKind());
+        assertSame(TypedAst.Type.ERROR, semantic.getResult().getExpressionType(missing));
+        assertEquals(TypedAst.Type.Kind.ERROR,
+                semantic.getResult().getExpressionType(missing).getKind());
 
         Ast.Stmt.Assign arrayAssignment = (Ast.Stmt.Assign) main.getStms().get(2);
         Ast.Expr.ArrayAccess arrayAccess = (Ast.Expr.ArrayAccess) arrayAssignment.getExpr();
-        assertSame(Ast.Type.Error.INSTANCE, arrayAccess.getElementType());
+        assertSame(TypedAst.Type.ERROR, semantic.getResult().getExpressionType(arrayAccess));
     }
 
     @Test

@@ -1,683 +1,880 @@
 package site.ilemon.semantic;
 
 import site.ilemon.ast.Ast;
-import site.ilemon.ast.Ast.Type.TypeKind;
 import site.ilemon.exception.SemanticException;
-import site.ilemon.visitor.ISemanticVisitor;
+import site.ilemon.source.SourceSpan;
+import site.ilemon.typedast.TypedAst;
 
-import java.util.ArrayList;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * 语义分析 Visitor。
+ * Semantic boundary from the parser AST to the immutable Typed-AST.
  *
- * <p>基于 Visitor 模式遍历 AST，执行以下静态语义检查：</p>
- * <ul>
- *   <li><b>类型检查</b>：赋值、运算、方法调用的类型一致性</li>
- *   <li><b>变量检查</b>：未声明变量、使用前未赋值</li>
- *   <li><b>方法检查</b>：未定义方法、重复定义、参数个数/类型匹配</li>
- *   <li><b>控制流检查</b>：if/while 条件必须是 bool 类型</li>
- *   <li><b>返回值检查</b>：返回类型与方法声明一致、main 方法必须是 void</li>
- * </ul>
- *
- * <p>发现错误时抛出 {@link SemanticException}，错误信息格式为
- * {@code [语义分析] 行 N: 错误描述}。</p>
- *
- * @author andy
- * @see site.ilemon.visitor.ISemanticVisitor
- * @see SemanticException
+ * <p>The historical class name is retained for source compatibility. This is
+ * no longer an AST visitor that stores inferred types back into parser nodes;
+ * every analysis operation returns a new typed node.</p>
  */
-public class SemanticVisitor implements ISemanticVisitor {
-
-    private boolean pass = true;
-
+public final class SemanticVisitor {
     private final boolean collectErrors;
-
     private final ArrayList<String> errors = new ArrayList<String>();
-
     private final ArrayList<Integer> errorLineNumbers = new ArrayList<Integer>();
+    private final IdentityHashMap<Ast.Expr.Base, TypedAst.Expr> typedExpressions =
+            new IdentityHashMap<Ast.Expr.Base, TypedAst.Expr>();
+    private final IdentityHashMap<Ast.Stmt.Base, TypedAst.Stmt> typedStatements =
+            new IdentityHashMap<Ast.Stmt.Base, TypedAst.Stmt>();
+    private final IdentityHashMap<Ast.Method.MethodSingle, TypedAst.MethodSymbol> sourceMethodSymbols =
+            new IdentityHashMap<Ast.Method.MethodSingle, TypedAst.MethodSymbol>();
 
-    private java.util.Stack<Ast.Type.Base> typeStack = new java.util.Stack<>();
+    private final Map<String, TypedAst.MethodSymbol> methods =
+            new HashMap<String, TypedAst.MethodSymbol>();
 
-    private String currMethodName;
+    /** 方法内所有局部声明，按分析顺序排列；被遮蔽的名字会得到各自独立的符号。 */
+    private List<TypedAst.Declaration> methodLocals;
+    private Deque<Map<String, TypedAst.Symbol>> variableScopes;
+    private Set<TypedAst.Symbol> unassigned;
+    private TypedAst.Type currentReturnType;
+    private int loopDepth;
+    private SemanticResult result;
 
-    private HashMap<String,MethodVarTable> methodVarTable;
-
-    private HashMap<String,Ast.Type.Base> methodNameRetTypeMap;
-
-    private HashSet<String> currMethodLocalVar;
-
-    private Deque<HashSet<String>> variableScopes;
-
-    private int loopDepth = 0;
-
-    private HashMap<String,Ast.Method.MethodSingle> methodMap;
-
-    private Ast.Type.Base typeOfMethodDeclared;
-
-    public SemanticVisitor(){
+    public SemanticVisitor() {
         this(false);
     }
 
-    private SemanticVisitor(boolean collectErrors){
-
+    private SemanticVisitor(boolean collectErrors) {
         this.collectErrors = collectErrors;
-        this.methodVarTable = new HashMap<String,MethodVarTable>();
-        this.methodMap = new HashMap<String, Ast.Method.MethodSingle>();
-        this.methodNameRetTypeMap = new HashMap<String, Ast.Type.Base>();
     }
 
     public static SemanticVisitor collecting() {
         return new SemanticVisitor(true);
     }
 
+    public SemanticResult analyze(Ast.Program.Base source) {
+        reset();
+        TypedAst.Program program = analyzeProgram(source);
+        this.result = new SemanticResult(program, errors, errorLineNumbers,
+                typedExpressions, typedStatements);
+        return result;
+    }
+
+    public void visit(Ast.Program.Base source) {
+        analyze(source);
+    }
+
+    public boolean passOrNot() {
+        return errors.isEmpty();
+    }
+
     public ArrayList<String> getErrors() {
-        return new ArrayList<String>(this.errors);
+        return new ArrayList<String>(errors);
     }
 
     public ArrayList<Integer> getErrorLineNumbers() {
-        return new ArrayList<Integer>(this.errorLineNumbers);
+        return new ArrayList<Integer>(errorLineNumbers);
     }
 
-    public boolean passOrNot(){
-        return pass;
-    }
-
-    private Ast.Type.Base errorType() {
-        return Ast.Type.Error.INSTANCE;
-    }
-
-    private boolean isErrorType(Ast.Type.Base type) {
-        return type != null && type.getKind() == TypeKind.ERROR;
-    }
-
-    private Ast.Type.Base analyzeExpression(Ast.Expr.Base expression) {
-        if (expression == null) {
-            return errorType();
+    public SemanticResult getResult() {
+        if (result == null) {
+            throw new IllegalStateException("semantic analysis has not run");
         }
-        int initialDepth = this.typeStack.size();
-        expression.accept(this);
-        if (this.typeStack.size() <= initialDepth) {
-            error(expression.getLineNum(), "internal error: expression analysis produced no type");
-            return errorType();
-        }
-        Ast.Type.Base result = this.typeStack.pop();
-        while (this.typeStack.size() > initialDepth) {
-            this.typeStack.pop();
-        }
-        return result == null ? errorType() : result;
+        return result;
     }
 
-    private void pushType(Ast.Type.Base type) {
-        this.typeStack.push(type == null ? errorType() : type);
+    public TypedAst.Program getTypedProgram() {
+        return getResult().getProgram();
     }
 
-    private String typeName(Ast.Type.Base type) {
-        if (type == null) {
-            return "未知";
-        }
-        String name = type.toString();
-        return name.startsWith("@") ? name.substring(1) : name;
+    private void reset() {
+        errors.clear();
+        errorLineNumbers.clear();
+        typedExpressions.clear();
+        typedStatements.clear();
+        sourceMethodSymbols.clear();
+        methods.clear();
+        methodLocals = null;
+        variableScopes = null;
+        unassigned = null;
+        currentReturnType = null;
+        loopDepth = 0;
+        result = null;
     }
 
-    private void checkSameOperandTypes(int lineNum, String operator, Ast.Type.Base leftType, Ast.Type.Base rightType) {
-        if (isErrorType(leftType) || isErrorType(rightType)) {
-            pushType(errorType());
-            return;
+    private TypedAst.Program analyzeProgram(Ast.Program.Base source) {
+        if (!(source instanceof Ast.Program.ProgramSingle)) {
+            error(1, "内部错误: 不支持的程序 AST 节点");
+            return new TypedAst.Program("<error>", Collections.<TypedAst.Method>emptyList(),
+                    source == null ? SourceSpan.UNKNOWN : source.getSourceSpan());
         }
-        if (isArrayType(leftType) || isArrayType(rightType)) {
-            error(lineNum, String.format(
-                    "运算符 '%s' 不支持数组操作数：左侧为 %s，右侧为 %s",
-                    operator, typeName(leftType), typeName(rightType)));
-            pushType(errorType());
-            return;
-        }
-        Ast.Type.Base promoted = promoteNumeric(leftType, rightType);
-        if (promoted != null) {
-            pushType(promoted);
-            return;
-        }
-        if (!isMatch(leftType, rightType)) {
-            error(lineNum, String.format(
-                    "运算符 '%s' 的左右操作数类型不匹配：左侧为 %s，右侧为 %s",
-                    operator, typeName(leftType), typeName(rightType)));
-            pushType(errorType());
-            return;
-        }
-        pushType(leftType);
-    }
-
-    private void checkBooleanOperandTypes(int lineNum, String operator, Ast.Type.Base leftType, Ast.Type.Base rightType) {
-        if (isErrorType(leftType) || isErrorType(rightType)) {
-            pushType(errorType());
-            return;
-        }
-        if (leftType.getKind() != TypeKind.BOOL || rightType.getKind() != TypeKind.BOOL) {
-            error(lineNum, String.format(
-                    "运算符 '%s' 要求左右操作数都是 bool：左侧为 %s，右侧为 %s",
-                    operator, typeName(leftType), typeName(rightType)));
-            pushType(errorType());
-            return;
-        }
-        pushType(new Ast.Type.Bool());
-    }
-
-    @Override
-    public void visit(Ast.Expr.Add obj) {
-        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
-        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
-        checkSameOperandTypes(obj.getLineNum(), "+", leftType, rightType);
-    }
-
-    @Override
-    public void visit(Ast.Expr.And obj) {
-        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
-        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
-        checkBooleanOperandTypes(obj.getLineNum(), "&&", leftType, rightType);
-    }
-
-    @Override
-    public void visit(Ast.Type.Bool obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Stmt.Assign obj) {
-        if(obj.getExpr() instanceof Ast.Expr.Base){
-            Ast.Type.Base exprType = analyzeExpression(obj.getExpr());
-            boolean wasUnassigned = this.currMethodLocalVar.contains(obj.getId().getId());
-            if (wasUnassigned)
-                this.currMethodLocalVar.remove(obj.getId().getId());
-            Ast.Type.Base destType = analyzeExpression(obj.getId());
-            if (isErrorType(destType) || isErrorType(exprType)) {
-                if (wasUnassigned) {
-                    this.currMethodLocalVar.add(obj.getId().getId());
-                }
-                return;
-            }
-            if (isArrayType(destType) || isArrayType(exprType)) {
-                error(obj.getLineNum(), String.format("数组不支持整体赋值：不能将 %s 赋值给 %s",
-                        typeName(exprType), typeName(destType)));
-                if (wasUnassigned) {
-                    this.currMethodLocalVar.add(obj.getId().getId());
-                }
-                return;
-            }
-            if (!isMatch(destType, exprType) && wasUnassigned) {
-                this.currMethodLocalVar.add(obj.getId().getId());
-            }
-            if( !isMatch(destType,exprType))
-                error(obj.getLineNum(),String.format("不能将 %s 类型的表达式赋值给 %s 类型的变量 '%s'",
-                        typeName(exprType), typeName(destType), obj.getId().getId()));
+        Ast.MainClass.Base mainBase = ((Ast.Program.ProgramSingle) source).getMainClass();
+        if (!(mainBase instanceof Ast.MainClass.MainClassSingle)) {
+            error(1, "内部错误: 不支持的主类 AST 节点");
+            return new TypedAst.Program("<error>", Collections.<TypedAst.Method>emptyList(),
+                    source.getSourceSpan());
         }
 
-    }
-
-    @Override
-    public void visit(Ast.Stmt.VarDecl obj) {
-        Ast.Declare.DeclareSingle declaration = obj.getDeclaration();
-        if (this.variableScopes == null || this.variableScopes.isEmpty()) {
-            error(obj.getLineNum(), "内部错误: 局部变量作用域未初始化");
-            return;
-        }
-        this.variableScopes.peek().add(declaration.getId());
-        if (!isArrayType(declaration.getType())) {
-            this.currMethodLocalVar.add(declaration.getId());
-        }
-        if (obj.getInitializer() == null) {
-            return;
-        }
-
-        Ast.Type.Base initializerType = analyzeExpression(obj.getInitializer());
-        if (isErrorType(initializerType)) {
-            return;
-        }
-        if (!isMatch(declaration.getType(), initializerType)) {
-            error(obj.getLineNum(), String.format(
-                    "不能用 %s 类型初始化 %s 类型的变量 '%s'",
-                    typeName(initializerType), typeName(declaration.getType()), declaration.getId()));
-            return;
-        }
-        this.currMethodLocalVar.remove(declaration.getId());
-    }
-
-    @Override
-    public void visit(Ast.Stmt.Block obj) {
-        enterVariableScope();
-        for( Ast.Stmt.Base stmt : obj.getStmts()){
-            this.visit(stmt);
-        }
-        exitVariableScope();
-    }
-
-    @Override
-    public void visit(Ast.Expr.Call obj) {
-        Ast.Type.Base returnType = validateMethodCall(obj.getName(), obj.getInputParams(), obj.getLineNum());
-        if (!isErrorType(returnType) && returnType.getKind() == TypeKind.VOID) {
-            error(obj.getLineNum(), "void 方法 '" + obj.getName() + "' 不能作为表达式使用");
-            returnType = errorType();
-        }
-        obj.setReturnType(returnType);
-        pushType(returnType);
-    }
-
-    @Override
-    public void visit(Ast.Declare.Base obj) {
-        if (obj instanceof Ast.Declare.DeclareSingle) {
-            pushType(((Ast.Declare.DeclareSingle) obj).getType());
-        }
-    }
-
-    @Override
-    public void visit(Ast.Expr.Div obj) {
-        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
-        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
-        checkSameOperandTypes(obj.getLineNum(), "/", leftType, rightType);
-    }
-
-    @Override
-    public void visit(Ast.Expr.Mod obj) {
-        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
-        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
-        if (isErrorType(leftType) || isErrorType(rightType)) {
-            pushType(errorType());
-            return;
-        }
-        if (leftType.getKind() != TypeKind.INT
-                || rightType.getKind() != TypeKind.INT) {
-            error(obj.getLineNum(), String.format(
-                    "运算符 '%%' 只支持 int 操作数：左侧为 %s，右侧为 %s",
-                    typeName(leftType), typeName(rightType)));
-            pushType(errorType());
-            return;
-        }
-        pushType(new Ast.Type.Int());
-    }
-
-    @Override
-    public void visit(Ast.Type.Float obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Type.Double obj) {
-        pushType(obj);
-    }@Override
-    public void visit(Ast.Expr.GT obj) {
-        checkOrderComparison(obj.getLeft(), obj.getRight(), ">", obj.getLineNum());
-    }
-
-    @Override
-    public void visit(Ast.Expr.Id obj) {
-        MethodVarTable mTable = this.methodVarTable.get(currMethodName);
-        if (mTable == null) {
-            error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
-            obj.setType(errorType());
-            pushType(errorType());
-            return;
-        }
-        boolean visible = isVariableVisible(obj.getId());
-        Ast.Type.Base declaredType = visible ? mTable.get(obj.getId()) : null;
-        if (declaredType == null) {
-            error(obj.getLineNum(), "未定义的变量: " + obj.getId());
-            obj.setType(errorType());
-            pushType(errorType());
-            return;
-        }
-        if (currMethodLocalVar.contains(obj.getId())) {
-            error(obj.getLineNum(), String.format("变量 '%s' 在使用前未赋值", obj.getId()));
-            obj.setType(errorType());
-            pushType(errorType());
-            return;
-        }
-        obj.setType(declaredType);
-        pushType(obj.getType());
-    }
-
-    @Override
-    public void visit(Ast.Stmt.If obj) {
-        Ast.Type.Base condType = analyzeExpression(obj.getCondition());
-        if (!isErrorType(condType) && condType.getKind() != TypeKind.BOOL)
-            error(obj.getCondition().getLineNum(),
-                    "if 条件必须是 bool，实际为 " + typeName(condType));
-
-        HashSet<String> before = new HashSet<String>(this.currMethodLocalVar);
-        this.currMethodLocalVar = new HashSet<String>(before);
-        this.visit(obj.getThenStmt());
-        HashSet<String> thenUnassigned = new HashSet<String>(this.currMethodLocalVar);
-
-        if (obj.getElseStmt() != null) {
-            this.currMethodLocalVar = new HashSet<String>(before);
-            this.visit(obj.getElseStmt());
-            HashSet<String> elseUnassigned = new HashSet<String>(this.currMethodLocalVar);
-            thenUnassigned.addAll(elseUnassigned);
-            this.currMethodLocalVar = thenUnassigned;
-        } else {
-            this.currMethodLocalVar = before;
-        }
-    }
-
-    @Override
-    public void visit(Ast.Type.Int obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Program.Base programSingle) {
-        this.visit(((Ast.Program.ProgramSingle)programSingle).getMainClass());
-    }
-
-    @Override
-    public void visit(Ast.Expr.LT obj) {
-        checkOrderComparison(obj.getLeft(), obj.getRight(), "<", obj.getLineNum());
-    }
-
-    @Override
-    public void visit(Ast.Expr.LTE obj) {
-        checkOrderComparison(obj.getLeft(), obj.getRight(), "<=", obj.getLineNum());
-    }
-
-    @Override
-    public void visit(Ast.Expr.GTE obj) {
-        checkOrderComparison(obj.getLeft(), obj.getRight(), ">=", obj.getLineNum());
-    }
-
-    @Override
-    public void visit(Ast.Expr.EQ obj) {
-        checkComparison(obj.getLeft(), obj.getRight(), "==", obj.getLineNum());
-    }
-
-    @Override
-    public void visit(Ast.Expr.NEQ obj) {
-        checkComparison(obj.getLeft(), obj.getRight(), "!=", obj.getLineNum());
-    }
-
-    @Override
-    public void visit(Ast.MainClass.Base obj) {
-        Ast.MainClass.MainClassSingle mainClassSingle = (Ast.MainClass.MainClassSingle) obj;
-        for(int i = 0; i < mainClassSingle.getMethods().size(); i++){
-            Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) mainClassSingle.getMethods().get(i);
-            if( methodMap.containsKey(method.getId())){
-                error(method.getLineNum(), "重复定义的方法: " + method.getId());
-            }else{
-                methodMap.put(method.getId(),method);
-                methodNameRetTypeMap.put(method.getId(),method.getRetType());
-            }
-        }
+        Ast.MainClass.MainClassSingle mainClass = (Ast.MainClass.MainClassSingle) mainBase;
+        declareMethods(mainClass.getMethods());
         validateMainMethod();
-        for(int i = 0; i < mainClassSingle.getMethods().size(); i++){
-            Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) mainClassSingle.getMethods().get(i);
-            this.visit(method);
+
+        ArrayList<TypedAst.Method> typedMethods = new ArrayList<TypedAst.Method>();
+        for (Ast.Method.Base methodBase : mainClass.getMethods()) {
+            if (methodBase instanceof Ast.Method.MethodSingle) {
+                typedMethods.add(analyzeMethod((Ast.Method.MethodSingle) methodBase));
+            }
+        }
+        return new TypedAst.Program(
+                mainClass.getClassId(), typedMethods, source.getSourceSpan());
+    }
+
+    private void declareMethods(List<Ast.Method.Base> methodNodes) {
+        for (Ast.Method.Base methodBase : methodNodes) {
+            Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) methodBase;
+            ArrayList<TypedAst.Type> parameterTypes = new ArrayList<TypedAst.Type>();
+            for (Ast.Declare.Base formalBase : method.getFormals()) {
+                parameterTypes.add(typeOf(((Ast.Declare.DeclareSingle) formalBase).getType()));
+            }
+            TypedAst.MethodSymbol symbol = new TypedAst.MethodSymbol(method.getId(),
+                    typeOf(method.getRetType()), parameterTypes, method.getSourceSpan());
+            sourceMethodSymbols.put(method, symbol);
+            if (methods.containsKey(method.getId())) {
+                error(method.getLineNum(), "重复定义的方法: " + method.getId());
+            } else {
+                methods.put(method.getId(), symbol);
+            }
         }
     }
 
     private void validateMainMethod() {
-        Ast.Method.MethodSingle main = this.methodMap.get("main");
+        TypedAst.MethodSymbol main = methods.get("main");
         if (main == null) {
             error(1, "程序必须定义 void main()");
-        }
-        if (main == null) {
             return;
         }
-        if (main.getRetType().getKind() != TypeKind.VOID) {
-            error(main.getLineNum(), "main 方法的返回类型必须是 void，实际声明为: "
-                    + typeName(main.getRetType()));
+        if (main.getReturnType() != TypedAst.Type.VOID) {
+            error(main.getLineNumber(), "main 方法的返回类型必须是 void，实际声明为: "
+                    + main.getReturnType());
         }
-        if (main.getFormals() != null && !main.getFormals().isEmpty()) {
-            error(main.getLineNum(), "main 方法不能声明参数，必须是 void main()");
+        if (!main.getParameterTypes().isEmpty()) {
+            error(main.getLineNumber(), "main 方法不能声明参数，必须是 void main()");
         }
     }
 
-    @Override
-    public void visit(Ast.Method.MethodSingle obj) {
-        this.typeStack.clear();
-        MethodVarTable mTable = new MethodVarTable();
-        this.currMethodLocalVar = new HashSet<String>();
-        mTable.put(obj.getFormals(),obj.getLocals());
-        this.methodVarTable.put(obj.getId(),mTable);
-        this.currMethodName = obj.getId();
-        this.typeOfMethodDeclared = obj.getRetType();
-		this.variableScopes = new ArrayDeque<HashSet<String>>();
-		enterVariableScope();
-		for (Ast.Declare.Base formal : obj.getFormals()) {
-			this.variableScopes.peek().add(((Ast.Declare.DeclareSingle) formal).getId());
-		}
+    private TypedAst.Method analyzeMethod(Ast.Method.MethodSingle source) {
+        variableScopes = new ArrayDeque<Map<String, TypedAst.Symbol>>();
+        methodLocals = new ArrayList<TypedAst.Declaration>();
+        unassigned = new HashSet<TypedAst.Symbol>();
+        currentReturnType = typeOf(source.getRetType());
+        loopDepth = 0;
 
-        for( int i = 0; i < obj.getStms().size(); i++){
-            Ast.Stmt.Base stmt = obj.getStms().get(i);
-            this.visit(stmt);
+        // 形参与方法体最外层的局部变量同处一个作用域：void f(int x) { int x; } 是重复声明。
+        enterScope();
+        ArrayList<TypedAst.Declaration> formals = new ArrayList<TypedAst.Declaration>();
+        for (Ast.Declare.Base formalBase : source.getFormals()) {
+            Ast.Declare.DeclareSingle formal = (Ast.Declare.DeclareSingle) formalBase;
+            formals.add(declare(formal, TypedAst.Symbol.Kind.PARAMETER));
         }
-        if( !obj.getId().equals("main")
-                && obj.getRetType().getKind() != TypeKind.VOID
-                && !statementsMustReturn(obj.getStms()) ){
-            error(obj.getLineNum(), "非 void 方法 '" + obj.getId() + "' 不是所有路径都有 return");
+
+        ArrayList<TypedAst.Stmt> statements = new ArrayList<TypedAst.Stmt>();
+        for (Ast.Stmt.Base statement : source.getStms()) {
+            statements.add(analyzeStatement(statement));
         }
-		if (!this.typeStack.isEmpty()) {
-			error(obj.getLineNum(), "internal error: semantic type stack is not balanced");
-			this.typeStack.clear();
-		}
-		exitVariableScope();
-		this.variableScopes = null;
+
+        if (!"main".equals(source.getId()) && currentReturnType != TypedAst.Type.VOID
+                && !statementsMustReturn(statements)) {
+            error(source.getLineNum(), "非 void 方法 '" + source.getId() + "' 不是所有路径都有 return");
+        }
+
+        exitScope();
+        TypedAst.Method typed = new TypedAst.Method(sourceMethodSymbols.get(source),
+                formals, methodLocals, statements, source.getSourceSpan());
+        variableScopes = null;
+        methodLocals = null;
+        unassigned = null;
+        currentReturnType = null;
+        return typed;
     }
 
-    @Override
-    public void visit(Ast.Expr.Mul obj) {
-        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
-        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
-        checkSameOperandTypes(obj.getLineNum(), "*", leftType, rightType);
-
-
+    /**
+     * 在当前作用域声明一个形参或局部变量。
+     *
+     * <p>只要名字在任一尚未关闭的作用域中可见就报重复声明——即禁止遮蔽（同 Java）。
+     * 作用域关闭后名字随之消失，所以并列的兄弟块可以复用同一个名字。</p>
+     */
+    private TypedAst.Declaration declare(Ast.Declare.DeclareSingle source,
+                                         TypedAst.Symbol.Kind kind) {
+        TypedAst.Symbol symbol = new TypedAst.Symbol(source.getId(), typeOf(source.getType()),
+                kind, source.getSourceSpan());
+        if (lookup(source.getId()) != null) {
+            String noun = kind == TypedAst.Symbol.Kind.PARAMETER ? "参数 " : "变量 ";
+            error(source.getLineNum(), "重复的" + noun + source.getId());
+        }
+        // 即使重复也要写入当前作用域：否则后续对这个名字的每次引用都会级联报"未定义的变量"。
+        variableScopes.peek().put(source.getId(), symbol);
+        TypedAst.Declaration declaration =
+                new TypedAst.Declaration(symbol, source.getSourceSpan());
+        if (kind == TypedAst.Symbol.Kind.LOCAL) {
+            methodLocals.add(declaration);
+        }
+        return declaration;
     }
 
-    @Override
-    public void visit(Ast.Expr.IntLiteral obj) {
-        pushType(new Ast.Type.Int());
+    private TypedAst.Stmt analyzeStatement(Ast.Stmt.Base source) {
+        if (source == null) {
+            return new TypedAst.Block(
+                    Collections.<TypedAst.Stmt>emptyList(), SourceSpan.UNKNOWN);
+        }
+        TypedAst.Stmt typed;
+        if (source instanceof Ast.Stmt.Assign) {
+            Ast.Stmt.Assign node = (Ast.Stmt.Assign) source;
+            TypedAst.Expr expression = analyzeExpression(node.getExpr());
+            TypedAst.Symbol target = resolveVisible(
+                    node.getId().getId(), node.getId().getSourceSpan(), "变量");
+            typedExpressions.put(node.getId(),
+                    new TypedAst.Id(target, target.getType(), node.getId().getSourceSpan()));
+            boolean valid = !target.getType().isError() && !expression.getType().isError();
+            if (valid && (target.getType().isArray() || expression.getType().isArray())) {
+                error(node.getLineNum(), String.format("数组不支持整体赋值：不能将 %s 赋值给 %s",
+                        expression.getType(), target.getType()));
+                valid = false;
+            }
+            if (valid && !isAssignable(target.getType(), expression.getType())) {
+                error(node.getLineNum(), String.format("不能将 %s 类型的表达式赋值给 %s 类型的变量 '%s'",
+                        expression.getType(), target.getType(), target.getName()));
+                valid = false;
+            }
+            if (valid) {
+                unassigned.remove(target);
+            }
+            typed = new TypedAst.Assign(target, expression, node.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.VarDecl) {
+            Ast.Stmt.VarDecl node = (Ast.Stmt.VarDecl) source;
+            TypedAst.Declaration declaration =
+                    declare(node.getDeclaration(), TypedAst.Symbol.Kind.LOCAL);
+            if (!declaration.getType().isArray()) {
+                unassigned.add(declaration.getSymbol());
+            }
+            TypedAst.Expr initializer = node.getInitializer() == null
+                    ? null : analyzeExpression(node.getInitializer());
+            if (initializer != null && !initializer.getType().isError()) {
+                if (!isAssignable(declaration.getType(), initializer.getType())) {
+                    error(node.getLineNum(), String.format(
+                            "不能用 %s 类型初始化 %s 类型的变量 '%s'",
+                            initializer.getType(), declaration.getType(), declaration.getName()));
+                } else {
+                    unassigned.remove(declaration.getSymbol());
+                }
+            }
+            typed = new TypedAst.VarDecl(declaration, initializer, node.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.Block) {
+            Ast.Stmt.Block node = (Ast.Stmt.Block) source;
+            enterScope();
+            ArrayList<TypedAst.Stmt> statements = new ArrayList<TypedAst.Stmt>();
+            for (Ast.Stmt.Base statement : node.getStmts()) {
+                statements.add(analyzeStatement(statement));
+            }
+            exitScope();
+            typed = new TypedAst.Block(statements, node.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.If) {
+            Ast.Stmt.If node = (Ast.Stmt.If) source;
+            TypedAst.Expr condition = analyzeExpression(node.getCondition());
+            requireBooleanCondition(condition, "if");
+            Set<TypedAst.Symbol> before = copyUnassigned();
+            unassigned = new HashSet<TypedAst.Symbol>(before);
+            TypedAst.Stmt thenStatement = analyzeStatement(node.getThenStmt());
+            Set<TypedAst.Symbol> thenUnassigned = copyUnassigned();
+            TypedAst.Stmt elseStatement = null;
+            if (node.getElseStmt() != null) {
+                unassigned = new HashSet<TypedAst.Symbol>(before);
+                elseStatement = analyzeStatement(node.getElseStmt());
+                thenUnassigned.addAll(unassigned);
+                unassigned = thenUnassigned;
+            } else {
+                unassigned = before;
+            }
+            typed = new TypedAst.If(
+                    condition, thenStatement, elseStatement, node.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.While) {
+            Ast.Stmt.While node = (Ast.Stmt.While) source;
+            TypedAst.Expr condition = analyzeExpression(node.getCondition());
+            requireBooleanCondition(condition, "while");
+            Set<TypedAst.Symbol> before = copyUnassigned();
+            loopDepth++;
+            unassigned = new HashSet<TypedAst.Symbol>(before);
+            TypedAst.Stmt body = analyzeStatement(node.getBody());
+            loopDepth--;
+            unassigned = before;
+            typed = new TypedAst.While(condition, body, node.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.For) {
+            Ast.Stmt.For node = (Ast.Stmt.For) source;
+            TypedAst.Stmt initializer = node.getInit() == null ? null : analyzeStatement(node.getInit());
+            TypedAst.Expr condition = analyzeExpression(node.getCondition());
+            requireBooleanCondition(condition, "for");
+            Set<TypedAst.Symbol> before = copyUnassigned();
+            loopDepth++;
+            unassigned = new HashSet<TypedAst.Symbol>(before);
+            TypedAst.Stmt body = analyzeStatement(node.getBody());
+            TypedAst.Stmt update = node.getUpdate() == null ? null : analyzeStatement(node.getUpdate());
+            loopDepth--;
+            unassigned = before;
+            typed = new TypedAst.For(
+                    initializer, condition, update, body, node.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.Return) {
+            Ast.Stmt.Return node = (Ast.Stmt.Return) source;
+            TypedAst.Expr expression = node.getExpr() == null ? null : analyzeExpression(node.getExpr());
+            if (expression == null && currentReturnType != TypedAst.Type.VOID) {
+                error(node.getLineNum(), "非 void 方法必须返回一个值");
+            } else if (expression != null && currentReturnType == TypedAst.Type.VOID) {
+                error(node.getLineNum(), "void 方法不能返回值");
+            } else if (expression != null && !expression.getType().isError()
+                    && !isAssignable(currentReturnType, expression.getType())) {
+                error(node.getLineNum(), String.format("返回值类型不匹配：期望 %s，实际 %s",
+                        currentReturnType, expression.getType()));
+            }
+            typed = new TypedAst.Return(expression, node.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.Printf) {
+            typed = analyzePrintf((Ast.Stmt.Printf) source);
+        } else if (source instanceof Ast.Stmt.PrintLine) {
+            typed = new TypedAst.PrintLine(source.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.Break) {
+            if (loopDepth == 0) {
+                error(source.getLineNum(), "break语句必须包含在循环体中。");
+            }
+            typed = new TypedAst.Break(source.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.Continue) {
+            if (loopDepth == 0) {
+                error(source.getLineNum(), "continue语句必须包含在循环体中。");
+            }
+            typed = new TypedAst.Continue(source.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.Call) {
+            Ast.Stmt.Call node = (Ast.Stmt.Call) source;
+            CallResolution call = analyzeCall(
+                    node.getName(), node.getInputParams(), node.getSourceSpan(), false);
+            typed = new TypedAst.CallStmt(
+                    call.method, call.arguments, node.getSourceSpan());
+        } else if (source instanceof Ast.Stmt.ArrayAssign) {
+            typed = analyzeArrayAssign((Ast.Stmt.ArrayAssign) source);
+        } else {
+            error(source.getLineNum(), "内部错误: 不支持的语句 AST 节点 " + source.getClass().getSimpleName());
+            typed = new TypedAst.Block(
+                    Collections.<TypedAst.Stmt>emptyList(), source.getSourceSpan());
+        }
+        typedStatements.put(source, typed);
+        return typed;
     }
 
-    @Override
-    public void visit(Ast.Expr.FloatLiteral obj) {
-        pushType(new Ast.Type.Float());
-    }
-
-    @Override
-    public void visit(Ast.Expr.DoubleLiteral obj) {
-        pushType(new Ast.Type.Double());
-    }
-
-    @Override
-    public void visit(Ast.Expr.Or obj) {
-        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
-        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
-        checkBooleanOperandTypes(obj.getLineNum(), "||", leftType, rightType);
-    }
-
-
-
-    @Override
-    public void visit(Ast.Type.Str obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Expr.Sub obj) {
-        Ast.Type.Base leftType = analyzeExpression(obj.getLeft());
-        Ast.Type.Base rightType = analyzeExpression(obj.getRight());
-        checkSameOperandTypes(obj.getLineNum(), "-", leftType, rightType);
-    }@Override
-    public void visit(Ast.Type.Void obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Type.Error obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Stmt.Base obj) {
-        obj.accept(this);
-    }
-
-    @Override
-    public void visit(Ast.Stmt.Printf obj) {
-        ArrayList<Character> placeholders = printfPlaceholders(obj.getFormat(), obj.getLineNum());
-        int argCount = obj.getExprs() == null ? 0 : obj.getExprs().size();
-        if (placeholders.size() != argCount) {
-            error(obj.getLineNum(), String.format(
+    private TypedAst.Stmt analyzePrintf(Ast.Stmt.Printf source) {
+        ArrayList<Character> placeholders = printfPlaceholders(source.getFormat(), source.getLineNum());
+        ArrayList<TypedAst.Expr> expressions = new ArrayList<TypedAst.Expr>();
+        for (Ast.Expr.Base expression : source.getExprs()) {
+            expressions.add(analyzeExpression(expression));
+        }
+        if (placeholders.size() != expressions.size()) {
+            error(source.getLineNum(), String.format(
                     "printf 参数个数不匹配：格式串需要 %d 个，实际 %d 个",
-                    placeholders.size(), argCount));
+                    placeholders.size(), expressions.size()));
         }
-        for (int i = 0; i < argCount; i++) {
-            Ast.Expr.Base expr = obj.getExprs().get(i);
-            Ast.Type.Base argType = analyzeExpression(expr);
-            if (isErrorType(argType) || i >= placeholders.size()) {
+        int checked = Math.min(placeholders.size(), expressions.size());
+        for (int i = 0; i < checked; i++) {
+            TypedAst.Expr expression = expressions.get(i);
+            if (expression.getType().isError()) {
                 continue;
             }
             char placeholder = placeholders.get(i);
-            if (placeholder == 'd' && argType.getKind() != TypeKind.INT) {
-                error(expr.getLineNum(), String.format(
-                        "printf 占位符 %%d 需要 int，实际为 %s", typeName(argType)));
+            if (placeholder == 'd' && expression.getType() != TypedAst.Type.INT) {
+                error(expression.getLineNum(), String.format(
+                        "printf 占位符 %%d 需要 int，实际为 %s", expression.getType()));
             }
-            if (placeholder == 'f'
-                    && argType.getKind() != TypeKind.FLOAT
-                    && argType.getKind() != TypeKind.DOUBLE) {
-                error(expr.getLineNum(), String.format(
-                        "printf 占位符 %%f 需要 float 或 double，实际为 %s", typeName(argType)));
+            if (placeholder == 'f' && expression.getType() != TypedAst.Type.FLOAT
+                    && expression.getType() != TypedAst.Type.DOUBLE) {
+                error(expression.getLineNum(), String.format(
+                        "printf 占位符 %%f 需要 float 或 double，实际为 %s", expression.getType()));
             }
         }
+        return new TypedAst.Printf(
+                source.getFormat(), expressions, source.getSourceSpan());
     }
 
-    @Override
-    public void visit(Ast.Stmt.PrintLine obj) {
-
-    }
-
-    @Override
-    public void visit(Ast.Expr.Base obj) {
-        obj.accept(this);
-    }
-
-    @Override
-    public void visit(Ast.Expr.True obj) {
-        pushType(new Ast.Type.Bool());
-    }
-
-    @Override
-    public void visit(Ast.Expr.False obj) {
-        pushType(new Ast.Type.Bool());
-    }
-
-    @Override
-    public void visit(Ast.Expr.UnaryMinus obj) {
-        Ast.Type.Base type = analyzeExpression(obj.getExpr());
-        if (isErrorType(type)) {
-            pushType(errorType());
-            return;
+    private TypedAst.Stmt analyzeArrayAssign(Ast.Stmt.ArrayAssign source) {
+        TypedAst.Expr index = analyzeExpression(source.getIndex());
+        TypedAst.Expr expression = analyzeExpression(source.getExpr());
+        TypedAst.Symbol array = resolveVisible(
+                source.getArrayName(), source.getSourceSpan(), "数组");
+        TypedAst.Type elementType = array.getType().elementType();
+        if (!array.getType().isError() && !array.getType().isArray()) {
+            error(source.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
+                    array.getName(), array.getType()));
+            elementType = TypedAst.Type.ERROR;
         }
-        if (type.getKind() != TypeKind.INT && type.getKind() != TypeKind.FLOAT && type.getKind() != TypeKind.DOUBLE) {
-            error(obj.getLineNum(), "一元负号不能用于类型 " + typeName(type));
+        if (!index.getType().isError() && index.getType() != TypedAst.Type.INT) {
+            error(index.getLineNum(), "数组下标必须是 int，实际为 " + index.getType());
         }
-        pushType(isNumberType(type) ? type : errorType());
-    }
-
-    @Override
-    public void visit(Ast.Expr.Not obj) {
-        Ast.Type.Base condType = analyzeExpression(obj.getExpr());
-        if (isErrorType(condType)) {
-            pushType(errorType());
-            return;
+        if (!elementType.isError() && !expression.getType().isError()
+                && !isAssignable(elementType, expression.getType())) {
+            error(source.getLineNum(), String.format("不能将 %s 类型的表达式赋值给 %s 数组元素",
+                    expression.getType(), elementType));
         }
-        if( condType.getKind() != TypeKind.BOOL)
-            error(obj.getLineNum(),"! 运算符要求操作数是 bool，实际为 " + typeName(condType));
-        pushType(condType.getKind() == TypeKind.BOOL ? new Ast.Type.Bool() : errorType());
+        return new TypedAst.ArrayAssign(
+                array, index, expression, source.getSourceSpan());
     }
 
-    @Override
-    public void visit(Ast.Expr.Str obj) {
-        pushType(new Ast.Type.Str());
-    }
-
-    @Override
-    public void visit(Ast.Type.Base obj) {
-
-    }
-
-    @Override
-    public void visit(Ast.Stmt.Return obj) {
-        boolean voidMethod = this.typeOfMethodDeclared != null
-                && this.typeOfMethodDeclared.getKind() == TypeKind.VOID;
-        if (obj.getExpr() == null) {
-            if (!voidMethod) {
-                error(obj.getLineNum(), "非 void 方法必须返回一个值");
+    private TypedAst.Expr analyzeExpression(Ast.Expr.Base source) {
+        if (source == null) {
+            return new TypedAst.ErrorExpr(SourceSpan.UNKNOWN);
+        }
+        TypedAst.Expr typed;
+        if (source instanceof Ast.Expr.IntLiteral) {
+            Ast.Expr.IntLiteral node = (Ast.Expr.IntLiteral) source;
+            typed = new TypedAst.IntLiteral(
+                    node.getValue(), node.getRawValue(), node.getSourceSpan());
+        } else if (source instanceof Ast.Expr.FloatLiteral) {
+            Ast.Expr.FloatLiteral node = (Ast.Expr.FloatLiteral) source;
+            typed = new TypedAst.FloatLiteral(
+                    node.getValue(), node.getRawValue(), node.getSourceSpan());
+        } else if (source instanceof Ast.Expr.DoubleLiteral) {
+            Ast.Expr.DoubleLiteral node = (Ast.Expr.DoubleLiteral) source;
+            typed = new TypedAst.DoubleLiteral(
+                    node.getValue(), node.getRawValue(), node.getSourceSpan());
+        } else if (source instanceof Ast.Expr.True) {
+            typed = new TypedAst.BoolLiteral(true, source.getSourceSpan());
+        } else if (source instanceof Ast.Expr.False) {
+            typed = new TypedAst.BoolLiteral(false, source.getSourceSpan());
+        } else if (source instanceof Ast.Expr.Str) {
+            typed = new TypedAst.StringLiteral(
+                    ((Ast.Expr.Str) source).getValue(), source.getSourceSpan());
+        } else if (source instanceof Ast.Expr.Id) {
+            Ast.Expr.Id node = (Ast.Expr.Id) source;
+            TypedAst.Symbol symbol = resolveVisible(
+                    node.getId(), node.getSourceSpan(), "变量");
+            TypedAst.Type type = symbol.getType();
+            if (!type.isError() && unassigned.contains(symbol)) {
+                error(node.getLineNum(), String.format("变量 '%s' 在使用前未赋值", node.getId()));
+                type = TypedAst.Type.ERROR;
             }
-            return;
+            typed = new TypedAst.Id(symbol, type, node.getSourceSpan());
+        } else if (source instanceof Ast.Expr.Call) {
+            Ast.Expr.Call node = (Ast.Expr.Call) source;
+            CallResolution call = analyzeCall(
+                    node.getName(), node.getInputParams(), node.getSourceSpan(), true);
+            typed = new TypedAst.Call(
+                    call.method, call.arguments, call.type, node.getSourceSpan());
+        } else if (source instanceof Ast.Expr.ArrayAccess) {
+            typed = analyzeArrayAccess((Ast.Expr.ArrayAccess) source);
+        } else if (source instanceof Ast.Expr.ArrayLength) {
+            Ast.Expr.ArrayLength node = (Ast.Expr.ArrayLength) source;
+            TypedAst.Symbol array = resolveVisible(
+                    node.getArrayName(), node.getSourceSpan(), "数组");
+            TypedAst.Type type = TypedAst.Type.INT;
+            if (!array.getType().isError() && !array.getType().isArray()) {
+                error(node.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
+                        array.getName(), array.getType()));
+                type = TypedAst.Type.ERROR;
+            } else if (array.getType().isError()) {
+                type = TypedAst.Type.ERROR;
+            }
+            typed = new TypedAst.ArrayLength(array, type, node.getSourceSpan());
+        } else if (source instanceof Ast.Expr.UnaryMinus) {
+            Ast.Expr.UnaryMinus node = (Ast.Expr.UnaryMinus) source;
+            TypedAst.Expr expression = analyzeExpression(node.getExpr());
+            TypedAst.Type type = expression.getType();
+            if (!type.isError() && !type.isNumeric()) {
+                error(node.getLineNum(), "一元负号不能用于类型 " + type);
+                type = TypedAst.Type.ERROR;
+            }
+            typed = new TypedAst.UnaryMinus(type, expression, node.getSourceSpan());
+        } else if (source instanceof Ast.Expr.Not) {
+            Ast.Expr.Not node = (Ast.Expr.Not) source;
+            TypedAst.Expr expression = analyzeExpression(node.getExpr());
+            TypedAst.Type type = expression.getType();
+            if (!type.isError() && type != TypedAst.Type.BOOL) {
+                error(node.getLineNum(), "! 运算符要求操作数是 bool，实际为 " + type);
+                type = TypedAst.Type.ERROR;
+            }
+            typed = type.isError() ? new TypedAst.ErrorExpr(node.getSourceSpan())
+                    : new TypedAst.Not(expression, node.getSourceSpan());
+        } else if (source instanceof Ast.Expr.And || source instanceof Ast.Expr.Or) {
+            typed = analyzeBooleanBinary((Ast.Expr.BinaryExpr) source);
+        } else if (source instanceof Ast.Expr.Mod) {
+            Ast.Expr.BinaryExpr node = (Ast.Expr.BinaryExpr) source;
+            TypedAst.Expr left = analyzeExpression(node.getLeft());
+            TypedAst.Expr right = analyzeExpression(node.getRight());
+            if (hasError(left, right)) {
+                typed = new TypedAst.ErrorExpr(node.getSourceSpan());
+            } else if (left.getType() != TypedAst.Type.INT || right.getType() != TypedAst.Type.INT) {
+                error(node.getLineNum(), String.format(
+                        "运算符 '%%' 只支持 int 操作数：左侧为 %s，右侧为 %s",
+                        left.getType(), right.getType()));
+                typed = new TypedAst.ErrorExpr(node.getSourceSpan());
+            } else {
+                typed = new TypedAst.Mod(left, right, node.getSourceSpan());
+            }
+        } else if (isArithmetic(source)) {
+            typed = analyzeArithmetic((Ast.Expr.BinaryExpr) source);
+        } else if (isComparison(source)) {
+            typed = analyzeComparison((Ast.Expr.BinaryExpr) source);
+        } else {
+            error(source.getLineNum(), "内部错误: 不支持的表达式 AST 节点 "
+                    + source.getClass().getSimpleName());
+            typed = new TypedAst.ErrorExpr(source.getSourceSpan());
         }
-        Ast.Type.Base retType = analyzeExpression(obj.getExpr());
-        if (voidMethod) {
-            error(obj.getLineNum(), "void 方法不能返回值");
-            return;
+        typedExpressions.put(source, typed);
+        return typed;
+    }
+
+    private TypedAst.Expr analyzeArithmetic(Ast.Expr.BinaryExpr source) {
+        TypedAst.Expr left = analyzeExpression(source.getLeft());
+        TypedAst.Expr right = analyzeExpression(source.getRight());
+        if (hasError(left, right)) {
+            return new TypedAst.ErrorExpr(source.getSourceSpan());
         }
-        if(!isErrorType(retType) && !isMatch(typeOfMethodDeclared,retType))
-            error(obj.getLineNum(),String.format("返回值类型不匹配：期望 %s，实际 %s",
-                    typeName(typeOfMethodDeclared), typeName(retType)));
-    }
-
-
-    @Override
-    public void visit(Ast.Stmt.While obj) {
-        Ast.Type.Base condType = analyzeExpression(obj.getCondition());
-        if(!isErrorType(condType) && condType.getKind() != TypeKind.BOOL )
-            error(obj.getCondition().getLineNum(), "while 条件必须是 bool，实际为 " + typeName(condType));
-        HashSet<String> before = new HashSet<String>(this.currMethodLocalVar);
-        loopDepth++;
-        this.currMethodLocalVar = new HashSet<String>(before);
-        this.visit(obj.getBody());
-        loopDepth--;
-        this.currMethodLocalVar = before;
-    }
-
-    @Override
-    public void visit(Ast.Stmt.For obj) {
-        if (obj.getInit() != null) {
-            this.visit(obj.getInit());
+        TypedAst.Type type = promoteNumeric(left.getType(), right.getType());
+        if (type == null) {
+            error(source.getLineNum(), String.format(
+                    "算术运算要求数值操作数：左侧为 %s，右侧为 %s",
+                    left.getType(), right.getType()));
+            return new TypedAst.ErrorExpr(source.getSourceSpan());
         }
-        Ast.Type.Base condType = analyzeExpression(obj.getCondition());
-        if(!isErrorType(condType) && condType.getKind() != TypeKind.BOOL )
-            error(obj.getCondition().getLineNum(), "for 条件必须是 bool，实际为 " + typeName(condType));
-        HashSet<String> before = new HashSet<String>(this.currMethodLocalVar);
-        loopDepth++;
-        this.currMethodLocalVar = new HashSet<String>(before);
-        this.visit(obj.getBody());
-        if (obj.getUpdate() != null) {
-            this.visit(obj.getUpdate());
+        if (source instanceof Ast.Expr.Add) {
+            return new TypedAst.Add(type, left, right, source.getSourceSpan());
         }
-        loopDepth--;
-        this.currMethodLocalVar = before;
+        if (source instanceof Ast.Expr.Sub) {
+            return new TypedAst.Sub(type, left, right, source.getSourceSpan());
+        }
+        if (source instanceof Ast.Expr.Mul) {
+            return new TypedAst.Mul(type, left, right, source.getSourceSpan());
+        }
+        return new TypedAst.Div(type, left, right, source.getSourceSpan());
     }
 
-    @Override
-    public void visit(Ast.Stmt.Break obj) {
-        if (loopDepth <= 0)
-            error(obj.getLineNum(), "break语句必须包含在循环体中。");
+    private TypedAst.Expr analyzeBooleanBinary(Ast.Expr.BinaryExpr source) {
+        TypedAst.Expr left = analyzeExpression(source.getLeft());
+        TypedAst.Expr right = analyzeExpression(source.getRight());
+        if (hasError(left, right)) {
+            return new TypedAst.ErrorExpr(source.getSourceSpan());
+        }
+        if (left.getType() != TypedAst.Type.BOOL || right.getType() != TypedAst.Type.BOOL) {
+            String operator = source instanceof Ast.Expr.And ? "&&" : "||";
+            error(source.getLineNum(), String.format(
+                    "运算符 '%s' 要求左右操作数都是 bool：左侧为 %s，右侧为 %s",
+                    operator, left.getType(), right.getType()));
+            return new TypedAst.ErrorExpr(source.getSourceSpan());
+        }
+        return source instanceof Ast.Expr.And
+                ? new TypedAst.And(left, right, source.getSourceSpan())
+                : new TypedAst.Or(left, right, source.getSourceSpan());
     }
 
-    @Override
-    public void visit(Ast.Stmt.Continue obj) {
-        if (loopDepth <= 0)
-            error(obj.getLineNum(), "continue语句必须包含在循环体中。");
+    private TypedAst.Expr analyzeComparison(Ast.Expr.BinaryExpr source) {
+        TypedAst.Expr left = analyzeExpression(source.getLeft());
+        TypedAst.Expr right = analyzeExpression(source.getRight());
+        if (hasError(left, right)) {
+            return new TypedAst.ErrorExpr(source.getSourceSpan());
+        }
+        boolean equality = source instanceof Ast.Expr.EQ || source instanceof Ast.Expr.NEQ;
+        boolean valid = promoteNumeric(left.getType(), right.getType()) != null
+                || (equality && left.getType() == TypedAst.Type.BOOL
+                && right.getType() == TypedAst.Type.BOOL);
+        if (!valid) {
+            String op = comparisonOperator(source);
+            error(source.getLineNum(), String.format(
+                    "比较运算符 '%s' %s：左侧为 %s，右侧为 %s", op,
+                    equality ? "要求两侧均为数值或均为 bool" : "只支持数值操作数",
+                    left.getType(), right.getType()));
+            return new TypedAst.ErrorExpr(source.getSourceSpan());
+        }
+        if (source instanceof Ast.Expr.EQ) {
+            return new TypedAst.EQ(left, right, source.getSourceSpan());
+        }
+        if (source instanceof Ast.Expr.NEQ) {
+            return new TypedAst.NEQ(left, right, source.getSourceSpan());
+        }
+        if (source instanceof Ast.Expr.GT) {
+            return new TypedAst.GT(left, right, source.getSourceSpan());
+        }
+        if (source instanceof Ast.Expr.LT) {
+            return new TypedAst.LT(left, right, source.getSourceSpan());
+        }
+        if (source instanceof Ast.Expr.GTE) {
+            return new TypedAst.GTE(left, right, source.getSourceSpan());
+        }
+        return new TypedAst.LTE(left, right, source.getSourceSpan());
     }
 
-    @Override
-    public void visit(Ast.Stmt.Call obj) {
-        Ast.Type.Base returnType = validateMethodCall(obj.getName(), obj.getInputParams(), obj.getLineNum());
-        obj.setReturnType(returnType);
+    private TypedAst.Expr analyzeArrayAccess(Ast.Expr.ArrayAccess source) {
+        TypedAst.Expr index = analyzeExpression(source.getIndex());
+        TypedAst.Symbol array = resolveVisible(
+                source.getArrayName(), source.getSourceSpan(), "数组");
+        TypedAst.Type type = array.getType().elementType();
+        if (!array.getType().isError() && !array.getType().isArray()) {
+            error(source.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
+                    array.getName(), array.getType()));
+            type = TypedAst.Type.ERROR;
+        }
+        if (!index.getType().isError() && index.getType() != TypedAst.Type.INT) {
+            error(index.getLineNum(), "数组下标必须是 int，实际为 " + index.getType());
+            type = TypedAst.Type.ERROR;
+        }
+        if (index.getType().isError() || array.getType().isError()) {
+            type = TypedAst.Type.ERROR;
+        }
+        return new TypedAst.ArrayAccess(array, index, type, source.getSourceSpan());
     }
 
-    private static class FlowResult {
+    private CallResolution analyzeCall(String name, List<Ast.Expr.Base> sourceArguments,
+                                       SourceSpan sourceSpan, boolean expressionContext) {
+        int lineNumber = sourceSpan.getStartLine();
+        ArrayList<TypedAst.Expr> arguments = new ArrayList<TypedAst.Expr>();
+        for (Ast.Expr.Base sourceArgument : sourceArguments) {
+            arguments.add(analyzeExpression(sourceArgument));
+        }
+        TypedAst.MethodSymbol method = methods.get(name);
+        if (method == null) {
+            error(lineNumber, "未定义的方法: " + name);
+            method = new TypedAst.MethodSymbol(name, TypedAst.Type.ERROR,
+                    Collections.<TypedAst.Type>emptyList(), sourceSpan);
+            return new CallResolution(method, arguments, TypedAst.Type.ERROR);
+        }
+        boolean valid = true;
+        if (arguments.size() != method.getParameterTypes().size()) {
+            valid = false;
+            error(lineNumber, String.format("方法 '%s' 的参数个数不正确：期望 %d 个，实际 %d 个",
+                    name, method.getParameterTypes().size(), arguments.size()));
+        }
+        int checked = Math.min(arguments.size(), method.getParameterTypes().size());
+        for (int i = 0; i < checked; i++) {
+            TypedAst.Type actual = arguments.get(i).getType();
+            TypedAst.Type expected = method.getParameterTypes().get(i);
+            if (actual.isError()) {
+                valid = false;
+            } else if (!isAssignable(expected, actual)) {
+                valid = false;
+                error(lineNumber, String.format(
+                        "方法 '%s' 的第 %d 个参数类型不匹配：期望 %s，实际 %s",
+                        name, i + 1, expected, actual));
+            }
+        }
+        if (expressionContext && method.getReturnType() == TypedAst.Type.VOID) {
+            valid = false;
+            error(lineNumber, "void 方法 '" + name + "' 不能作为表达式使用");
+        }
+        return new CallResolution(method, arguments,
+                valid ? method.getReturnType() : TypedAst.Type.ERROR);
+    }
+
+    private void enterScope() {
+        variableScopes.push(new HashMap<String, TypedAst.Symbol>());
+    }
+
+    private void exitScope() {
+        Map<String, TypedAst.Symbol> declarations = variableScopes.pop();
+        unassigned.removeAll(declarations.values());
+    }
+
+    /** 由内向外查找名字；未找到返回 null。 */
+    private TypedAst.Symbol lookup(String name) {
+        if (variableScopes == null) {
+            return null;
+        }
+        for (Map<String, TypedAst.Symbol> scope : variableScopes) {
+            TypedAst.Symbol symbol = scope.get(name);
+            if (symbol != null) {
+                return symbol;
+            }
+        }
+        return null;
+    }
+
+    private TypedAst.Symbol resolveVisible(String name, SourceSpan sourceSpan, String noun) {
+        TypedAst.Symbol symbol = lookup(name);
+        if (symbol != null) {
+            return symbol;
+        }
+        error(sourceSpan.getStartLine(), "未定义的" + noun + ": " + name);
+        return new TypedAst.Symbol(name, TypedAst.Type.ERROR,
+                TypedAst.Symbol.Kind.LOCAL, sourceSpan);
+    }
+
+    private Set<TypedAst.Symbol> copyUnassigned() {
+        return new HashSet<TypedAst.Symbol>(unassigned);
+    }
+
+    private void requireBooleanCondition(TypedAst.Expr condition, String statement) {
+        if (!condition.getType().isError() && condition.getType() != TypedAst.Type.BOOL) {
+            error(condition.getLineNum(), statement + " 条件必须是 bool，实际为 " + condition.getType());
+        }
+    }
+
+    private TypedAst.Type typeOf(Ast.Type.Base source) {
+        if (source == null) {
+            return TypedAst.Type.ERROR;
+        }
+        switch (source.getKind()) {
+            case INT:
+                return TypedAst.Type.INT;
+            case FLOAT:
+                return TypedAst.Type.FLOAT;
+            case DOUBLE:
+                return TypedAst.Type.DOUBLE;
+            case BOOL:
+                return TypedAst.Type.BOOL;
+            case STRING:
+                return TypedAst.Type.STRING;
+            case VOID:
+                return TypedAst.Type.VOID;
+            case INT_ARRAY:
+                return TypedAst.Type.array(TypedAst.Type.Kind.INT_ARRAY,
+                        ((Ast.Type.IntArray) source).getSize());
+            case FLOAT_ARRAY:
+                return TypedAst.Type.array(TypedAst.Type.Kind.FLOAT_ARRAY,
+                        ((Ast.Type.FloatArray) source).getSize());
+            case DOUBLE_ARRAY:
+                return TypedAst.Type.array(TypedAst.Type.Kind.DOUBLE_ARRAY,
+                        ((Ast.Type.DoubleArray) source).getSize());
+            case BOOL_ARRAY:
+                return TypedAst.Type.array(TypedAst.Type.Kind.BOOL_ARRAY,
+                        ((Ast.Type.BoolArray) source).getSize());
+            default:
+                return TypedAst.Type.ERROR;
+        }
+    }
+
+    private boolean isAssignable(TypedAst.Type target, TypedAst.Type source) {
+        if (target.isError() || source.isError()) {
+            return true;
+        }
+        if (target.getKind() == source.getKind()) {
+            return true;
+        }
+        return (target == TypedAst.Type.FLOAT && source == TypedAst.Type.INT)
+                || (target == TypedAst.Type.DOUBLE
+                && (source == TypedAst.Type.INT || source == TypedAst.Type.FLOAT));
+    }
+
+    private TypedAst.Type promoteNumeric(TypedAst.Type left, TypedAst.Type right) {
+        if (!left.isNumeric() || !right.isNumeric()) {
+            return null;
+        }
+        if (left == TypedAst.Type.DOUBLE || right == TypedAst.Type.DOUBLE) {
+            return TypedAst.Type.DOUBLE;
+        }
+        if (left == TypedAst.Type.FLOAT || right == TypedAst.Type.FLOAT) {
+            return TypedAst.Type.FLOAT;
+        }
+        return TypedAst.Type.INT;
+    }
+
+    private boolean hasError(TypedAst.Expr left, TypedAst.Expr right) {
+        return left.getType().isError() || right.getType().isError();
+    }
+
+    private boolean isArithmetic(Ast.Expr.Base source) {
+        return source instanceof Ast.Expr.Add || source instanceof Ast.Expr.Sub
+                || source instanceof Ast.Expr.Mul || source instanceof Ast.Expr.Div;
+    }
+
+    private boolean isComparison(Ast.Expr.Base source) {
+        return source instanceof Ast.Expr.EQ || source instanceof Ast.Expr.NEQ
+                || source instanceof Ast.Expr.GT || source instanceof Ast.Expr.LT
+                || source instanceof Ast.Expr.GTE || source instanceof Ast.Expr.LTE;
+    }
+
+    private String comparisonOperator(Ast.Expr.BinaryExpr source) {
+        if (source instanceof Ast.Expr.EQ) return "==";
+        if (source instanceof Ast.Expr.NEQ) return "!=";
+        if (source instanceof Ast.Expr.GT) return ">";
+        if (source instanceof Ast.Expr.LT) return "<";
+        if (source instanceof Ast.Expr.GTE) return ">=";
+        return "<=";
+    }
+
+    private boolean statementsMustReturn(List<TypedAst.Stmt> statements) {
+        return flowOfStatements(statements).mustReturn;
+    }
+
+    private FlowResult flowOfStatements(List<TypedAst.Stmt> statements) {
+        boolean canCompleteNormally = true;
+        for (TypedAst.Stmt statement : statements) {
+            if (!canCompleteNormally) {
+                break;
+            }
+            FlowResult flow = flowOfStatement(statement);
+            canCompleteNormally = flow.canCompleteNormally;
+            if (flow.mustReturn) {
+                return new FlowResult(false, true);
+            }
+        }
+        return new FlowResult(canCompleteNormally, false);
+    }
+
+    private FlowResult flowOfStatement(TypedAst.Stmt statement) {
+        if (statement instanceof TypedAst.Return) {
+            return new FlowResult(false, true);
+        }
+        if (statement instanceof TypedAst.Block) {
+            return flowOfStatements(((TypedAst.Block) statement).getStatements());
+        }
+        if (statement instanceof TypedAst.If) {
+            TypedAst.If ifStatement = (TypedAst.If) statement;
+            if (ifStatement.getElseStatement() == null) {
+                return new FlowResult(true, false);
+            }
+            FlowResult thenFlow = flowOfStatement(ifStatement.getThenStatement());
+            FlowResult elseFlow = flowOfStatement(ifStatement.getElseStatement());
+            return new FlowResult(thenFlow.canCompleteNormally || elseFlow.canCompleteNormally,
+                    thenFlow.mustReturn && elseFlow.mustReturn);
+        }
+        return new FlowResult(true, false);
+    }
+
+    private ArrayList<Character> printfPlaceholders(String format, int lineNumber) {
+        ArrayList<Character> placeholders = new ArrayList<Character>();
+        for (int i = 0; i < format.length(); i++) {
+            if (format.charAt(i) != '%') {
+                continue;
+            }
+            if (i + 1 >= format.length()) {
+                error(lineNumber, "printf 格式串中的 % 缺少占位符");
+                break;
+            }
+            char placeholder = format.charAt(++i);
+            if (placeholder == 'd' || placeholder == 'f') {
+                placeholders.add(placeholder);
+            } else {
+                error(lineNumber, "printf 不支持占位符 %" + placeholder);
+            }
+        }
+        return placeholders;
+    }
+
+    private void error(int lineNumber, String message) {
+        String diagnostic = "[语义分析] 行 " + lineNumber + ": " + message;
+        if (!collectErrors) {
+            throw new SemanticException(diagnostic);
+        }
+        errors.add(diagnostic);
+        errorLineNumbers.add(lineNumber);
+    }
+
+    private static final class CallResolution {
+        final TypedAst.MethodSymbol method;
+        final List<TypedAst.Expr> arguments;
+        final TypedAst.Type type;
+
+        CallResolution(TypedAst.MethodSymbol method, List<TypedAst.Expr> arguments, TypedAst.Type type) {
+            this.method = method;
+            this.arguments = arguments;
+            this.type = type;
+        }
+    }
+
+    private static final class FlowResult {
         final boolean canCompleteNormally;
         final boolean mustReturn;
 
@@ -685,383 +882,5 @@ public class SemanticVisitor implements ISemanticVisitor {
             this.canCompleteNormally = canCompleteNormally;
             this.mustReturn = mustReturn;
         }
-    }
-
-    private boolean statementsMustReturn(ArrayList<Ast.Stmt.Base> statements) {
-        return flowOfStatements(statements).mustReturn;
-    }
-
-    private FlowResult flowOfStatements(ArrayList<Ast.Stmt.Base> statements) {
-        if (statements == null || statements.isEmpty()) {
-            return new FlowResult(true, false);
-        }
-        boolean canCompleteNormally = true;
-        for (Ast.Stmt.Base statement : statements) {
-            if (!canCompleteNormally) {
-                break;
-            }
-            FlowResult result = flowOfStatement(statement);
-            canCompleteNormally = result.canCompleteNormally;
-            if (result.mustReturn) {
-                return new FlowResult(false, true);
-            }
-        }
-        return new FlowResult(canCompleteNormally, false);
-    }
-
-    private FlowResult flowOfStatement(Ast.Stmt.Base statement) {
-        if (statement instanceof Ast.Stmt.Return) {
-            return new FlowResult(false, true);
-        }
-        if (statement instanceof Ast.Stmt.Block) {
-            return flowOfStatements(((Ast.Stmt.Block) statement).getStmts());
-        }
-        if (statement instanceof Ast.Stmt.If) {
-            Ast.Stmt.If ifStmt = (Ast.Stmt.If) statement;
-            if (ifStmt.getElseStmt() == null) {
-                return new FlowResult(true, false);
-            }
-            FlowResult thenFlow = flowOfStatement(ifStmt.getThenStmt());
-            FlowResult elseFlow = flowOfStatement(ifStmt.getElseStmt());
-            return new FlowResult(
-                    thenFlow.canCompleteNormally || elseFlow.canCompleteNormally,
-                    thenFlow.mustReturn && elseFlow.mustReturn);
-        }
-        return new FlowResult(true, false);
-    }
-
-    private ArrayList<Character> printfPlaceholders(String format, int lineNum) {
-        ArrayList<Character> placeholders = new ArrayList<Character>();
-        for (int i = 0; i < format.length(); i++) {
-            if (format.charAt(i) != '%') {
-                continue;
-            }
-            if (i + 1 >= format.length()) {
-                error(lineNum, "printf 格式串中的 % 缺少占位符");
-                break;
-            }
-            char placeholder = format.charAt(++i);
-            if (placeholder == 'd' || placeholder == 'f') {
-                placeholders.add(placeholder);
-            } else {
-                error(lineNum, "printf 不支持占位符 %" + placeholder);
-            }
-        }
-        return placeholders;
-    }
-
-    private void error(int lineNum, String msg){
-        this.pass = false;
-        if (this.collectErrors) {
-            this.errors.add("[语义分析] 行 " + lineNum + ": " + msg);
-            this.errorLineNumbers.add(lineNum);
-            return;
-        }
-        throw new SemanticException("[语义分析] 行 " + lineNum + ": " + msg);
-    }
-
-    private void enterVariableScope() {
-        this.variableScopes.push(new HashSet<String>());
-    }
-
-    private void exitVariableScope() {
-        HashSet<String> declarations = this.variableScopes.pop();
-        this.currMethodLocalVar.removeAll(declarations);
-    }
-
-    private boolean isVariableVisible(String name) {
-        if (this.variableScopes == null) {
-            return false;
-        }
-        for (HashSet<String> scope : this.variableScopes) {
-            if (scope.contains(name)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isMatch(Ast.Type.Base target,Ast.Type.Base curr){
-        if (isErrorType(target) || isErrorType(curr))
-            return true;
-        if( target == null || curr == null )
-            return false;
-        if(target.getKind() == curr.getKind())
-            return true;
-        // 允许float隐式转换为double
-        if(target.getKind() == TypeKind.DOUBLE && curr.getKind() == TypeKind.FLOAT)
-            return true;
-        if(target.getKind() == TypeKind.FLOAT && curr.getKind() == TypeKind.INT)
-            return true;
-        if(target.getKind() == TypeKind.DOUBLE && curr.getKind() == TypeKind.INT)
-            return true;
-        return false;
-    }
-
-    private Ast.Type.Base promoteNumeric(Ast.Type.Base left, Ast.Type.Base right) {
-        if (!isNumberType(left) || !isNumberType(right)) {
-            return null;
-        }
-        if (left.getKind() == TypeKind.DOUBLE || right.getKind() == TypeKind.DOUBLE) {
-            return new Ast.Type.Double();
-        }
-        if (left.getKind() == TypeKind.FLOAT || right.getKind() == TypeKind.FLOAT) {
-            return new Ast.Type.Float();
-        }
-        return new Ast.Type.Int();
-    }
-
-    private boolean isNumberType(Ast.Type.Base type) {
-        if (type == null) {
-            return false;
-        }
-        TypeKind kind = type.getKind();
-        return kind == TypeKind.INT || kind == TypeKind.FLOAT || kind == TypeKind.DOUBLE;
-    }
-
-    private boolean isArrayType(Ast.Type.Base type) {
-        if (type == null) {
-            return false;
-        }
-        TypeKind kind = type.getKind();
-        return kind == TypeKind.INT_ARRAY || kind == TypeKind.FLOAT_ARRAY
-                || kind == TypeKind.DOUBLE_ARRAY || kind == TypeKind.BOOL_ARRAY;
-    }
-
-    /**
-     * 校验比较运算符（== / !=）：只要左右类型匹配即可
-     */
-    private void checkComparison(Ast.Expr.Base left, Ast.Expr.Base right, String op, int lineNum) {
-        Ast.Type.Base leftType = analyzeExpression(left);
-        Ast.Type.Base rightType = analyzeExpression(right);
-        if (isErrorType(leftType) || isErrorType(rightType)) {
-            pushType(errorType());
-            return;
-        }
-        if (isArrayType(leftType) || isArrayType(rightType)) {
-            error(lineNum, String.format("比较运算符 '%s' 不支持数组操作数：左侧为 %s，右侧为 %s",
-                    op, typeName(leftType), typeName(rightType)));
-            pushType(errorType());
-            return;
-        }
-        if (promoteNumeric(leftType, rightType) == null && !isMatch(leftType, rightType)) {
-            error(lineNum, String.format("比较运算符 '%s' 的左右操作数类型不匹配：左侧为 %s，右侧为 %s",
-                    op, typeName(leftType), typeName(rightType)));
-            pushType(errorType());
-            return;
-        }
-        pushType(new Ast.Type.Bool());
-    }
-
-    /**
-     * 校验序比较运算符（> / < / >= / <=）：除了类型匹配，还要求是数值类型
-     */
-    private void checkOrderComparison(Ast.Expr.Base left, Ast.Expr.Base right, String op, int lineNum) {
-        Ast.Type.Base leftType = analyzeExpression(left);
-        Ast.Type.Base rightType = analyzeExpression(right);
-        if (isErrorType(leftType) || isErrorType(rightType)) {
-            pushType(errorType());
-            return;
-        }
-        if (promoteNumeric(leftType, rightType) == null) {
-            error(lineNum, String.format("比较运算符 '%s' 只支持同类型数值操作数：左侧为 %s，右侧为 %s",
-                    op, typeName(leftType), typeName(rightType)));
-            pushType(errorType());
-            return;
-        }
-        pushType(new Ast.Type.Bool());
-    }
-
-    /**
-     * 公共方法调用校验逻辑，被 Expr.Call 和 Stmt.Call 共用。
-     * 校验方法是否存在、参数个数是否匹配、参数类型是否匹配。
-     * @return 方法的返回类型
-     */
-    private Ast.Type.Base validateMethodCall(String methodName, ArrayList<Ast.Expr.Base> inputParams, int lineNum) {
-        ArrayList<Ast.Type.Base> actualTypes = new ArrayList<Ast.Type.Base>();
-        if (inputParams != null) {
-            for (Ast.Expr.Base inputParam : inputParams) {
-                actualTypes.add(analyzeExpression(inputParam));
-            }
-        }
-        Ast.Method.MethodSingle method = this.methodMap.get(methodName);
-        if (method == null) {
-            error(lineNum, "未定义的方法: " + methodName);
-            return errorType();
-        }
-        boolean callHasError = false;
-        if (actualTypes.size() != method.getFormals().size()) {
-            callHasError = true;
-            error(lineNum, String.format("方法 '%s' 的参数个数不正确：期望 %d 个，实际 %d 个",
-                    methodName, method.getFormals().size(), actualTypes.size()));
-        }
-        int checkedArgCount = Math.min(actualTypes.size(), method.getFormals().size());
-        for (int i = 0; i < checkedArgCount; i++) {
-            Ast.Type.Base actualType = actualTypes.get(i);
-            Ast.Type.Base expectedType = ((Ast.Declare.DeclareSingle) method.getFormals().get(i)).getType();
-            if (isErrorType(actualType)) {
-                callHasError = true;
-                continue;
-            }
-            if (!isMatch(expectedType, actualType)) {
-                callHasError = true;
-                error(lineNum, String.format("方法 '%s' 的第 %d 个参数类型不匹配：期望 %s，实际 %s",
-                        methodName, i + 1, typeName(expectedType), typeName(actualType)));
-            }
-        }
-        if (callHasError) {
-            return errorType();
-        }
-        Ast.Type.Base returnType = this.methodNameRetTypeMap.get(methodName);
-        return returnType == null ? errorType() : returnType;
-    }
-
-    // ========== 数组相关的 visit 方法 ==========
-
-    @Override
-    public void visit(Ast.Type.IntArray obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Type.FloatArray obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Type.DoubleArray obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Type.BoolArray obj) {
-        pushType(obj);
-    }
-
-    @Override
-    public void visit(Ast.Expr.ArrayAccess obj) {
-        Ast.Type.Base idxType = analyzeExpression(obj.getIndex());
-        // 检查数组是否已声明
-        MethodVarTable mTable = this.methodVarTable.get(currMethodName);
-        if (mTable == null) {
-            error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
-        }
-        if (mTable == null) {
-            obj.setElementType(errorType());
-            pushType(errorType());
-            return;
-        }
-        Ast.Type.Base arrayType = isVariableVisible(obj.getArrayName())
-                ? mTable.get(obj.getArrayName()) : null;
-        if (arrayType == null) {
-            error(obj.getLineNum(), "未定义的数组: " + obj.getArrayName());
-        }
-        if (arrayType == null) {
-            obj.setElementType(errorType());
-            pushType(errorType());
-            return;
-        }
-        Ast.Type.Base elementType = getElementType(arrayType);
-        if (elementType == null) {
-            error(obj.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
-                    obj.getArrayName(), typeName(arrayType)));
-        }
-        // 检查下标类型必须是int
-        if (elementType == null) {
-            obj.setElementType(errorType());
-            pushType(errorType());
-            return;
-        }
-        if (isErrorType(idxType)) {
-            obj.setElementType(errorType());
-            pushType(errorType());
-            return;
-        }
-        if (idxType.getKind() != TypeKind.INT) {
-            error(obj.getIndex().getLineNum(), "数组下标必须是 int，实际为 " + typeName(idxType));
-        }
-        // 设置元素类型
-        if (idxType.getKind() != TypeKind.INT) {
-            obj.setElementType(errorType());
-            pushType(errorType());
-            return;
-        }
-        obj.setElementType(elementType);
-        pushType(obj.getElementType());
-    }
-
-    @Override
-    public void visit(Ast.Expr.ArrayLength obj) {
-        MethodVarTable mTable = this.methodVarTable.get(currMethodName);
-        if (mTable == null) {
-            error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
-            pushType(errorType());
-            return;
-        }
-        Ast.Type.Base arrayType = isVariableVisible(obj.getArrayName())
-                ? mTable.get(obj.getArrayName()) : null;
-        if (arrayType == null) {
-            error(obj.getLineNum(), "未定义的数组: " + obj.getArrayName());
-        }
-        if (arrayType == null) {
-            pushType(errorType());
-            return;
-        }
-        if (getElementType(arrayType) == null) {
-            error(obj.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
-                    obj.getArrayName(), typeName(arrayType)));
-            pushType(errorType());
-            return;
-        }
-        pushType(new Ast.Type.Int());
-    }
-
-    @Override
-    public void visit(Ast.Stmt.ArrayAssign obj) {
-        Ast.Type.Base idxType = analyzeExpression(obj.getIndex());
-        Ast.Type.Base elemType = analyzeExpression(obj.getExpr());
-        // 检查数组是否已声明
-        MethodVarTable mTable = this.methodVarTable.get(currMethodName);
-        if (mTable == null) {
-            error(obj.getLineNum(), "内部错误: 方法 '" + currMethodName + "' 的变量表未找到");
-            return;
-        }
-        Ast.Type.Base arrayType = isVariableVisible(obj.getArrayName())
-                ? mTable.get(obj.getArrayName()) : null;
-        if (arrayType == null) {
-            error(obj.getLineNum(), "未定义的数组: " + obj.getArrayName());
-            return;
-        }
-        // 设置元素类型
-        Ast.Type.Base elementType = getElementType(arrayType);
-        if (elementType == null) {
-            error(obj.getLineNum(), String.format("变量 '%s' 不是数组，实际类型为 %s",
-                    obj.getArrayName(), typeName(arrayType)));
-            return;
-        }
-        obj.setElementType(elementType);
-        // 检查下标类型
-        if (!isErrorType(idxType) && idxType.getKind() != TypeKind.INT) {
-            error(obj.getIndex().getLineNum(), "数组下标必须是 int，实际为 " + typeName(idxType));
-        }
-        // 检查赋值类型
-        if (!isErrorType(elemType) && !isMatch(elementType, elemType)) {
-            error(obj.getLineNum(), String.format("不能将 %s 类型的表达式赋值给 %s 数组元素",
-                    typeName(elemType), typeName(elementType)));
-        }
-    }
-
-    // 获取数组元素类型
-    private Ast.Type.Base getElementType(Ast.Type.Base arrayType) {
-        if (arrayType instanceof Ast.Type.IntArray) {
-            return new Ast.Type.Int();
-        } else if (arrayType instanceof Ast.Type.FloatArray) {
-            return new Ast.Type.Float();
-        } else if (arrayType instanceof Ast.Type.DoubleArray) {
-            return new Ast.Type.Double();
-        } else if (arrayType instanceof Ast.Type.BoolArray) {
-            return new Ast.Type.Bool();
-        }
-        return null;
     }
 }

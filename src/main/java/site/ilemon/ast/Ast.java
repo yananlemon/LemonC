@@ -2,6 +2,7 @@ package site.ilemon.ast;
 
 import site.ilemon.codegen.ast.Label;
 import site.ilemon.list.DoublyLinkedList;
+import site.ilemon.source.SourceSpan;
 import site.ilemon.visitor.ISemanticVisitor;
 
 import java.util.ArrayList;
@@ -10,12 +11,31 @@ import java.util.ArrayList;
  * Created by andy on 2019/7/31.
  */
 public class Ast {
+    public static abstract class Node {
+        private SourceSpan sourceSpan = SourceSpan.UNKNOWN;
+
+        public final SourceSpan getSourceSpan() {
+            return sourceSpan;
+        }
+
+        public final void setSourceSpan(SourceSpan sourceSpan) {
+            this.sourceSpan = sourceSpan == null ? SourceSpan.UNKNOWN : sourceSpan;
+        }
+
+        public final int getLineNum() {
+            return sourceSpan.getStartLine();
+        }
+
+        public final void setLineNum(int lineNum) {
+            this.sourceSpan = SourceSpan.line(lineNum);
+        }
+    }
 
     /**
      * Program
      */
     public static class Program{
-        public static abstract class Base{
+        public static abstract class Base extends Node {
             public abstract void accept(ISemanticVisitor v);
         }
         public static class ProgramSingle extends Base{
@@ -37,7 +57,7 @@ public class Ast {
      * MainClass
      */
     public static class MainClass{
-        public static abstract class Base{
+        public static abstract class Base extends Node {
             public abstract void accept(ISemanticVisitor v);
         }
         public static class MainClassSingle extends Base {
@@ -62,11 +82,8 @@ public class Ast {
      * Stmt
      */
     public static class Stmt{
-        public static abstract class Base{
+        public static abstract class Base extends Node {
             // breakList and continueList removed
-            private int lineNum;
-            public int getLineNum() { return this.lineNum; }
-            public void setLineNum(int lineNum) { this.lineNum = lineNum; }
             public abstract void accept(ISemanticVisitor v);
         }
 
@@ -84,14 +101,11 @@ public class Ast {
         public static class Assign extends Base {
             private final Ast.Expr.Id id;
             public Ast.Expr.Id getId() { return this.id; }
-            private Expr.Base expr;
+            private final Expr.Base expr;
             public Expr.Base getExpr() { return this.expr; }
-            public void setExpr(Expr.Base expr) { this.expr = expr; }
-            //private Type.Base type;
             public Assign(Ast.Expr.Id id, Expr.Base exp, int lineNum) {
                 this.id = id;
                 this.expr = exp;
-                //this.type = type;
                 this.setLineNum(lineNum);
             }
 
@@ -136,11 +150,6 @@ public class Ast {
         }
 
         public static class Call extends Base {
-            /**方法返回类型**/
-            private Ast.Type.Base returnType;
-            public Ast.Type.Base getReturnType() { return this.returnType; }
-            public void setReturnType(Ast.Type.Base returnType) { this.returnType = returnType; }
-
             /**方法名称**/
             private final String name;
             public String getName() { return this.name; }
@@ -235,13 +244,13 @@ public class Ast {
         }
 
         public static class For extends Base {
-            private Ast.Stmt.Base init;
+            private final Ast.Stmt.Base init;
             public Ast.Stmt.Base getInit() { return this.init; }
-            private Ast.Expr.Base condition;
+            private final Ast.Expr.Base condition;
             public Ast.Expr.Base getCondition() { return this.condition; }
-            private Ast.Stmt.Base update;
+            private final Ast.Stmt.Base update;
             public Ast.Stmt.Base getUpdate() { return this.update; }
-            private Ast.Stmt.Base body;
+            private final Ast.Stmt.Base body;
             public Ast.Stmt.Base getBody() { return this.body; }
 
             public For(Ast.Stmt.Base init, Ast.Expr.Base condition, Ast.Stmt.Base update,
@@ -274,10 +283,6 @@ public class Ast {
             public Expr.Base getIndex() { return this.index; }
             private final Expr.Base expr;
             public Expr.Base getExpr() { return this.expr; }
-            private Type.Base elementType;
-            public Type.Base getElementType() { return this.elementType; }
-            public void setElementType(Type.Base elementType) { this.elementType = elementType; }
-
             public ArrayAssign(String arrayName, Expr.Base index, Expr.Base expr, int lineNum) {
                 this.arrayName = arrayName;
                 this.index = index;
@@ -296,10 +301,7 @@ public class Ast {
      * Declare
      */
     public static class Declare{
-        public static abstract class Base{
-            private int lineNum;
-            public int getLineNum() { return this.lineNum; }
-            public void setLineNum(int lineNum) { this.lineNum = lineNum; }
+        public static abstract class Base extends Node {
             public abstract void accept(ISemanticVisitor v);
         }
         public static class DeclareSingle extends Base {
@@ -330,11 +332,10 @@ public class Ast {
          */
         public enum TypeKind {
             INT, FLOAT, DOUBLE, BOOL, STRING, VOID,
-            INT_ARRAY, FLOAT_ARRAY, DOUBLE_ARRAY, BOOL_ARRAY,
-            ERROR
+            INT_ARRAY, FLOAT_ARRAY, DOUBLE_ARRAY, BOOL_ARRAY
         }
 
-        public static abstract class Base{
+        public static abstract class Base extends Node {
             public abstract void accept(ISemanticVisitor v);
             public abstract TypeKind getKind();
         }
@@ -350,21 +351,6 @@ public class Ast {
             public void accept(ISemanticVisitor v) {
                 v.visit(this);
             }
-        }
-        public static final class Error extends Base {
-            public static final Error INSTANCE = new Error();
-
-            private Error() {
-            }
-
-            @Override
-            public TypeKind getKind() { return TypeKind.ERROR; }
-
-            @Override
-            public String toString() { return "@error"; }
-
-            @Override
-            public void accept(ISemanticVisitor v) { v.visit(this); }
         }
         public static class Int extends Base {
             @Override
@@ -438,9 +424,8 @@ public class Ast {
 
         // 数组类型
         public static class IntArray extends Base {
-            private int size;
+            private final int size;
             public int getSize() { return this.size; }
-            public void setSize(int size) { this.size = size; }
             public IntArray() { this.size = -1; }
             public IntArray(int size) { this.size = size; }
             @Override
@@ -452,9 +437,8 @@ public class Ast {
         }
 
         public static class FloatArray extends Base {
-            private int size;
+            private final int size;
             public int getSize() { return this.size; }
-            public void setSize(int size) { this.size = size; }
             public FloatArray() { this.size = -1; }
             public FloatArray(int size) { this.size = size; }
             @Override
@@ -466,9 +450,8 @@ public class Ast {
         }
 
         public static class DoubleArray extends Base {
-            private int size;
+            private final int size;
             public int getSize() { return this.size; }
-            public void setSize(int size) { this.size = size; }
             public DoubleArray() { this.size = -1; }
             public DoubleArray(int size) { this.size = size; }
             @Override
@@ -480,9 +463,8 @@ public class Ast {
         }
 
         public static class BoolArray extends Base {
-            private int size;
+            private final int size;
             public int getSize() { return this.size; }
-            public void setSize(int size) { this.size = size; }
             public BoolArray() { this.size = -1; }
             public BoolArray(int size) { this.size = size; }
             @Override
@@ -499,21 +481,16 @@ public class Ast {
      * Expression
      */
     public static class Expr {
-        public static abstract class Base {
-            private int lineNum;
-            public int getLineNum() { return this.lineNum; }
-            public void setLineNum(int lineNum) { this.lineNum = lineNum; }
+        public static abstract class Base extends Node {
 
             public abstract void accept(ISemanticVisitor v);
         }
 
         public static abstract class BinaryExpr extends Base {
-            private Ast.Expr.Base left;
-            private Ast.Expr.Base right;
+            private final Ast.Expr.Base left;
+            private final Ast.Expr.Base right;
             public Ast.Expr.Base getLeft() { return this.left; }
-            public void setLeft(Ast.Expr.Base left) { this.left = left; }
             public Ast.Expr.Base getRight() { return this.right; }
-            public void setRight(Ast.Expr.Base right) { this.right = right; }
             public BinaryExpr(Ast.Expr.Base left, Ast.Expr.Base right, int lineNum) {
                 this.left = left;
                 this.right = right;
@@ -626,11 +603,6 @@ public class Ast {
         }
 
         public static class Call extends Base{
-            /**方法返回类型**/
-            private Ast.Type.Base returnType;
-            public Ast.Type.Base getReturnType() { return this.returnType; }
-            public void setReturnType(Ast.Type.Base returnType) { this.returnType = returnType; }
-
             /**方法名称**/
             private final String name;
             public String getName() { return this.name; }
@@ -643,13 +615,6 @@ public class Ast {
                 this.name = name;
                 this.inputParams = inputParams;
                 this.setLineNum(lineNumber);
-            }
-
-            public Call(String name, ArrayList<Expr.Base> inputParams,int lineNumber,Ast.Type.Base rt) {
-                this.name = name;
-                this.inputParams = inputParams;
-                this.setLineNum(lineNumber);
-                this.returnType = rt;
             }
 
             @Override
@@ -827,19 +792,10 @@ public class Ast {
         public static class Id extends Base {
             private final String id;
             public String getId() { return this.id; }
-            private Type.Base type;
-            public Type.Base getType() { return this.type; }
-            public void setType(Type.Base type) { this.type = type; }
 
             public Id(String id, int lineNum)
             {
                 this.id = id;
-                this.setLineNum(lineNum);
-            }
-
-            public Id(String id, Type.Base type, int lineNum) {
-                this.id = id;
-                this.type = type;
                 this.setLineNum(lineNum);
             }
 
@@ -855,10 +811,6 @@ public class Ast {
             public String getArrayName() { return this.arrayName; }
             private final Expr.Base index;
             public Expr.Base getIndex() { return this.index; }
-            private Type.Base elementType;
-            public Type.Base getElementType() { return this.elementType; }
-            public void setElementType(Type.Base elementType) { this.elementType = elementType; }
-
             public ArrayAccess(String arrayName, Expr.Base index, int lineNum) {
                 this.arrayName = arrayName;
                 this.index = index;
@@ -891,45 +843,77 @@ public class Ast {
 
 
     public static class Method {
-        public static abstract class Base {
-            private int lineNum;
-            public int getLineNum() { return this.lineNum; }
-            public void setLineNum(int lineNum) { this.lineNum = lineNum; }
+        public static abstract class Base extends Node {
             public abstract void accept(ISemanticVisitor v);
         }
 
         public static class MethodSingle extends Base {
-            private Ast.Type.Base retType;
+            private final Ast.Type.Base retType;
             public Ast.Type.Base getRetType() { return this.retType; }
-            public void setRetType(Ast.Type.Base retType) { this.retType = retType; }
-            private String id;
+            private final String id;
             public String getId() { return this.id; }
-            public void setId(String id) { this.id = id; }
-            private ArrayList<Declare.Base> formals;
+            private final ArrayList<Declare.Base> formals;
             public ArrayList<Declare.Base> getFormals() { return this.formals; }
-            public void setFormals(ArrayList<Declare.Base> formals) { this.formals = formals; }
-            private ArrayList<Declare.Base> locals;
+            private final ArrayList<Declare.Base> locals;
             public ArrayList<Declare.Base> getLocals() { return this.locals; }
-            public void setLocals(ArrayList<Declare.Base> locals) { this.locals = locals; }
-            private ArrayList<Stmt.Base> stms;
+            private final ArrayList<Stmt.Base> stms;
             public ArrayList<Stmt.Base> getStms() { return this.stms; }
-            public void setStms(ArrayList<Stmt.Base> stms) { this.stms = stms; }
-            private Ast.Stmt.Base retExp;
+            private final Ast.Stmt.Base retExp;
             public Ast.Stmt.Base getRetExp() { return this.retExp; }
-            public void setRetExp(Ast.Stmt.Base retExp) { this.retExp = retExp; }
 
             public MethodSingle(Ast.Type.Base  retType, String id,
                                 ArrayList<Declare.Base> formals,
-                                ArrayList<Declare.Base> locals,
                                 ArrayList<Stmt.Base> stms,
                                 Ast.Stmt.Base retExp,int lineNum) {
                 this.retType = retType;
                 this.id = id;
                 this.formals = formals;
-                this.locals = locals;
+                this.locals = collectDeclarations(stms);
                 this.stms = stms;
                 this.retExp = retExp;
                 this.setLineNum(lineNum);
+            }
+
+            /**
+             * 按源码顺序收集方法体内所有变量声明。
+             *
+             * <p>声明本身留在块结构里（{@link Stmt.VarDecl}），这里只提供一个派生的扁平视图，
+             * 供需要方法级槽位列表的后端使用。语义分析不使用它——作用域可见性由
+             * 作用域栈决定，而不是由这张平坦表决定。</p>
+             */
+            private static ArrayList<Declare.Base> collectDeclarations(ArrayList<Stmt.Base> stms) {
+                ArrayList<Declare.Base> declarations = new ArrayList<Declare.Base>();
+                collectDeclarations(stms, declarations);
+                return declarations;
+            }
+
+            private static void collectDeclarations(java.util.List<Stmt.Base> stms,
+                                                    ArrayList<Declare.Base> out) {
+                if (stms == null) {
+                    return;
+                }
+                for (Stmt.Base stmt : stms) {
+                    collectDeclarations(stmt, out);
+                }
+            }
+
+            private static void collectDeclarations(Stmt.Base stmt, ArrayList<Declare.Base> out) {
+                if (stmt instanceof Stmt.VarDecl) {
+                    out.add(((Stmt.VarDecl) stmt).getDeclaration());
+                } else if (stmt instanceof Stmt.Block) {
+                    collectDeclarations(((Stmt.Block) stmt).getStmts(), out);
+                } else if (stmt instanceof Stmt.If) {
+                    Stmt.If node = (Stmt.If) stmt;
+                    collectDeclarations(node.getThenStmt(), out);
+                    collectDeclarations(node.getElseStmt(), out);
+                } else if (stmt instanceof Stmt.While) {
+                    collectDeclarations(((Stmt.While) stmt).getBody(), out);
+                } else if (stmt instanceof Stmt.For) {
+                    Stmt.For node = (Stmt.For) stmt;
+                    collectDeclarations(node.getInit(), out);
+                    collectDeclarations(node.getBody(), out);
+                    collectDeclarations(node.getUpdate(), out);
+                }
             }
 
             @Override

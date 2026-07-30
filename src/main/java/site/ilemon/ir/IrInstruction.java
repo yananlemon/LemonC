@@ -1,10 +1,13 @@
 package site.ilemon.ir;
 
+import site.ilemon.source.SourceSpan;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
- * LemonIR 三地址码指令。
+ * LemonIR 三地址码指令。前端生成的指令携带对应 Typed-AST 的 end-exclusive source span。
  */
 public class IrInstruction {
     private IrOpcode opcode;
@@ -13,10 +16,16 @@ public class IrInstruction {
     private List<IrValue> operands;// 源操作数列表
     private String labelTarget;    // 用于跳转的标签目标
     private String funcTarget;     // 用于调用的函数名
+    private SourceSpan sourceSpan;
 
     public IrInstruction(IrOpcode opcode) {
+        this(opcode, SourceSpan.UNKNOWN);
+    }
+
+    public IrInstruction(IrOpcode opcode, SourceSpan sourceSpan) {
         this.opcode = opcode;
         this.operands = new ArrayList<IrValue>();
+        this.sourceSpan = Objects.requireNonNull(sourceSpan, "sourceSpan");
     }
 
     public IrOpcode getOpcode() { return opcode; }
@@ -40,6 +49,11 @@ public class IrInstruction {
 
     public String getFuncTarget() { return funcTarget; }
     public void setFuncTarget(String funcTarget) { this.funcTarget = funcTarget; }
+
+    public SourceSpan getSourceSpan() { return sourceSpan; }
+    public void setSourceSpan(SourceSpan sourceSpan) {
+        this.sourceSpan = Objects.requireNonNull(sourceSpan, "sourceSpan");
+    }
 
     @Override
     public String toString() {

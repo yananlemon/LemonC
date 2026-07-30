@@ -1,161 +1,210 @@
 import org.junit.Test;
-import site.ilemon.ast.Ast;
 import site.ilemon.optimizer.AstOptimizer;
+import site.ilemon.typedast.TypedAst;
 
 import java.util.ArrayList;
+import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class AstOptimizerTest {
-
     @Test
     public void foldsConstantArithmetic() {
-        Ast.Expr.Base expr = new Ast.Expr.Mul(
-                new Ast.Expr.Add(num(2), num(3), 1),
-                num(4),
-                1);
-
-        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
-
-        assertTrue(optimized instanceof Ast.Expr.IntLiteral);
-        assertEquals(Integer.valueOf(20), ((Ast.Expr.IntLiteral) optimized).getValue());
+        TypedAst.Expr expression = new TypedAst.Mul(TypedAst.Type.INT,
+                new TypedAst.Add(TypedAst.Type.INT, num(2), num(3), 1), num(4), 1);
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
+        assertTrue(optimized instanceof TypedAst.IntLiteral);
+        assertEquals(20, ((TypedAst.IntLiteral) optimized).getValue());
     }
 
     @Test
     public void simplifiesAlgebraicIdentity() {
-        Ast.Expr.Id x = new Ast.Expr.Id("x", new Ast.Type.Int(), 1);
-        Ast.Expr.Base expr = new Ast.Expr.Add(
-                new Ast.Expr.Mul(x, num(1), 1),
-                num(0),
-                1);
-
-        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
-
-        assertTrue(optimized instanceof Ast.Expr.Id);
-        assertEquals("x", ((Ast.Expr.Id) optimized).getId());
+        TypedAst.Id x = id("x", TypedAst.Type.INT);
+        TypedAst.Expr expression = new TypedAst.Add(TypedAst.Type.INT,
+                new TypedAst.Mul(TypedAst.Type.INT, x, num(1), 1), num(0), 1);
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
+        assertTrue(optimized instanceof TypedAst.Id);
+        assertEquals("x", ((TypedAst.Id) optimized).getName());
     }
 
     @Test
     public void doesNotDiscardMethodCallInArithmeticIdentity() {
-        Ast.Expr.Base expr = new Ast.Expr.Mul(call("side", new Ast.Type.Int()), num(0), 1);
-
-        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
-
-        assertTrue(optimized instanceof Ast.Expr.Mul);
-        assertTrue(((Ast.Expr.Mul) optimized).getLeft() instanceof Ast.Expr.Call);
+        TypedAst.Expr expression = new TypedAst.Mul(TypedAst.Type.INT,
+                call("side", TypedAst.Type.INT), num(0), 1);
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
+        assertTrue(optimized instanceof TypedAst.Mul);
+        assertTrue(((TypedAst.Mul) optimized).getLeft() instanceof TypedAst.Call);
     }
 
     @Test
     public void doesNotApplyZeroMultiplicationToFloatingPoint() {
-        Ast.Expr.Id f = new Ast.Expr.Id("f", new Ast.Type.Float(), 1);
-        Ast.Expr.Base expr = new Ast.Expr.Mul(num(0.0f), f, 1);
-
-        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
-
-        assertTrue(optimized instanceof Ast.Expr.Mul);
+        TypedAst.Expr expression = new TypedAst.Mul(TypedAst.Type.FLOAT,
+                num(0.0f), id("f", TypedAst.Type.FLOAT), 1);
+        assertTrue(optimizeAssignExpression(expression) instanceof TypedAst.Mul);
     }
 
     @Test
     public void doesNotDiscardIntegerDivisionThatMayTrap() {
-        Ast.Expr.Base division = new Ast.Expr.Div(num(1), num(0), 1);
-        Ast.Expr.Base expr = new Ast.Expr.Mul(num(0), division, 1);
-
-        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
-
-        assertTrue(optimized instanceof Ast.Expr.Mul);
-        assertTrue(((Ast.Expr.Mul) optimized).getRight() instanceof Ast.Expr.Div);
+        TypedAst.Expr division = new TypedAst.Div(TypedAst.Type.INT, num(1), num(0), 1);
+        TypedAst.Expr expression = new TypedAst.Mul(TypedAst.Type.INT, num(0), division, 1);
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
+        assertTrue(optimized instanceof TypedAst.Mul);
+        assertTrue(((TypedAst.Mul) optimized).getRight() instanceof TypedAst.Div);
     }
 
     @Test
     public void doesNotSimplifyZeroDividedByVariable() {
-        Ast.Expr.Id divisor = new Ast.Expr.Id("divisor", new Ast.Type.Int(), 1);
-        Ast.Expr.Base expr = new Ast.Expr.Div(num(0), divisor, 1);
-
-        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
-
-        assertTrue(optimized instanceof Ast.Expr.Div);
+        TypedAst.Expr expression = new TypedAst.Div(TypedAst.Type.INT,
+                num(0), id("divisor", TypedAst.Type.INT), 1);
+        assertTrue(optimizeAssignExpression(expression) instanceof TypedAst.Div);
     }
 
     @Test
     public void zeroMultiplicationStillSimplifiesPureIntegers() {
-        Ast.Expr.Id x = new Ast.Expr.Id("x", new Ast.Type.Int(), 1);
-        Ast.Expr.Base expr = new Ast.Expr.Mul(num(0), x, 1);
-
-        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
-
-        assertTrue(optimized instanceof Ast.Expr.IntLiteral);
-        assertEquals(Integer.valueOf(0), ((Ast.Expr.IntLiteral) optimized).getValue());
+        TypedAst.Expr expression = new TypedAst.Mul(TypedAst.Type.INT,
+                num(0), id("x", TypedAst.Type.INT), 1);
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
+        assertTrue(optimized instanceof TypedAst.IntLiteral);
+        assertEquals(0, ((TypedAst.IntLiteral) optimized).getValue());
     }
 
     @Test
     public void identityDoesNotChangePromotedResultType() {
-        Ast.Expr.Id x = new Ast.Expr.Id("x", new Ast.Type.Int(), 1);
-        Ast.Expr.Base expr = new Ast.Expr.Mul(num(1.0f), x, 1);
-
-        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
-
-        assertTrue(optimized instanceof Ast.Expr.Mul);
+        TypedAst.Expr expression = new TypedAst.Mul(TypedAst.Type.FLOAT,
+                num(1.0f), id("x", TypedAst.Type.INT), 1);
+        assertTrue(optimizeAssignExpression(expression) instanceof TypedAst.Mul);
     }
 
     @Test
     public void doesNotDiscardMethodCallInBooleanIdentity() {
-        Ast.Expr.Base expr = new Ast.Expr.Or(call("side", new Ast.Type.Bool()), new Ast.Expr.True(1), 1);
+        TypedAst.Expr expression = new TypedAst.Or(call("side", TypedAst.Type.BOOL),
+                new TypedAst.BoolLiteral(true, 1), 1);
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
+        assertTrue(optimized instanceof TypedAst.Or);
+        assertTrue(((TypedAst.Or) optimized).getLeft() instanceof TypedAst.Call);
+    }
 
-        Ast.Expr.Base optimized = optimizeAssignExpr(expr);
+    @Test
+    public void foldsFloatLiteralInDoubleContextAtDoublePrecision() {
+        // 小数字面量类型是 float，但携带的是十进制常量。在 double 运算里必须按十进制原文
+        // 取 double 精度值，否则折叠出的常量与"没被折叠时"算出的结果不同。
+        TypedAst.Expr expression = new TypedAst.Add(TypedAst.Type.DOUBLE,
+                new TypedAst.DoubleLiteral(0.0d, "0.0d", 1),
+                new TypedAst.FloatLiteral(0.1f, "0.1", 1), 1);
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
 
-        assertTrue(optimized instanceof Ast.Expr.Or);
-        assertTrue(((Ast.Expr.Or) optimized).getLeft() instanceof Ast.Expr.Call);
+        assertTrue(optimized instanceof TypedAst.DoubleLiteral);
+        assertEquals(0.1d, ((TypedAst.DoubleLiteral) optimized).getValue(), 0.0d);
+    }
+
+    @Test
+    public void foldingKeepsAllDigitsOfAWideDecimalLiteral() {
+        TypedAst.Expr expression = new TypedAst.Add(TypedAst.Type.DOUBLE,
+                new TypedAst.DoubleLiteral(0.0d, "0.0d", 1),
+                new TypedAst.FloatLiteral((float) 3.14159265358979d, "3.14159265358979", 1), 1);
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
+
+        assertEquals(3.14159265358979d,
+                ((TypedAst.DoubleLiteral) optimized).getValue(), 0.0d);
+    }
+
+    @Test
+    public void foldsFloatLiteralInFloatContextAtFloatPrecision() {
+        // 反向守卫：float 运算里仍必须按 float 取值。
+        TypedAst.Expr expression = new TypedAst.Add(TypedAst.Type.FLOAT,
+                new TypedAst.FloatLiteral(0.1f, "0.1", 1),
+                new TypedAst.FloatLiteral(0.2f, "0.2", 1), 1);
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
+
+        assertTrue(optimized instanceof TypedAst.FloatLiteral);
+        assertEquals(0.1f + 0.2f, ((TypedAst.FloatLiteral) optimized).getValue(), 0.0f);
+    }
+
+    @Test
+    public void foldsMixedIntFloatComparisonAtFloatPrecision() {
+        // 提升类型是 float，16777217 舍入到 16777216f，所以结果必须是 false。
+        TypedAst.Expr expression = new TypedAst.GT(num(16777217), num(16777216.0f), 1);
+        assertFoldsToBool(false, expression);
+    }
+
+    @Test
+    public void foldsMixedIntFloatEqualityAtFloatPrecision() {
+        TypedAst.Expr expression = new TypedAst.EQ(num(16777217), num(16777216.0f), 1);
+        assertFoldsToBool(true, expression);
+    }
+
+    @Test
+    public void foldsMixedIntDoubleComparisonAtDoublePrecision() {
+        // 提升类型是 double，两个值互不相等，所以结果必须是 true。
+        TypedAst.Expr expression = new TypedAst.GT(num(16777217), num(16777216.0d), 1);
+        assertFoldsToBool(true, expression);
+    }
+
+    @Test
+    public void foldsIntegerComparisonWithoutPromotion() {
+        assertFoldsToBool(true, new TypedAst.LT(num(1), num(2), 1));
     }
 
     @Test
     public void foldsConstantBooleanCondition() {
-        Ast.Stmt.If ifStmt = new Ast.Stmt.If(
-                new Ast.Expr.LT(num(1), num(2), 1),
-                new Ast.Stmt.Assign(new Ast.Expr.Id("x", 1), num(7), 1),
-                new Ast.Stmt.Assign(new Ast.Expr.Id("x", 1), num(9), 1),
-                1);
-
-        Ast.Stmt.Base optimized = optimizeStmt(ifStmt);
-
-        assertTrue(optimized instanceof Ast.Stmt.Assign);
-        assertEquals(Integer.valueOf(7), ((Ast.Expr.IntLiteral) ((Ast.Stmt.Assign) optimized).getExpr()).getValue());
+        TypedAst.Symbol x = symbol("x", TypedAst.Type.INT);
+        TypedAst.Stmt statement = new TypedAst.If(new TypedAst.LT(num(1), num(2), 1),
+                new TypedAst.Assign(x, num(7), 1), new TypedAst.Assign(x, num(9), 1), 1);
+        TypedAst.Stmt optimized = optimizeStatement(statement);
+        assertTrue(optimized instanceof TypedAst.Assign);
+        assertEquals(7, ((TypedAst.IntLiteral)
+                ((TypedAst.Assign) optimized).getExpression()).getValue());
     }
 
-    private Ast.Expr.Base optimizeAssignExpr(Ast.Expr.Base expr) {
-        Ast.Stmt.Assign optimized = (Ast.Stmt.Assign) optimizeStmt(
-                new Ast.Stmt.Assign(new Ast.Expr.Id("x", 1), expr, 1));
-        return optimized.getExpr();
+    private void assertFoldsToBool(boolean expected, TypedAst.Expr expression) {
+        TypedAst.Expr optimized = optimizeAssignExpression(expression);
+        assertTrue("expected a folded bool literal, got " + optimized.getClass().getSimpleName(),
+                optimized instanceof TypedAst.BoolLiteral);
+        assertEquals(expected, ((TypedAst.BoolLiteral) optimized).getValue());
     }
 
-    private Ast.Stmt.Base optimizeStmt(Ast.Stmt.Base stmt) {
-        ArrayList<Ast.Stmt.Base> statements = new ArrayList<Ast.Stmt.Base>();
-        statements.add(stmt);
-        Ast.Method.MethodSingle method = new Ast.Method.MethodSingle(new Ast.Type.Void(), "main",
-                new ArrayList<Ast.Declare.Base>(), new ArrayList<Ast.Declare.Base>(),
-                statements, null, 1);
-        ArrayList<Ast.Method.Base> methods = new ArrayList<Ast.Method.Base>();
-        methods.add(method);
-        Ast.Program.Base program = new Ast.Program.ProgramSingle(
-                new Ast.MainClass.MainClassSingle("Test", methods));
-        Ast.Program.ProgramSingle optimizedProgram =
-                (Ast.Program.ProgramSingle) new AstOptimizer().optimize(program);
-        Ast.MainClass.MainClassSingle mainClass =
-                (Ast.MainClass.MainClassSingle) optimizedProgram.getMainClass();
-        Ast.Method.MethodSingle optimizedMethod =
-                (Ast.Method.MethodSingle) mainClass.getMethods().get(0);
-        return optimizedMethod.getStms().get(0);
+    private TypedAst.Expr optimizeAssignExpression(TypedAst.Expr expression) {
+        TypedAst.Symbol x = symbol("target", expression.getType());
+        return ((TypedAst.Assign) optimizeStatement(new TypedAst.Assign(x, expression, 1)))
+                .getExpression();
     }
 
-    private Ast.Expr.IntLiteral num(int value) {
-        return new Ast.Expr.IntLiteral(value, 1);
+    private TypedAst.Stmt optimizeStatement(TypedAst.Stmt statement) {
+        TypedAst.MethodSymbol main = new TypedAst.MethodSymbol("main", TypedAst.Type.VOID,
+                Collections.<TypedAst.Type>emptyList(), 1);
+        TypedAst.Method method = new TypedAst.Method(main,
+                Collections.<TypedAst.Declaration>emptyList(),
+                Collections.<TypedAst.Declaration>emptyList(),
+                Collections.singletonList(statement), 1);
+        TypedAst.Program program = new TypedAst.Program("Test", Collections.singletonList(method));
+        return new AstOptimizer().optimize(program).getMethods().get(0).getStatements().get(0);
     }
 
-    private Ast.Expr.FloatLiteral num(float value) {
-        return new Ast.Expr.FloatLiteral(value, 1);
+    private TypedAst.IntLiteral num(int value) {
+        return new TypedAst.IntLiteral(value, null, 1);
     }
 
-    private Ast.Expr.Call call(String name, Ast.Type.Base returnType) {
-        return new Ast.Expr.Call(name, new ArrayList<Ast.Expr.Base>(), 1, returnType);
+    private TypedAst.FloatLiteral num(float value) {
+        return new TypedAst.FloatLiteral(value, null, 1);
+    }
+
+    private TypedAst.DoubleLiteral num(double value) {
+        return new TypedAst.DoubleLiteral(value, null, 1);
+    }
+
+    private TypedAst.Id id(String name, TypedAst.Type type) {
+        TypedAst.Symbol symbol = symbol(name, type);
+        return new TypedAst.Id(symbol, type, 1);
+    }
+
+    private TypedAst.Symbol symbol(String name, TypedAst.Type type) {
+        return new TypedAst.Symbol(name, type, TypedAst.Symbol.Kind.LOCAL, 1);
+    }
+
+    private TypedAst.Call call(String name, TypedAst.Type returnType) {
+        TypedAst.MethodSymbol method = new TypedAst.MethodSymbol(name, returnType,
+                new ArrayList<TypedAst.Type>(), 1);
+        return new TypedAst.Call(method, new ArrayList<TypedAst.Expr>(), returnType, 1);
     }
 }

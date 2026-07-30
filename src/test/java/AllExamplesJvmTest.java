@@ -9,6 +9,7 @@ import site.ilemon.lexer.Lexer;
 import site.ilemon.optimizer.AstOptimizer;
 import site.ilemon.parser.Parser;
 import site.ilemon.semantic.SemanticVisitor;
+import site.ilemon.typedast.TypedAst;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -81,10 +82,9 @@ public class AllExamplesJvmTest {
         SemanticVisitor semantic = new SemanticVisitor();
         semantic.visit(program);
 
-        program = new AstOptimizer().optimize(program);
+        TypedAst.Program typedProgram = new AstOptimizer().optimize(semantic.getTypedProgram());
         AstToIrTranslator astToIr = new AstToIrTranslator();
-        program.accept(astToIr);
-        IrProgram irProgram = astToIr.getProgram();
+        IrProgram irProgram = astToIr.translate(typedProgram);
         site.ilemon.codegen.ast.Ast.Program.ProgramSingle jvmProgram =
                 new IrToJvmTranslator(irProgram).translate();
 

@@ -258,6 +258,9 @@ public class ByteCodeGenerator implements Visitor {
         if (stmt instanceof Ast.Stmt.Dadd || stmt instanceof Ast.Stmt.Dsub
                 || stmt instanceof Ast.Stmt.Dmul || stmt instanceof Ast.Stmt.Ddiv) return deltas(-4, 2);
         if (stmt instanceof Ast.Stmt.Dcmpl || stmt instanceof Ast.Stmt.Dcmpg) return deltas(-4, 1);
+        // 取负是原地操作：消耗与产生的槽位数相同，栈深度不变。
+        if (stmt instanceof Ast.Stmt.Ineg || stmt instanceof Ast.Stmt.Fneg
+                || stmt instanceof Ast.Stmt.Dneg) return deltas();
         if (stmt instanceof Ast.Stmt.F2d) return deltas(-1, 2);
         if (stmt instanceof Ast.Stmt.I2f) return deltas();
         if (stmt instanceof Ast.Stmt.I2d) return deltas(-1, 2);
@@ -485,6 +488,21 @@ public class ByteCodeGenerator implements Visitor {
     @Override
     public void visit(Ast.Stmt.Irem s) {
         this.iwriteln("irem");
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Ineg s) {
+        this.iwriteln("ineg");
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Fneg s) {
+        this.iwriteln("fneg");
+    }
+
+    @Override
+    public void visit(Ast.Stmt.Dneg s) {
+        this.iwriteln("dneg");
     }
 
     @Override

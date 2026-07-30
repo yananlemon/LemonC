@@ -1,6 +1,7 @@
 package site.ilemon.lexer;
 
 import site.ilemon.exception.LexException;
+import site.ilemon.source.SourceSpan;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -210,7 +211,7 @@ public class Lexer {
 
             c = advance();
             if (c == '"') {
-                return new Token(TokenKind.StringLiteral, value.toString(), startLine, startColumn);
+                return token(TokenKind.StringLiteral, value.toString(), startLine, startColumn);
             }
 
             if (c == '\\') {
@@ -257,7 +258,7 @@ public class Lexer {
 
         String text = lexeme.toString();
         TokenKind kind = KEYWORDS.get(text);
-        return new Token(kind == null ? TokenKind.Id : kind, text, startLine, startColumn);
+        return token(kind == null ? TokenKind.Id : kind, text, startLine, startColumn);
     }
 
     private Token scanNumberLiteral(int startLine, int startColumn) {
@@ -303,17 +304,17 @@ public class Lexer {
         char suffix = peek();
         if (suffix == 'f' || suffix == 'F') {
             lexeme.append(advance());
-            return new Token(TokenKind.FloatLiteral, lexeme.toString(), startLine, startColumn);
+            return token(TokenKind.FloatLiteral, lexeme.toString(), startLine, startColumn);
         }
         if (suffix == 'd' || suffix == 'D') {
             lexeme.append(advance());
-            return new Token(TokenKind.DoubleLiteral, lexeme.toString(), startLine, startColumn);
+            return token(TokenKind.DoubleLiteral, lexeme.toString(), startLine, startColumn);
         }
         if (hasExponent) {
-            return new Token(TokenKind.DoubleLiteral, lexeme.toString(), startLine, startColumn);
+            return token(TokenKind.DoubleLiteral, lexeme.toString(), startLine, startColumn);
         }
         if (hasDot) {
-            return new Token(TokenKind.FloatLiteral, lexeme.toString(), startLine, startColumn);
+            return token(TokenKind.FloatLiteral, lexeme.toString(), startLine, startColumn);
         }
 
         String text = lexeme.toString();
@@ -321,7 +322,7 @@ public class Lexer {
             throw lexicalError("invalid octal integer literal '" + text + "'", startLine, startColumn);
         }
         validateIntegerRange(text, startLine, startColumn);
-        return new Token(TokenKind.Num, text, startLine, startColumn);
+        return token(TokenKind.Num, text, startLine, startColumn);
     }
 
     private Token scanHexadecimalInteger(int startLine, int startColumn) {
@@ -345,7 +346,7 @@ public class Lexer {
 
         String text = lexeme.toString();
         validateIntegerRange(text, startLine, startColumn);
-        return new Token(TokenKind.Num, text, startLine, startColumn);
+        return token(TokenKind.Num, text, startLine, startColumn);
     }
 
     private void validateIntegerRange(String text, int startLine, int startColumn) {
@@ -387,11 +388,26 @@ public class Lexer {
     private Token scanOperatorOrDelimiter(int startLine, int startColumn) {
         char first = advance();
         switch (first) {
-            case '+': return token(TokenKind.Add, first, startLine, startColumn);
-            case '-': return token(TokenKind.Sub, first, startLine, startColumn);
-            case '*': return token(TokenKind.Mul, first, startLine, startColumn);
-            case '/': return token(TokenKind.Div, first, startLine, startColumn);
-            case '%': return token(TokenKind.Mod, first, startLine, startColumn);
+            case '+':
+                if (peek() == '+') {
+                    advance();
+                    return token(TokenKind.Increment, "++", startLine, startColumn);
+                }
+                return scanOptionalEquals(TokenKind.Add, TokenKind.AddAssign,
+                        first, startLine, startColumn);
+            case '-':
+                if (peek() == '-') {
+                    advance();
+                    return token(TokenKind.Decrement, "--", startLine, startColumn);
+                }
+                return scanOptionalEquals(TokenKind.Sub, TokenKind.SubAssign,
+                        first, startLine, startColumn);
+            case '*': return scanOptionalEquals(TokenKind.Mul, TokenKind.MulAssign,
+                    first, startLine, startColumn);
+            case '/': return scanOptionalEquals(TokenKind.Div, TokenKind.DivAssign,
+                    first, startLine, startColumn);
+            case '%': return scanOptionalEquals(TokenKind.Mod, TokenKind.ModAssign,
+                    first, startLine, startColumn);
             case '{': return token(TokenKind.Lbrace, first, startLine, startColumn);
             case '}': return token(TokenKind.Rbrace, first, startLine, startColumn);
             case '(': return token(TokenKind.Lparen, first, startLine, startColumn);
@@ -412,14 +428,14 @@ public class Lexer {
             case '&':
                 if (peek() == '&') {
                     advance();
-                    return new Token(TokenKind.And, "&&", startLine, startColumn);
+                    return token(TokenKind.And, "&&", startLine, startColumn);
                 }
                 throw lexicalError("illegal logical operator '&', did you mean '&&'?",
                         startLine, startColumn);
             case '|':
                 if (peek() == '|') {
                     advance();
-                    return new Token(TokenKind.Or, "||", startLine, startColumn);
+                    return token(TokenKind.Or, "||", startLine, startColumn);
                 }
                 throw lexicalError("illegal logical operator '|', did you mean '||'?",
                         startLine, startColumn);
@@ -433,20 +449,25 @@ public class Lexer {
                                      char first, int startLine, int startColumn) {
         if (peek() == '=') {
             advance();
-            return new Token(pairKind, String.valueOf(first) + '=', startLine, startColumn);
+            return token(pairKind, String.valueOf(first) + '=', startLine, startColumn);
         }
         return token(singleKind, first, startLine, startColumn);
     }
 
     private Token token(TokenKind kind, char lexeme, int lineNumber, int columnNumber) {
-        return new Token(kind, String.valueOf(lexeme), lineNumber, columnNumber);
+        return token(kind, String.valueOf(lexeme), lineNumber, columnNumber);
+    }
+
+    private Token token(TokenKind kind, String lexeme, int startLine, int startColumn) {
+        return new Token(kind, lexeme, SourceSpan.of(
+                startLine, startColumn, line, column));
     }
 
     private Token nextToken() {
         skipTrivia();
 
         if (position >= source.length()) {
-            return new Token(TokenKind.EOF, "EOF", line, column);
+            return new Token(TokenKind.EOF, "EOF", SourceSpan.point(line, column));
         }
 
         int startLine = line;

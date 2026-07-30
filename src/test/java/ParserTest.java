@@ -197,7 +197,148 @@ public class ParserTest {
         assertTrue("应包含return语句", hasReturn);
     }
 
+    // ==================== 优先级层级测试 ====================
+
+    @Test
+    public void equalityBindsLooserThanRelational() throws IOException {
+        // a < b == c < d 必须解析为 (a<b) == (c<d)：相等运算符优先级低于关系运算符（同 C）。
+        // 拆层之前这个合法表达式会被解析成 ((a<b)==c)<d 并在语义层被拒。
+        Ast.Expr.Base condition = firstIfCondition(parseSource("EqualityPrecedence",
+                "class EqualityPrecedence {\n" +
+                "    void main() {\n" +
+                "        int a; int b; int c; int d;\n" +
+                "        a = 1; b = 2; c = 3; d = 4;\n" +
+                "        if (a < b == c < d) { printf(\"yes\\n\"); }\n" +
+                "    }\n" +
+                "}\n"));
+
+        assertTrue("根节点应为 EQ，实际为 " + condition.getClass().getSimpleName(),
+                condition instanceof Ast.Expr.EQ);
+        Ast.Expr.EQ equality = (Ast.Expr.EQ) condition;
+        assertTrue("左子树应为 LT", equality.getLeft() instanceof Ast.Expr.LT);
+        assertTrue("右子树应为 LT", equality.getRight() instanceof Ast.Expr.LT);
+    }
+
+    @Test
+    public void andBindsLooserThanEquality() throws IOException {
+        Ast.Expr.Base condition = firstIfCondition(parseSource("AndPrecedence",
+                "class AndPrecedence {\n" +
+                "    void main() {\n" +
+                "        int a; int b;\n" +
+                "        a = 1; b = 2;\n" +
+                "        if (a == 1 && b == 2) { printf(\"yes\\n\"); }\n" +
+                "    }\n" +
+                "}\n"));
+
+        assertTrue("根节点应为 And", condition instanceof Ast.Expr.And);
+        Ast.Expr.And and = (Ast.Expr.And) condition;
+        assertTrue(and.getLeft() instanceof Ast.Expr.EQ);
+        assertTrue(and.getRight() instanceof Ast.Expr.EQ);
+    }
+
+    // ==================== 复合赋值与自增测试 ====================
+
+    @Test
+    public void incrementDesugarsToAssignPlusOne() throws IOException {
+        // i++ 脱糖为 i = i + 1，所以后端与语义层不需要新增节点类型。
+        Ast.Stmt.Base stmt = firstStatementOfKind(parseSource("IncrementDesugar",
+                "class IncrementDesugar {\n" +
+                "    void main() { int i; i = 0; i++; }\n" +
+                "}\n"), 2);
+
+        assertTrue("应脱糖为 Assign", stmt instanceof Ast.Stmt.Assign);
+        Ast.Stmt.Assign assign = (Ast.Stmt.Assign) stmt;
+        assertEquals("i", assign.getId().getId());
+        assertTrue("右值应为 Add", assign.getExpr() instanceof Ast.Expr.Add);
+        Ast.Expr.Add add = (Ast.Expr.Add) assign.getExpr();
+        assertTrue(add.getLeft() instanceof Ast.Expr.Id);
+        assertTrue(add.getRight() instanceof Ast.Expr.IntLiteral);
+        assertEquals(Integer.valueOf(1), ((Ast.Expr.IntLiteral) add.getRight()).getValue());
+    }
+
+    @Test
+    public void compoundAssignmentDesugarsToBinaryOperation() throws IOException {
+        Ast.Stmt.Base stmt = firstStatementOfKind(parseSource("CompoundDesugar",
+                "class CompoundDesugar {\n" +
+                "    void main() { int k; k = 3; k *= 5; }\n" +
+                "}\n"), 2);
+
+        Ast.Stmt.Assign assign = (Ast.Stmt.Assign) stmt;
+        assertTrue("右值应为 Mul", assign.getExpr() instanceof Ast.Expr.Mul);
+        Ast.Expr.Mul mul = (Ast.Expr.Mul) assign.getExpr();
+        assertEquals("k", ((Ast.Expr.Id) mul.getLeft()).getId());
+    }
+
+    @Test
+    public void arrayElementCompoundAssignmentDoesNotShareTheIndexNode() throws IOException {
+        // 这是一条卫生性不变式，不是当前的 bug：共享下标节点目前不会造成可观察的错误。
+        // 但 AST 的 source span 是可变的，而 SemanticVisitor 用 IdentityHashMap 建立
+        // 源节点到类型化节点的映射，一旦有人依赖这两点，共享节点就会静默出错。
+        // 脱糖是唯一会凭空造出重复节点的地方，所以在这里把不变式钉住。
+        Ast.Stmt.Base stmt = firstStatementOfKind(parseSource("ArrayCompoundDesugar",
+                "class ArrayCompoundDesugar {\n" +
+                "    void main() { int a[3]; int i; i = 0; a[i] = 1; a[i] += 2; }\n" +
+                "}\n"), 4);
+
+        assertTrue(stmt instanceof Ast.Stmt.ArrayAssign);
+        Ast.Stmt.ArrayAssign arrayAssign = (Ast.Stmt.ArrayAssign) stmt;
+        Ast.Expr.Add add = (Ast.Expr.Add) arrayAssign.getExpr();
+        Ast.Expr.ArrayAccess read = (Ast.Expr.ArrayAccess) add.getLeft();
+        assertEquals("a", read.getArrayName());
+        assertNotSame("读回的下标不能与写入的下标共享同一个节点",
+                arrayAssign.getIndex(), read.getIndex());
+    }
+
+    @Test
+    public void rejectsCompoundAssignmentWithSideEffectingIndex() throws IOException {
+        try {
+            parseSource("SideEffectIndex",
+                    "class SideEffectIndex {\n" +
+                    "    int id(int x) { return x; }\n" +
+                    "    void main() { int a[3]; a[0] = 1; a[id(0)] += 1; }\n" +
+                    "}\n");
+            fail("下标含方法调用时应拒绝复合赋值");
+        } catch (RuntimeException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("下标会被求值两次"));
+        }
+    }
+
     // ==================== 辅助方法 ====================
+
+    private Ast.Stmt.Base firstStatementOfKind(Ast.Program.Base program, int index) {
+        Ast.MainClass.MainClassSingle mainClass = (Ast.MainClass.MainClassSingle)
+                ((Ast.Program.ProgramSingle) program).getMainClass();
+        for (Ast.Method.Base methodBase : mainClass.getMethods()) {
+            Ast.Method.MethodSingle method = (Ast.Method.MethodSingle) methodBase;
+            if ("main".equals(method.getId())) {
+                return method.getStms().get(index);
+            }
+        }
+        throw new AssertionError("main not found");
+    }
+
+    private Ast.Program.Base parseSource(String className, String source) throws IOException {
+        File directory = new File("test_tmp");
+        directory.mkdirs();
+        File file = new File(directory, className + ".lemon");
+        java.nio.file.Files.write(file.toPath(),
+                source.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        file.deleteOnExit();
+        return new Parser(new Lexer(file)).parse();
+    }
+
+    private Ast.Expr.Base firstIfCondition(Ast.Program.Base program) {
+        Ast.MainClass.MainClassSingle mainClass = (Ast.MainClass.MainClassSingle)
+                ((Ast.Program.ProgramSingle) program).getMainClass();
+        for (Ast.Method.Base methodBase : mainClass.getMethods()) {
+            for (Ast.Stmt.Base stmt : ((Ast.Method.MethodSingle) methodBase).getStms()) {
+                if (stmt instanceof Ast.Stmt.If) {
+                    return ((Ast.Stmt.If) stmt).getCondition();
+                }
+            }
+        }
+        throw new AssertionError("No if statement found");
+    }
 
     private Parser createParser(String filename) throws IOException {
         Lexer lexer = new Lexer(new File(filename));

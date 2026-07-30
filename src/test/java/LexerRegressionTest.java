@@ -132,6 +132,53 @@ public class LexerRegressionTest {
         assertLexError("020000000000", "integer literal out of range", 1, 1);
     }
 
+    @Test
+    public void scansIncrementDecrementAndCompoundAssignOperators() throws Exception {
+        Lexer lexer = lex("class T { void main() { a++; b--; c += 1; d -= 1; "
+                + "e *= 1; f /= 1; g %= 1; } }");
+
+        List<TokenKind> kinds = new ArrayList<TokenKind>();
+        for (Token token : lexer.getTokens()) {
+            kinds.add(token.getKind());
+        }
+        assertTrue(kinds.toString(), kinds.contains(TokenKind.Increment));
+        assertTrue(kinds.toString(), kinds.contains(TokenKind.Decrement));
+        assertTrue(kinds.toString(), kinds.contains(TokenKind.AddAssign));
+        assertTrue(kinds.toString(), kinds.contains(TokenKind.SubAssign));
+        assertTrue(kinds.toString(), kinds.contains(TokenKind.MulAssign));
+        assertTrue(kinds.toString(), kinds.contains(TokenKind.DivAssign));
+        assertTrue(kinds.toString(), kinds.contains(TokenKind.ModAssign));
+    }
+
+    @Test
+    public void separatedMinusSignsStayTwoSubtractionTokens() throws Exception {
+        // 最长匹配：'--' 成词，但 'a - -b' 中间有空白，必须仍是两个 Sub，
+        // 否则 a - -b 这种写法会被 '--' 吞掉。
+        Lexer lexer = lex("class T { void main() { c = a - -b; } }");
+
+        assertKinds(lexer.getTokens(),
+                TokenKind.Class, TokenKind.Id, TokenKind.Lbrace,
+                TokenKind.Void, TokenKind.Main, TokenKind.Lparen, TokenKind.Rparen,
+                TokenKind.Lbrace,
+                TokenKind.Id, TokenKind.Assign, TokenKind.Id, TokenKind.Sub, TokenKind.Sub,
+                TokenKind.Id, TokenKind.Semicolon,
+                TokenKind.Rbrace, TokenKind.Rbrace, TokenKind.EOF);
+    }
+
+    @Test
+    public void divisionAssignDoesNotSwallowComments() throws Exception {
+        // '/=' 与 '//'、'/*' 共享前缀，注释必须仍然先被 trivia 处理掉。
+        Lexer lexer = lex("class T { void main() { a /= 2; // c\n b = 1; /* x */ c = 2; } }");
+
+        List<TokenKind> kinds = new ArrayList<TokenKind>();
+        for (Token token : lexer.getTokens()) {
+            kinds.add(token.getKind());
+        }
+        assertTrue(kinds.toString(), kinds.contains(TokenKind.DivAssign));
+        assertEquals(1, java.util.Collections.frequency(kinds, TokenKind.DivAssign));
+        assertTrue(kinds.toString(), !kinds.contains(TokenKind.Div));
+    }
+
     private static Lexer lex(String source) throws Exception {
         File directory = new File("test_tmp");
         directory.mkdirs();

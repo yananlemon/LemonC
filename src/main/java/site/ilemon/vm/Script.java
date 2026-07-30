@@ -40,8 +40,11 @@ public class Script {
     /** 是否正在运行 */
     private boolean running;
 
+    /** 运行时栈容量上限；{@link #resetRuntimeState()} 会重建栈，所以配置存在 Script 上。 */
+    private int stackMaxSize = RuntimeStack.DEFAULT_MAX_STACK_SIZE;
+
     public Script() {
-        this.stack = new RuntimeStack();
+        this.stack = newStack();
         this.heap = new VmHeap();
         this.retVal = new Value();
         this.funcTableByName = new HashMap<String, VmFunction>();
@@ -52,11 +55,28 @@ public class Script {
     }
 
     public void resetRuntimeState() {
-        this.stack = new RuntimeStack();
+        this.stack = newStack();
         this.heap = new VmHeap();
         this.retVal = new Value();
         this.pc = 0;
         this.running = false;
+    }
+
+    private RuntimeStack newStack() {
+        int initial = Math.min(RuntimeStack.DEFAULT_STACK_SIZE, stackMaxSize);
+        return new RuntimeStack(initial, stackMaxSize);
+    }
+
+    public int getStackMaxSize() {
+        return stackMaxSize;
+    }
+
+    /** 设置运行时栈容量上限。下一次 {@link #resetRuntimeState()} 生效。 */
+    public void setStackMaxSize(int stackMaxSize) {
+        if (stackMaxSize <= 0) {
+            throw new VmException("栈容量上限必须为正数: " + stackMaxSize);
+        }
+        this.stackMaxSize = stackMaxSize;
     }
 
     // ---- 指令流 ----

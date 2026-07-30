@@ -1,5 +1,7 @@
 package site.ilemon.vm;
 
+import site.ilemon.source.SourceSpan;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +18,9 @@ public class Instruction {
 
     /** 操作数列表 */
     private final List<Value> operands;
+
+    /** 该指令对应的源码位置，用于运行时错误定位；未知时为 {@link SourceSpan#UNKNOWN}。 */
+    private SourceSpan sourceSpan = SourceSpan.UNKNOWN;
 
     public Instruction(Opcode opcode) {
         this.opcode = opcode;
@@ -37,6 +42,14 @@ public class Instruction {
 
     public int getOperandCount() {
         return operands.size();
+    }
+
+    public SourceSpan getSourceSpan() {
+        return sourceSpan;
+    }
+
+    public void setSourceSpan(SourceSpan sourceSpan) {
+        this.sourceSpan = sourceSpan == null ? SourceSpan.UNKNOWN : sourceSpan;
     }
 
     /**

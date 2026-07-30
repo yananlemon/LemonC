@@ -1,5 +1,6 @@
 package site.ilemon.ir;
 
+import site.ilemon.exception.CompilerException;
 import site.ilemon.vm.Instruction;
 import site.ilemon.vm.Opcode;
 import site.ilemon.vm.Script;
@@ -74,7 +75,7 @@ public class IrToVmTranslator {
                 labelToPc.put(labelKey(irFunc.getName(), block.getLabel()), instrStream.size());
 
                 for (IrInstruction instr : block.getInstructions()) {
-                    translateInstruction(instr, paramCount);
+                    translateInstruction(instr);
                 }
             }
         }
@@ -84,7 +85,7 @@ public class IrToVmTranslator {
         for (LabelFixup fixup : fixups) {
             String targetKey = labelKey(fixup.functionName, fixup.labelTarget);
             if (!labelToPc.containsKey(targetKey)) {
-                throw new RuntimeException("Unresolved label: " + fixup.labelTarget);
+                throw new CompilerException("Unresolved label: " + fixup.labelTarget);
             }
             int targetPc = labelToPc.get(targetKey);
             Instruction instr = instrStream.get(fixup.instrIndex);
@@ -142,7 +143,7 @@ public class IrToVmTranslator {
             case CONST_DOUBLE: return Value.ofDouble(val.getDoubleValue());
             case CONST_BOOL: return Value.ofInt(val.getBoolValue() ? 1 : 0);
             case CONST_STRING: return Value.ofString(val.getStringValue());
-            default: throw new RuntimeException("Unknown const kind: " + val.getKind());
+            default: throw new CompilerException("Unknown const kind: " + val.getKind());
         }
     }
 
@@ -153,7 +154,21 @@ public class IrToVmTranslator {
         return mapConst(val);
     }
 
-    private void translateInstruction(IrInstruction instr, int paramCount) {
+    /**
+     * 翻译一条 LemonIR 指令，并把它的源码位置盖到本次新产生的所有 VM 指令上。
+     *
+     * <p>在这里统一盖章，而不是在每个 {@code new Instruction(...)} 处逐个设置：
+     * 比较、二元运算、NOT、NEG、CALL 都会展开成多条 VM 指令，逐个设置容易漏。</p>
+     */
+    private void translateInstruction(IrInstruction instr) {
+        int firstIndex = instrStream.size();
+        translateInstructionInternal(instr);
+        for (int i = firstIndex; i < instrStream.size(); i++) {
+            instrStream.get(i).setSourceSpan(instr.getSourceSpan());
+        }
+    }
+
+    private void translateInstructionInternal(IrInstruction instr) {
         switch (instr.getOpcode()) {
             case MOV: {
                 Instruction m = new Instruction(Opcode.MOV);
@@ -238,7 +253,7 @@ public class IrToVmTranslator {
                 Instruction call = new Instruction(Opcode.CALL);
                 Integer fIndex = funcNameToIndex.get(instr.getFuncTarget());
                 if (fIndex == null) {
-                    throw new RuntimeException("Unknown function: " + instr.getFuncTarget());
+                    throw new CompilerException("Unknown function: " + instr.getFuncTarget());
                 }
                 call.getOperands().add(Value.ofFuncIndex(fIndex));
                 instrStream.add(call);
@@ -248,6 +263,18 @@ public class IrToVmTranslator {
                     mov.getOperands().add(Value.ofRetValRef());
                     instrStream.add(mov);
                 }
+                break;
+            }
+
+            case NEG: {
+                Instruction mov = new Instruction(Opcode.MOV);
+                mov.getOperands().add(mapVReg(instr.getResult().getId()));
+                mov.getOperands().add(mapConstOrVReg(instr.getOperands().get(0)));
+                instrStream.add(mov);
+
+                Instruction neg = new Instruction(Opcode.NEG);
+                neg.getOperands().add(mapVReg(instr.getResult().getId()));
+                instrStream.add(neg);
                 break;
             }
 

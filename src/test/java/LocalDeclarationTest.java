@@ -70,6 +70,58 @@ public class LocalDeclarationTest {
     }
 
     @Test
+    public void semanticAcceptsSameNameInDisjointSiblingBlocks() throws Exception {
+        // 兄弟块的作用域互不重叠，同名合法（C 和 Java 都允许），
+        // 而且两个块的类型可以不同——各自拿到独立的符号与槽位。
+        SemanticVisitor semantic = analyze("SiblingBlockScopes",
+                "class SiblingBlockScopes {\n" +
+                "    void main() {\n" +
+                "        { int v; v = 1; printf(\"%d\\n\", v); }\n" +
+                "        { double v; v = 2.5d; printf(\"%f\\n\", v); }\n" +
+                "        int v;\n" +
+                "        v = 3;\n" +
+                "        printf(\"%d\\n\", v);\n" +
+                "    }\n" +
+                "}\n");
+
+        assertTrue(semantic.getErrors().toString(), semantic.passOrNot());
+    }
+
+    @Test
+    public void duplicateDeclarationStillEntersScopeSoReferencesUseTheInnerSymbol() throws Exception {
+        // 重复声明只应报一次。重复的符号仍要写入当前作用域，否则块内的引用会解析到
+        // 外层的 int x，于是 x = 2.5d 会再报一次"不能将 double 赋值给 int"。
+        // 内外类型不同，正是用来区分"解析到哪个符号"的。
+        SemanticVisitor semantic = analyze("DuplicateNoCascade",
+                "class DuplicateNoCascade {\n" +
+                "    void main() {\n" +
+                "        int x;\n" +
+                "        x = 1;\n" +
+                "        printf(\"%d\\n\", x);\n" +
+                "        {\n" +
+                "            double x;\n" +
+                "            x = 2.5d;\n" +
+                "            printf(\"%f\\n\", x);\n" +
+                "        }\n" +
+                "    }\n" +
+                "}\n");
+
+        assertEquals(semantic.getErrors().toString(), 1, semantic.getErrors().size());
+        assertContains(semantic.getErrors(), "重复的变量 x");
+    }
+
+    @Test
+    public void semanticRejectsDuplicateParameterShadowedByLocal() throws Exception {
+        SemanticVisitor semantic = analyze("ParameterShadow",
+                "class ParameterShadow {\n" +
+                "    void main() { helper(1); }\n" +
+                "    void helper(int p) { int p; p = 2; }\n" +
+                "}\n");
+
+        assertContains(semantic.getErrors(), "重复的变量 p");
+    }
+
+    @Test
     public void semanticRejectsDuplicateLocalsAcrossNestedBlocks() throws Exception {
         Ast.Program.Base program = parse("DuplicateBlockLocal",
                 "class DuplicateBlockLocal { void main() { int x; { int x; } } }");

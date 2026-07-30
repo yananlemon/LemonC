@@ -3,8 +3,11 @@ package site.ilemon.visitor;
 import site.ilemon.ast.Ast;
 
 /**
- * 璇箟鍒嗘瀽璁块棶鑰呮帴鍙? * @author andy
+ * Legacy visitor for traversing the syntax-only source AST.
  *
+ * <p>The historical name is retained for compatibility with the direct JVM
+ * translator. Semantic analysis itself transforms source nodes into a
+ * separate Typed-AST and does not implement this interface.</p>
  */
 public interface ISemanticVisitor {
 
@@ -50,7 +53,6 @@ public interface ISemanticVisitor {
     default void visit(Ast.Type.Double obj) {}
     default void visit(Ast.Type.Str obj) {}
     default void visit(Ast.Type.Void obj) {}
-    default void visit(Ast.Type.Error obj) {}
     default void visit(Ast.Type.Int obj) {}
     default void visit(Ast.Type.IntArray obj) {}
     default void visit(Ast.Type.FloatArray obj) {}

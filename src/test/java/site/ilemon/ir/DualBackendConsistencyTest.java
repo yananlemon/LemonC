@@ -6,6 +6,7 @@ import site.ilemon.lexer.Lexer;
 import site.ilemon.optimizer.AstOptimizer;
 import site.ilemon.parser.Parser;
 import site.ilemon.semantic.SemanticVisitor;
+import site.ilemon.typedast.TypedAst;
 import site.ilemon.vm.LemonVm;
 import site.ilemon.vm.Script;
 
@@ -23,14 +24,13 @@ public class DualBackendConsistencyTest {
         Ast.Program.Base root = parser.parse();
 
         SemanticVisitor semanticVisitor = new SemanticVisitor();
-        root.accept(semanticVisitor);
+        semanticVisitor.visit(root);
         assertTrue("Semantic analysis should pass for " + testFile, semanticVisitor.passOrNot());
 
-        root = new AstOptimizer().optimize(root);
+        TypedAst.Program typedRoot = new AstOptimizer().optimize(semanticVisitor.getTypedProgram());
 
         AstToIrTranslator astToIr = new AstToIrTranslator();
-        root.accept(astToIr);
-        IrProgram irProgram = astToIr.getProgram();
+        IrProgram irProgram = astToIr.translate(typedRoot);
         IrVerifier.verify(irProgram);
 
         Script script = new IrToVmTranslator(irProgram).translate();

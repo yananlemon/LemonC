@@ -7,10 +7,13 @@ import site.ilemon.codegen.ast.Ast;
 import site.ilemon.codegen.ast.Label;
 import site.ilemon.lexer.IntegerLiterals;
 import site.ilemon.visitor.ISemanticVisitor;
+import site.ilemon.semantic.SemanticResult;
+import site.ilemon.typedast.TypedAst;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import site.ilemon.exception.CompilerException;
 
 /**
@@ -68,8 +71,10 @@ public class TranslatorVisitor implements ISemanticVisitor {
     public Ast.Program.ProgramSingle prog;
     private List<Ast.Stmt.T> stmts;
     private HashMap<String, List<Ast.Type.T>> methodFormalTypes;
+    private final SemanticResult semanticResult;
 
-    public TranslatorVisitor() {
+    public TranslatorVisitor(SemanticResult semanticResult) {
+        this.semanticResult = Objects.requireNonNull(semanticResult, "semanticResult");
         this.stmts = new ArrayList<Ast.Stmt.T>();
         this.classId = null;
         this.indexTable = null;
@@ -613,7 +618,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Expr.Call obj) {
-        this.visit(obj.getReturnType());
+        this.visit(inferredType(obj));
         Ast.Type.T returnType = this.type;
         List<Ast.Type.T> at = new ArrayList<>();
         List<Ast.Type.T> expectedTypes = this.methodFormalTypes.get(obj.getName());
@@ -634,7 +639,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
      * @param expr 参数
      */
     private void processExpression(Expr.Base expr) {
-        if( checkWhetherBoolExpression(expr) || ( expr instanceof Expr.Call && ((Expr.Call)expr).getReturnType() instanceof Type.Bool) ){
+        if( checkWhetherBoolExpression(expr) || (expr instanceof Expr.Call && inferredType(expr) instanceof Type.Bool) ){
             emitBooleanValue(expr);
         }else{
             this.visit(expr);
@@ -643,30 +648,35 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Stmt.Assign obj) {
-        int index = lookupIndex(obj.getId().getId());
+        Type.Base targetType = inferredType(obj.getId());
+        emitAssignment(obj.getId().getId(), targetType, obj.getExpr());
+    }
 
-        if( checkWhetherBoolExpression(obj.getExpr()) || ( obj.getExpr() instanceof Expr.Call && ((Expr.Call)obj.getExpr()).getReturnType() instanceof Type.Bool) ){
-            emitBooleanValue(obj.getExpr());
-        } else if (obj.getId().getType() instanceof Type.Double && (obj.getExpr() instanceof Expr.DoubleLiteral || obj.getExpr() instanceof Expr.FloatLiteral || obj.getExpr() instanceof Expr.IntLiteral)) {
+    private void emitAssignment(String targetName, Type.Base targetType, Expr.Base expression) {
+        int targetIndex = lookupIndex(targetName);
+        if (checkWhetherBoolExpression(expression)
+                || (expression instanceof Expr.Call && inferredType(expression) instanceof Type.Bool)) {
+            emitBooleanValue(expression);
+        } else if (targetType instanceof Type.Double && (expression instanceof Expr.DoubleLiteral
+                || expression instanceof Expr.FloatLiteral || expression instanceof Expr.IntLiteral)) {
             // 当float字面量赋值给double变量时，直接生成double常量
             String numStr = "0";
-            if (obj.getExpr() instanceof Expr.IntLiteral) numStr = String.valueOf(((Expr.IntLiteral)obj.getExpr()).getValue());
-            else if (obj.getExpr() instanceof Expr.FloatLiteral) numStr = ((Expr.FloatLiteral)obj.getExpr()).getRawValue();
-            else if (obj.getExpr() instanceof Expr.DoubleLiteral) numStr = ((Expr.DoubleLiteral)obj.getExpr()).getRawValue();
+            if (expression instanceof Expr.IntLiteral) numStr = String.valueOf(((Expr.IntLiteral) expression).getValue());
+            else if (expression instanceof Expr.FloatLiteral) numStr = ((Expr.FloatLiteral) expression).getRawValue();
+            else if (expression instanceof Expr.DoubleLiteral) numStr = ((Expr.DoubleLiteral) expression).getRawValue();
             emit(new Ast.Stmt.Ldc(java.lang.Double.parseDouble(numStr)));
             this.type = new Ast.Type.Double();
-        } else{
-            this.visit(obj.getExpr());
+        } else {
+            this.visit(expression);
         }
-        emitWideningConversion(toCodegenType(obj.getId().getType()));
+        emitWideningConversion(toCodegenType(targetType));
 
-        // 生成 xstore index
-        if (obj.getId().getType() instanceof Type.Int || obj.getId().getType() instanceof Type.Bool)
-            emit(new Ast.Stmt.Istore(index));
-        else if (obj.getId().getType() instanceof Type.Float)
-            emit(new Ast.Stmt.Fstore(index));
-        else if (obj.getId().getType() instanceof Type.Double) {
-            emit(new Ast.Stmt.Dstore(index));
+        if (targetType instanceof Type.Int || targetType instanceof Type.Bool)
+            emit(new Ast.Stmt.Istore(targetIndex));
+        else if (targetType instanceof Type.Float)
+            emit(new Ast.Stmt.Fstore(targetIndex));
+        else if (targetType instanceof Type.Double) {
+            emit(new Ast.Stmt.Dstore(targetIndex));
         }
     }
 
@@ -674,24 +684,25 @@ public class TranslatorVisitor implements ISemanticVisitor {
     @Override
     public void visit(Expr.Id obj) {
         int index = lookupIndex(obj.getId());
-        if (obj.getType() instanceof Type.Int) {
+        Type.Base inferred = inferredType(obj);
+        if (inferred instanceof Type.Int) {
             this.type = new Ast.Type.Int();
             emit(new Ast.Stmt.Iload(index));
-        } else if (obj.getType() instanceof Type.Float) {
+        } else if (inferred instanceof Type.Float) {
             this.type = new Ast.Type.Float();
             emit(new Ast.Stmt.Fload(index));
-        } else if (obj.getType() instanceof Type.Double) {
+        } else if (inferred instanceof Type.Double) {
             this.type = new Ast.Type.Double();
             emit(new Ast.Stmt.Dload(index));
-        } else if (obj.getType() instanceof Type.Str) {
+        } else if (inferred instanceof Type.Str) {
             this.type = new Ast.Type.Str();
             emit(new Ast.Stmt.Aload(index));
-        } else if (isSourceArrayType(obj.getType())) {
-            this.type = toCodegenType(obj.getType());
+        } else if (isSourceArrayType(inferred)) {
+            this.type = toCodegenType(inferred);
             emit(new Ast.Stmt.Aload(index));
         }
         // 如果ID是bool类型
-        else if( obj.getType() instanceof Type.Bool ){
+        else if( inferred instanceof Type.Bool ){
             emit(new Ast.Stmt.Iload(lookupIndex(obj.getId())));
             this.type = new Ast.Type.Bool();
         }
@@ -913,9 +924,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
             emit(new Ast.Stmt.Astore(lookupIndex(declaration.getId())));
         }
         if (obj.getInitializer() != null) {
-            visit(new Stmt.Assign(
-                    new Expr.Id(declaration.getId(), declaration.getType(), obj.getLineNum()),
-                    obj.getInitializer(), obj.getLineNum()));
+            emitAssignment(declaration.getId(), declaration.getType(), obj.getInitializer());
         }
     }
 
@@ -1009,7 +1018,8 @@ public class TranslatorVisitor implements ISemanticVisitor {
             this.type = new Ast.Type.Void();
             return;
         }
-        if ( checkWhetherBoolExpression(obj.getExpr()) ||  ( obj.getExpr() instanceof Expr.Call && ((Expr.Call)obj.getExpr()).getReturnType() instanceof Type.Bool)) {
+        if (checkWhetherBoolExpression(obj.getExpr())
+                || (obj.getExpr() instanceof Expr.Call && inferredType(obj.getExpr()) instanceof Type.Bool)) {
             emitBooleanValue(obj.getExpr());
         } else {
             this.visit(obj.getExpr());
@@ -1099,7 +1109,7 @@ public class TranslatorVisitor implements ISemanticVisitor {
 
     @Override
     public void visit(Stmt.Call obj) {
-        this.visit(obj.getReturnType());
+        this.visit(inferredCallReturnType(obj));
         Ast.Type.T returnType = this.type;
         List<Ast.Type.T> at = new ArrayList<>();
         List<Ast.Type.T> expectedTypes = this.methodFormalTypes.get(obj.getName());
@@ -1147,16 +1157,17 @@ public class TranslatorVisitor implements ISemanticVisitor {
         // 计算下标
         this.visit(obj.getIndex());
         // 根据元素类型生成对应的加载指令
-        if (obj.getElementType() instanceof Type.Int) {
+        Type.Base elementType = inferredType(obj);
+        if (elementType instanceof Type.Int) {
             emit(new Ast.Stmt.Iaload());
             this.type = new Ast.Type.Int();
-        } else if (obj.getElementType() instanceof Type.Float) {
+        } else if (elementType instanceof Type.Float) {
             emit(new Ast.Stmt.Faload());
             this.type = new Ast.Type.Float();
-        } else if (obj.getElementType() instanceof Type.Double) {
+        } else if (elementType instanceof Type.Double) {
             emit(new Ast.Stmt.Daload());
             this.type = new Ast.Type.Double();
-        } else if (obj.getElementType() instanceof Type.Bool) {
+        } else if (elementType instanceof Type.Bool) {
             emit(new Ast.Stmt.Baload());
             this.type = new Ast.Type.Int(); // bool在JVM中用int表示
         }
@@ -1180,16 +1191,54 @@ public class TranslatorVisitor implements ISemanticVisitor {
         // 计算值
         this.visit(obj.getExpr());
         // 根据数组元素类型生成存储指令
-        if (obj.getElementType() instanceof Type.Int) {
+        Type.Base elementType = inferredArrayElementType(obj);
+        if (elementType instanceof Type.Int) {
             emit(new Ast.Stmt.Iastore());
-        } else if (obj.getElementType() instanceof Type.Float) {
+        } else if (elementType instanceof Type.Float) {
             emitWideningConversion(new Ast.Type.Float());
             emit(new Ast.Stmt.Fastore());
-        } else if (obj.getElementType() instanceof Type.Double) {
+        } else if (elementType instanceof Type.Double) {
             emitWideningConversion(new Ast.Type.Double());
             emit(new Ast.Stmt.Dastore());
-        } else if (obj.getElementType() instanceof Type.Bool) {
+        } else if (elementType instanceof Type.Bool) {
             emit(new Ast.Stmt.Bastore());
+        }
+    }
+
+    private Type.Base inferredType(Expr.Base expression) {
+        return sourceType(semanticResult.getExpressionType(expression));
+    }
+
+    private Type.Base inferredCallReturnType(Stmt.Call call) {
+        TypedAst.Stmt typed = semanticResult.getTypedStatement(call);
+        if (!(typed instanceof TypedAst.CallStmt)) {
+            throw new CompilerException("Missing typed call metadata at line " + call.getLineNum());
+        }
+        return sourceType(((TypedAst.CallStmt) typed).getMethod().getReturnType());
+    }
+
+    private Type.Base inferredArrayElementType(Stmt.ArrayAssign assignment) {
+        TypedAst.Stmt typed = semanticResult.getTypedStatement(assignment);
+        if (!(typed instanceof TypedAst.ArrayAssign)) {
+            throw new CompilerException("Missing typed array assignment metadata at line "
+                    + assignment.getLineNum());
+        }
+        return sourceType(((TypedAst.ArrayAssign) typed).getArray().getType().elementType());
+    }
+
+    private Type.Base sourceType(TypedAst.Type typed) {
+        switch (typed.getKind()) {
+            case INT: return new Type.Int();
+            case FLOAT: return new Type.Float();
+            case DOUBLE: return new Type.Double();
+            case BOOL: return new Type.Bool();
+            case STRING: return new Type.Str();
+            case VOID: return new Type.Void();
+            case INT_ARRAY: return new Type.IntArray(typed.getArraySize());
+            case FLOAT_ARRAY: return new Type.FloatArray(typed.getArraySize());
+            case DOUBLE_ARRAY: return new Type.DoubleArray(typed.getArraySize());
+            case BOOL_ARRAY: return new Type.BoolArray(typed.getArraySize());
+            default: throw new CompilerException("Error type reached legacy JVM translator");
         }
     }
 }

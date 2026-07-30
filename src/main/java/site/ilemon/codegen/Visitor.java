@@ -24,6 +24,9 @@ public interface Visitor {
     void visit(Ast.Stmt.Imul s);
     void visit(Ast.Stmt.Idiv s);
     void visit(Ast.Stmt.Irem s);
+    void visit(Ast.Stmt.Ineg s);
+    void visit(Ast.Stmt.Fneg s);
+    void visit(Ast.Stmt.Dneg s);
     void visit(Ast.Stmt.Fadd s);
     void visit(Ast.Stmt.Fsub s);
     void visit(Ast.Stmt.Fmul s);

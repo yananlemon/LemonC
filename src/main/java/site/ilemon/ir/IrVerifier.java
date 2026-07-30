@@ -347,6 +347,9 @@ public final class IrVerifier {
             case MOD:
                 verifyIntBinary(instruction);
                 break;
+            case NEG:
+                verifyNumericUnary(instruction);
+                break;
             case I2F:
                 verifyCast(instruction, IrType.INT, IrType.FLOAT);
                 break;
@@ -430,7 +433,6 @@ public final class IrVerifier {
                 requireNoResult(instruction);
                 requireOperandCount(instruction, 0);
                 break;
-            case NEG:
             case INC:
             case DEC:
             case EXIT:
@@ -451,6 +453,17 @@ public final class IrVerifier {
         }
         requireType(instruction.getOperands().get(0), resultType, instruction);
         requireType(instruction.getOperands().get(1), resultType, instruction);
+        requireInstructionTypeIfPresent(instruction, resultType);
+    }
+
+    private void verifyNumericUnary(IrInstruction instruction) {
+        requireResult(instruction);
+        requireOperandCount(instruction, 1);
+        IrType resultType = typeOf(instruction.getResult());
+        if (!resultType.isNumeric()) {
+            fail(instruction, "numeric operation result must be numeric");
+        }
+        requireType(instruction.getOperands().get(0), resultType, instruction);
         requireInstructionTypeIfPresent(instruction, resultType);
     }
 
@@ -651,8 +664,11 @@ public final class IrVerifier {
     }
 
     private void fail(IrInstruction instruction, String message) {
+        String location = instruction.getSourceSpan().isKnown()
+                ? " at " + instruction.getSourceSpan() : "";
         throw new CompilerException("LemonIR verification failed in function "
-                + currentFunction.getName() + ": " + instruction.getOpcode() + ": " + message);
+                + currentFunction.getName() + ": " + instruction.getOpcode()
+                + location + ": " + message);
     }
 
     private void fail(String message) {

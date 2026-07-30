@@ -128,7 +128,7 @@ public class TranslatorVisitorTest {
     @Test
     public void testDoubleDispatchStmtAcceptExists() {
         // 验证语句节点的 accept 方法存在
-        Ast.Expr.Id id = new Ast.Expr.Id("x", new Ast.Type.Int(), 1);
+        Ast.Expr.Id id = new Ast.Expr.Id("x", 1);
         Ast.Expr.IntLiteral num = new Ast.Expr.IntLiteral(1, 1);
         Ast.Stmt.Assign assign = new Ast.Stmt.Assign(id, num, 1);
         
@@ -253,7 +253,7 @@ public class TranslatorVisitorTest {
         SemanticVisitor semantic = new SemanticVisitor();
         semantic.visit(prog);
         
-        TranslatorVisitor visitor = new TranslatorVisitor();
+        TranslatorVisitor visitor = new TranslatorVisitor(semantic.getResult());
         visitor.visit(prog);
         
         return visitor;

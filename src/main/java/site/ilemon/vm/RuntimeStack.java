@@ -28,14 +28,20 @@ package site.ilemon.vm;
  */
 public class RuntimeStack {
 
-    /** 默认栈大小 */
+    /** 初始容量。栈按需增长，所以这只影响首次扩容前的表现，不构成递归深度上限。 */
     public static final int DEFAULT_STACK_SIZE = 4096;
 
-    /** 栈元素数组 */
-    private final Value[] elements;
+    /**
+     * 默认容量上限。存在的意义是让无穷递归以一条干净的诊断结束，
+     * 而不是耗尽堆内存抛 OutOfMemoryError。
+     */
+    public static final int DEFAULT_MAX_STACK_SIZE = 1 << 20;
 
-    /** 栈大小 */
-    private final int size;
+    /** 栈元素数组，按需增长 */
+    private Value[] elements;
+
+    /** 容量上限 */
+    private final int maxSize;
 
     /** 栈顶索引（指向下一个空位） */
     private int topIndex;
@@ -44,18 +50,62 @@ public class RuntimeStack {
     private int frameIndex;
 
     public RuntimeStack() {
-        this(DEFAULT_STACK_SIZE);
+        this(DEFAULT_STACK_SIZE, DEFAULT_MAX_STACK_SIZE);
     }
 
+    /**
+     * 固定容量的栈：初始容量与上限都是 size，不会增长。
+     *
+     * <p>保持这个重载的原有含义——"这就是整个栈"。想要按需增长请用双参构造。</p>
+     */
     public RuntimeStack(int size) {
-        this.size = size;
-        this.elements = new Value[size];
+        this(size, size);
+    }
+
+    public RuntimeStack(int initialSize, int maxSize) {
+        if (initialSize <= 0) {
+            throw new VmException("栈初始容量必须为正数: " + initialSize);
+        }
+        if (maxSize < initialSize) {
+            throw new VmException("栈容量上限不能小于初始容量: max=" + maxSize
+                    + ", initial=" + initialSize);
+        }
+        this.maxSize = maxSize;
+        this.elements = new Value[initialSize];
         this.topIndex = 0;
         this.frameIndex = 0;
         // 初始化所有元素为 NULL
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < initialSize; i++) {
             elements[i] = new Value();
         }
+    }
+
+    /**
+     * 确保容量至少为 required，不足则倍增扩容。
+     *
+     * <p>所有寻址都是相对 frameIndex 的负索引或绝对正索引，扩容只是把数组变长，
+     * 不改变任何已有索引的含义，因此拷贝扩容是安全的。</p>
+     */
+    private void ensureCapacity(int required) {
+        if (required <= elements.length) {
+            return;
+        }
+        if (required > maxSize) {
+            throw new VmException(String.format(
+                    "栈溢出：需要 %d 个槽位，已达容量上限 %d。"
+                    + "常见原因是无穷递归；确认递归有终止条件，"
+                    + "或用 --vm-stack-size 提高上限", required, maxSize));
+        }
+        int newLength = elements.length;
+        while (newLength < required) {
+            newLength = newLength > maxSize / 2 ? maxSize : newLength * 2;
+        }
+        Value[] grown = new Value[newLength];
+        System.arraycopy(elements, 0, grown, 0, elements.length);
+        for (int i = elements.length; i < newLength; i++) {
+            grown[i] = new Value();
+        }
+        this.elements = grown;
     }
 
     // ---- 索引解析 ----
@@ -98,9 +148,7 @@ public class RuntimeStack {
      * 参考 XVM 的 Push()。
      */
     public void push(Value val) {
-        if (topIndex >= size) {
-            throw new VmException("栈溢出: topIndex=" + topIndex + ", size=" + size);
-        }
+        ensureCapacity(topIndex + 1);
         elements[topIndex].copyFrom(val);
         topIndex++;
     }
@@ -128,9 +176,7 @@ public class RuntimeStack {
     public void pushFrame(int frameSize) {
         int oldTopIndex = topIndex;
         int newTopIndex = topIndex + frameSize;
-        if (newTopIndex > size) {
-            throw new VmException("栈溢出（压入栈帧）: topIndex=" + newTopIndex + ", size=" + size);
-        }
+        ensureCapacity(newTopIndex);
         topIndex = newTopIndex;
         for (int i = oldTopIndex; i < topIndex; i++) {
             elements[i] = new Value();
@@ -161,14 +207,17 @@ public class RuntimeStack {
     public int getTopIndex() { return topIndex; }
     public int getFrameIndex() { return frameIndex; }
     public void setFrameIndex(int frameIndex) { this.frameIndex = frameIndex; }
-    public int getSize() { return size; }
+    /** 当前容量（会随扩容变化）。 */
+    public int getSize() { return elements.length; }
+    /** 容量上限。 */
+    public int getMaxSize() { return maxSize; }
 
     // ---- 工具方法 ----
 
     private void checkBounds(int absIndex) {
-        if (absIndex < 0 || absIndex >= size) {
+        if (absIndex < 0 || absIndex >= elements.length) {
             throw new VmException("栈索引越界: absIndex=" + absIndex
-                    + ", frameIndex=" + frameIndex + ", size=" + size);
+                    + ", frameIndex=" + frameIndex + ", size=" + elements.length);
         }
     }
 

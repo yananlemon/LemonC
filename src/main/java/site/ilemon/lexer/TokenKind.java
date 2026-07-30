@@ -32,6 +32,17 @@ public enum TokenKind {
     Div,
     Mod,
 
+    /***自增自减****/
+    Increment,      // ++
+    Decrement,      // --
+
+    /***复合赋值****/
+    AddAssign,      // +=
+    SubAssign,      // -=
+    MulAssign,      // *=
+    DivAssign,      // /=
+    ModAssign,      // %=
+
     /***比较运算符****/
     LT,         // <
     GT,         // >

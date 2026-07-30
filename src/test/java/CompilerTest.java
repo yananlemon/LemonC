@@ -10,6 +10,7 @@ import site.ilemon.lexer.Lexer;
 import site.ilemon.optimizer.AstOptimizer;
 import site.ilemon.parser.Parser;
 import site.ilemon.semantic.SemanticVisitor;
+import site.ilemon.typedast.TypedAst;
 
 import java.io.File;
 import java.io.IOException;
@@ -198,11 +199,14 @@ public class CompilerTest {
                         + "arr[4] = 5\n");
     }
     @Test public void testArrayTest02() throws IOException {
+        // double 数组元素与 double 变量必须得到同一个值：曾经 darr[0] = 10.01 走
+        // "先舍入成 float 再 F2D" 得到 10.010000228881836，而 double d = 10.01
+        // 走赋值路径得到 10.01。同一个字面量因语法位置不同而取值不同。
         compileAndVerify("ArrayTest02",
                 "Float array: 0\n"
                         + "1.1 2.2 3.3 \n"
                         + "Double array: 0\n"
-                        + "10.010000228881836 20.020000457763672 30.030000686645508 \n");
+                        + "10.01 20.02 30.03 \n");
     }
 
     @Test public void testArrayLengthTest() throws IOException {
@@ -330,10 +334,9 @@ public class CompilerTest {
         assertTrue("语义分析应通过: " + name, semantic.passOrNot());
 
         // 4. IR 翻译
-        program = new AstOptimizer().optimize(program);
+        TypedAst.Program typedProgram = new AstOptimizer().optimize(semantic.getTypedProgram());
         AstToIrTranslator astToIr = new AstToIrTranslator();
-        program.accept(astToIr);
-        IrProgram irProgram = astToIr.getProgram();
+        IrProgram irProgram = astToIr.translate(typedProgram);
         assertNotNull("LemonIR 程序不应为 null", irProgram);
         assertNotNull("LemonIR 主类不应为 null", irProgram.getClassName());
         site.ilemon.codegen.ast.Ast.Program.ProgramSingle jvmProgram =

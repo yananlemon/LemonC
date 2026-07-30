@@ -19,8 +19,11 @@ import site.ilemon.parser.Parser;
 import site.ilemon.parser.ParseDiagnostic;
 import site.ilemon.parser.ParseResult;
 import site.ilemon.semantic.SemanticVisitor;
+import site.ilemon.typedast.TypedAst;
 import site.ilemon.vm.LemonVm;
+import site.ilemon.vm.RuntimeStack;
 import site.ilemon.vm.Script;
+import site.ilemon.vm.VmException;
 import site.ilemon.vm.VmFunction;
 
 import java.io.File;
@@ -47,6 +50,11 @@ public class LemonC {
             CompilerOptions options = CompilerOptions.parse(args, err);
             if (options == null) {
                 usage(err);
+                return 1;
+            }
+            if (options.target != Target.VM
+                    && (options.instructionLimit != null || options.stackMaxSize != null)) {
+                err.println("error: --vm-instruction-limit and --vm-stack-size require --target vm or --run-vm");
                 return 1;
             }
             if (!options.sourcePath.endsWith(".lemon")) {
@@ -83,7 +91,7 @@ public class LemonC {
             Ast.Program.Base program = parseResult.getProgram();
 
             SemanticVisitor semantic = SemanticVisitor.collecting();
-            semantic.visit(program);
+            TypedAst.Program typedProgram = semantic.analyze(program).getProgram();
             if (!semantic.passOrNot()) {
                 err.println("compile failed: semantic analysis has errors");
                 printSemanticDiagnostics(semantic, lexer, err);
@@ -91,13 +99,13 @@ public class LemonC {
             }
             if (options.dumpAst) {
                 out.println("== AST ==");
-                out.print(AstPrinter.print(program));
+                out.print(AstPrinter.print(typedProgram));
             }
 
-            Ast.Program.Base optimizedProgram = new AstOptimizer().optimize(program);
+            TypedAst.Program optimizedProgram = new AstOptimizer().optimize(typedProgram);
             IrProgram irProgram = buildLemonIr(optimizedProgram);
             if (options.target == Target.VM) {
-                return runVmBackend(irProgram, options, out);
+                return runVmBackend(irProgram, options, out, err);
             }
 
             if (options.dumpIr) {
@@ -126,10 +134,9 @@ public class LemonC {
         }
     }
 
-    private static IrProgram buildLemonIr(Ast.Program.Base optimizedProgram) {
+    private static IrProgram buildLemonIr(TypedAst.Program optimizedProgram) {
         AstToIrTranslator astToIr = new AstToIrTranslator();
-        optimizedProgram.accept(astToIr);
-        IrProgram irProgram = astToIr.getProgram();
+        IrProgram irProgram = astToIr.translate(optimizedProgram);
         IrVerifier.verify(irProgram);
         return irProgram;
     }
@@ -158,7 +165,8 @@ public class LemonC {
         err.println('^');
     }
 
-    private static int runVmBackend(IrProgram irProgram, CompilerOptions options, PrintStream out) {
+    private static int runVmBackend(IrProgram irProgram, CompilerOptions options,
+                                    PrintStream out, PrintStream err) {
         if (options.dumpIr) {
             out.println("== LemonIR ==");
             out.print(formatLemonIr(irProgram));
@@ -166,6 +174,9 @@ public class LemonC {
 
         IrToVmTranslator irToVm = new IrToVmTranslator(irProgram);
         Script script = irToVm.translate();
+        if (options.stackMaxSize != null) {
+            script.setStackMaxSize(options.stackMaxSize.intValue());
+        }
 
         if (options.dumpVmBytecode) {
             out.println("== LemonVM Bytecode ==");
@@ -175,8 +186,22 @@ public class LemonC {
         if (options.pipeline) {
             out.println("== LemonVM Output ==");
         }
-        out.print(new LemonVm(script).run());
-        return 0;
+
+        LemonVm vm = new LemonVm(script);
+        if (options.instructionLimit != null) {
+            vm.setInstructionLimit(options.instructionLimit.longValue());
+        }
+        try {
+            out.print(vm.run());
+            return 0;
+        } catch (VmException e) {
+            // JVM 后端是直接写 stdout 的，出错前的输出天然可见；
+            // VM 后端把输出攒在缓冲区里，所以这里要先把它吐出来，两个后端才表现一致。
+            out.print(vm.getOutput());
+            out.flush();
+            err.println("runtime error: " + e.getDiagnostic());
+            return 1;
+        }
     }
 
     private static String formatLemonIr(IrProgram program) {
@@ -250,7 +275,14 @@ public class LemonC {
     }
 
     private static void usage(PrintStream err) {
-        err.println("usage: java -jar LemonC.jar <source.lemon> [--pipeline] [--target jvm|vm] [--run-vm] [--dump-tokens] [--dump-ast] [--dump-ir] [--dump-vm-bytecode] [--verbose]");
+        err.println("usage: java -jar LemonC.jar <source.lemon> [--pipeline] [--target jvm|vm] [--run-vm]");
+        err.println("       [--dump-tokens] [--dump-ast] [--dump-ir] [--dump-vm-bytecode] [--verbose]");
+        err.println("       [--vm-instruction-limit N] [--vm-stack-size N]");
+        err.println();
+        err.println("  --vm-instruction-limit N  LemonVM 指令执行上限，0 表示不限制（默认 "
+                + LemonVm.DEFAULT_INSTRUCTION_LIMIT + "）");
+        err.println("  --vm-stack-size N         LemonVM 运行时栈容量上限（槽位数，默认 "
+                + RuntimeStack.DEFAULT_MAX_STACK_SIZE + "）");
     }
 
     private enum Target {
@@ -268,6 +300,8 @@ public class LemonC {
         private boolean runVm;
         private boolean pipeline;
         private boolean verbose;
+        private Long instructionLimit;
+        private Integer stackMaxSize;
 
         private CompilerOptions(String sourcePath) {
             this.sourcePath = sourcePath;
@@ -313,6 +347,30 @@ public class LemonC {
                     }
                 } else if ("--verbose".equals(args[i])) {
                     options.verbose = true;
+                } else if ("--vm-instruction-limit".equals(args[i])) {
+                    if (i + 1 >= args.length) {
+                        err.println("error: --vm-instruction-limit requires a number (0 = unlimited)");
+                        return null;
+                    }
+                    Long limit = parseLong(args[++i], "--vm-instruction-limit", err);
+                    if (limit == null) {
+                        return null;
+                    }
+                    options.instructionLimit = limit;
+                } else if ("--vm-stack-size".equals(args[i])) {
+                    if (i + 1 >= args.length) {
+                        err.println("error: --vm-stack-size requires a positive number of slots");
+                        return null;
+                    }
+                    Long size = parseLong(args[++i], "--vm-stack-size", err);
+                    if (size == null) {
+                        return null;
+                    }
+                    if (size.longValue() <= 0 || size.longValue() > Integer.MAX_VALUE) {
+                        err.println("error: --vm-stack-size must be between 1 and " + Integer.MAX_VALUE);
+                        return null;
+                    }
+                    options.stackMaxSize = Integer.valueOf(size.intValue());
                 } else {
                     err.println("error: unknown option - " + args[i]);
                     return null;
@@ -326,6 +384,15 @@ public class LemonC {
                 return null;
             }
             return options;
+        }
+
+        private static Long parseLong(String value, String option, PrintStream err) {
+            try {
+                return Long.valueOf(Long.parseLong(value.trim()));
+            } catch (NumberFormatException e) {
+                err.println("error: " + option + " expects an integer, got: " + value);
+                return null;
+            }
         }
 
         private static Target parseTarget(String value, PrintStream err) {

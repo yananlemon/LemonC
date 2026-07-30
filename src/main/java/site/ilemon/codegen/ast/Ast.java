@@ -243,6 +243,18 @@ public Label l;
             public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
 }
 
+        public static class Ineg extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+}
+
+        public static class Fneg extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+}
+
+        public static class Dneg extends T {
+            public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }
+}
+
 
         public static class Fadd extends T {
             public void accept(site.ilemon.codegen.Visitor v) { v.visit(this); }

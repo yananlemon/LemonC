@@ -93,6 +93,11 @@ public class IrToJvmTranslator {
             case MOD:
                 translateBinary(instruction);
                 break;
+            case NEG:
+                loadValue(instruction.getOperands().get(0));
+                emitNeg(typeOf(instruction.getResult()));
+                storeVReg(instruction.getResult());
+                break;
             case I2F:
                 loadValue(instruction.getOperands().get(0));
                 emit(new Ast.Stmt.I2f());
@@ -387,6 +392,12 @@ public class IrToJvmTranslator {
         if (type == IrType.FLOAT) emit(new Ast.Stmt.Fdiv());
         else if (type == IrType.DOUBLE) emit(new Ast.Stmt.Ddiv());
         else emit(new Ast.Stmt.Idiv());
+    }
+
+    private void emitNeg(IrType type) {
+        if (type == IrType.FLOAT) emit(new Ast.Stmt.Fneg());
+        else if (type == IrType.DOUBLE) emit(new Ast.Stmt.Dneg());
+        else emit(new Ast.Stmt.Ineg());
     }
 
     private void emitArrayLoad(IrType elementType) {

@@ -65,6 +65,24 @@ public class ParseRecoveryTest {
     }
 
     @Test
+    public void chainedRelationalOperatorsReportExactlyOneDiagnostic() throws Exception {
+        // 关系运算符非结合。诊断在本地恢复（按左结合吃掉链的剩余部分），
+        // 不交给恐慌模式同步，所以不应产生连带错误。
+        ParseResult result = parseCollecting("ChainedRelational",
+                "class ChainedRelational {\n" +
+                "    void main() {\n" +
+                "        int a; int b; int c;\n" +
+                "        a = 1; b = 2; c = 3;\n" +
+                "        if (a < b < c) { printf(\"yes\\n\"); }\n" +
+                "    }\n" +
+                "}\n");
+
+        assertEquals(result.getDiagnostics().toString(), 1, result.getDiagnostics().size());
+        assertContains(result.getDiagnostics(), "关系运算符不可连用");
+        assertDiagnosticsHaveLocations(result.getDiagnostics());
+    }
+
+    @Test
     public void cliPrintsAllSyntaxErrorsAndSkipsLaterPhases() throws Exception {
         File file = writeSource("CliParseRecovery",
                 "class CliParseRecovery {\n" +

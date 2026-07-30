@@ -10,6 +10,7 @@ import site.ilemon.lexer.Lexer;
 import site.ilemon.optimizer.AstOptimizer;
 import site.ilemon.parser.Parser;
 import site.ilemon.semantic.SemanticVisitor;
+import site.ilemon.typedast.TypedAst;
 import site.ilemon.vm.LemonVm;
 import site.ilemon.vm.Script;
 
@@ -120,6 +121,216 @@ public class BackendEquivalenceTest {
     }
 
     @Test
+    public void workloadsPastTheOldVmLimitsMatchAcrossBackends() throws Exception {
+        // 两个规模都刻意越过旧的 VM 硬上限：
+        //   循环 200000 次 ≈ 120 万条指令 > 旧的 1_000_000 指令上限
+        //   递归深度 2000 > 旧的 4096 槽位栈能承受的约 600 层
+        // 在修复之前，JVM 后端能跑完而 VM 后端直接失败——"双后端等价"名不副实。
+        File sourceFile = writeSource("VmLimitsIntegration",
+                "class VmLimitsIntegration {\n" +
+                "    int rec(int n) {\n" +
+                "        if (n <= 0) { return 0; }\n" +
+                "        return rec(n - 1) + 1;\n" +
+                "    }\n" +
+                "    void main() {\n" +
+                "        int i;\n" +
+                "        int sum;\n" +
+                "        sum = 0;\n" +
+                "        for (i = 0; i < 200000; i++) {\n" +
+                "            sum += 1;\n" +
+                "        }\n" +
+                "        printf(\"%d %d\\n\", sum, rec(2000));\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("200000 2000\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void incrementAndCompoundAssignmentMatchAcrossBackends() throws Exception {
+        // ++/--/op= 在解析阶段按 a = a op b 脱糖，因此后端无需任何改动；
+        // 这里验证脱糖出来的语义在两个后端上都正确。
+        File sourceFile = writeSource("CompoundAssignIntegration",
+                "class CompoundAssignIntegration {\n" +
+                "    void main() {\n" +
+                "        int i; int s; int k; int a[4];\n" +
+                "        s = 0;\n" +
+                "        for (i = 0; i < 4; i++) { a[i] = i; }\n" +
+                "        for (i = 0; i < 4; i++) { a[i] *= 10; }\n" +
+                "        for (i = 0; i < 4; i++) { s += a[i]; }\n" +
+                "        k = 3;\n" +
+                "        k -= 1;\n" +
+                "        k *= 5;\n" +
+                "        k /= 2;\n" +
+                "        k %= 4;\n" +
+                "        a[2]++;\n" +
+                "        i--;\n" +
+                "        printf(\"%d %d %d %d\\n\", s, k, a[2], i);\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("60 1 21 3\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void compoundAssignmentOnFloatingTargetMatchesAcrossBackends() throws Exception {
+        File sourceFile = writeSource("CompoundWideningIntegration",
+                "class CompoundWideningIntegration {\n" +
+                "    void main() {\n" +
+                "        double d;\n" +
+                "        float f;\n" +
+                "        d = 1.0d;\n" +
+                "        f = 2.0;\n" +
+                "        d += 2;\n" +
+                "        f *= 3;\n" +
+                "        printf(\"%f %f\\n\", d, f);\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("3.0 6.0\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void siblingBlockScopesGetDistinctSlotsAcrossBackends() throws Exception {
+        // 三个兄弟块复用同一个名字且类型不同（含占两个 JVM 槽位的 double），
+        // 每个声明必须拿到独立的 vreg 与槽位。
+        File sourceFile = writeSource("SiblingScopeIntegration",
+                "class SiblingScopeIntegration {\n" +
+                "    void main() {\n" +
+                "        { int v; v = 10; printf(\"%d\\n\", v); }\n" +
+                "        { double v; v = 2.5d; printf(\"%f\\n\", v); }\n" +
+                "        { int v; v = 30; printf(\"%d\\n\", v); }\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("10\n2.5\n30\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void runtimeNegationPreservesSignedZeroAcrossBackends() throws Exception {
+        // 取负的操作数是变量而非字面量，所以常量折叠不会介入，走的是 LemonIR 的 NEG 路径。
+        File sourceFile = writeSource("RuntimeNegationIntegration",
+                "class RuntimeNegationIntegration {\n" +
+                "    void main() {\n" +
+                "        float fz;\n" +
+                "        double dz;\n" +
+                "        int i;\n" +
+                "        fz = 0.0;\n" +
+                "        dz = 0.0d;\n" +
+                "        i = 7;\n" +
+                "        printf(\"%f %f %d\\n\", -fz, -dz, -i);\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("-0.0 -0.0 -7\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void aDecimalLiteralHasTheSameValueInEverySyntacticPosition() throws Exception {
+        // 同一个字面量 0.1 出现在赋值、二元表达式、数组元素、实参、返回值、比较六个位置，
+        // 都必须取到同一个 double 值。修复前赋值路径按十进制原文materialize（0.1），
+        // 而其余路径先舍入成 float 再 F2D（0.10000000149011612）。
+        File sourceFile = writeSource("LiteralPositionIntegration",
+                "class LiteralPositionIntegration {\n" +
+                "    double identity(double v) { return v; }\n" +
+                "    double literal() { return 0.1; }\n" +
+                "    void main() {\n" +
+                "        double assigned;\n" +
+                "        double viaExpression;\n" +
+                "        double element[1];\n" +
+                "        assigned = 0.1;\n" +
+                "        viaExpression = 0.0d + 0.1;\n" +
+                "        element[0] = 0.1;\n" +
+                "        printf(\"%f %f %f %f %f\\n\",\n" +
+                "               assigned, viaExpression, element[0], identity(0.1), literal());\n" +
+                "        if (assigned == 0.1) { printf(\"cmp=yes\\n\"); } else { printf(\"cmp=no\\n\"); }\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("0.1 0.1 0.1 0.1 0.1\ncmp=yes\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void widePrecisionLiteralsKeepAllTheirDigitsInADoubleContext() throws Exception {
+        // 反向守卫：不能为了"一致"而把赋值路径也改成先过 float——那会让
+        // double a = 3.14159265358979 静默变成 3.1415927410125732。
+        File sourceFile = writeSource("WideLiteralIntegration",
+                "class WideLiteralIntegration {\n" +
+                "    void main() {\n" +
+                "        double pi;\n" +
+                "        double viaExpression;\n" +
+                "        pi = 3.14159265358979;\n" +
+                "        viaExpression = 0.0d + 3.14159265358979;\n" +
+                "        printf(\"%f %f\\n\", pi, viaExpression);\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("3.14159265358979 3.14159265358979\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
+    public void mixedPrecisionConstantComparisonsMatchRuntimeAcrossBackends() throws Exception {
+        // 折叠后的常量比较必须和未折叠的变量比较得到同样的结果。
+        File sourceFile = writeSource("MixedPrecisionCompareIntegration",
+                "class MixedPrecisionCompareIntegration {\n" +
+                "    void main() {\n" +
+                "        float f;\n" +
+                "        int i;\n" +
+                "        f = 16777216.0;\n" +
+                "        i = 16777217;\n" +
+                "        report(16777217 > 16777216.0);\n" +
+                "        report(i > f);\n" +
+                "        report(16777217 > 16777216.0d);\n" +
+                "    }\n" +
+                "    void report(bool value) {\n" +
+                "        if (value) { printf(\"true\\n\"); } else { printf(\"false\\n\"); }\n" +
+                "    }\n" +
+                "}\n");
+
+        IrProgram irProgram = compileToLemonIr(sourceFile);
+        String vmOutput = normalize(runVm(irProgram));
+        String jvmOutput = normalize(runJvm(irProgram));
+
+        assertEquals("false\nfalse\ntrue\n", vmOutput);
+        assertEquals(vmOutput, jvmOutput);
+    }
+
+    @Test
     public void hexadecimalAndOctalLiteralsMatchAcrossBackends() throws Exception {
         File sourceFile = writeSource("RadixIntegration",
                 "class RadixIntegration {\n" +
@@ -167,10 +378,9 @@ public class BackendEquivalenceTest {
         semantic.visit(program);
         assertTrue("Semantic analysis should pass for " + sourceFile.getName(), semantic.passOrNot());
 
-        program = new AstOptimizer().optimize(program);
+        TypedAst.Program typedProgram = new AstOptimizer().optimize(semantic.getTypedProgram());
         AstToIrTranslator astToIr = new AstToIrTranslator();
-        program.accept(astToIr);
-        return astToIr.getProgram();
+        return astToIr.translate(typedProgram);
     }
 
     private File writeSource(String className, String source) throws Exception {

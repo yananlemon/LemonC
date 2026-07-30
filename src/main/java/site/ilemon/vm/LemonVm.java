@@ -20,11 +20,20 @@ public class LemonVm {
     /** 是否启用调试模式 */
     private boolean debugMode;
 
-    /** 已执行的指令数（防止无限循环） */
-    private int instructionCount;
+    /** 已执行的指令数 */
+    private long instructionCount;
 
-    /** 最大指令执行数量（防止无限循环） */
-    private static final int MAX_INSTRUCTIONS = 1_000_000;
+    /**
+     * 默认指令执行上限。
+     *
+     * <p>这个上限不是语言语义的一部分——JVM 后端没有对应的限制，所以任何有限值都会
+     * 让两个后端在足够长的程序上出现分歧。保留一个很高的默认值只为一个目的：
+     * 让无穷循环在自动化环境里以失败结束而不是永久挂起。需要严格等价时设为 0。</p>
+     */
+    public static final long DEFAULT_INSTRUCTION_LIMIT = 100_000_000L;
+
+    /** 指令执行上限；{@code <= 0} 表示不限制。 */
+    private long instructionLimit = DEFAULT_INSTRUCTION_LIMIT;
 
     public LemonVm(Script script) {
         this.script = script;
@@ -35,6 +44,30 @@ public class LemonVm {
 
     public void setDebugMode(boolean debugMode) {
         this.debugMode = debugMode;
+    }
+
+    /** 设置指令执行上限；传入 0 或负数表示不限制。 */
+    public void setInstructionLimit(long instructionLimit) {
+        this.instructionLimit = instructionLimit;
+    }
+
+    public long getInstructionLimit() {
+        return instructionLimit;
+    }
+
+    public long getInstructionCount() {
+        return instructionCount;
+    }
+
+    /**
+     * 迄今为止产生的输出。
+     *
+     * <p>运行时出错时 {@link #run()} 会抛异常而不返回，调用方需要用这个方法取回
+     * 出错前已经产生的输出——JVM 后端是直接写 stdout 的，出错前的输出天然可见，
+     * VM 后端要靠它才能表现一致。</p>
+     */
+    public String getOutput() {
+        return output.toString();
     }
 
     /**
@@ -89,67 +122,30 @@ public class LemonVm {
      */
     private void executeLoop() {
         while (script.isRunning()) {
-            // 防止无限循环
-            if (instructionCount++ > MAX_INSTRUCTIONS) {
-                throw new VmException("超出最大指令执行次数: " + MAX_INSTRUCTIONS);
-            }
-
             int pcBefore = script.getPc();
             Instruction instr = script.getCurrentInstr();
+
+            instructionCount++;
+            if (instructionLimit > 0 && instructionCount > instructionLimit) {
+                VmException limitExceeded = new VmException(String.format(
+                        "超出指令执行上限 %d 条。常见原因是循环没有终止条件；"
+                        + "如果程序本身就需要执行更多指令，"
+                        + "用 --vm-instruction-limit 提高上限（0 表示不限制）",
+                        instructionLimit));
+                // 标上停在哪里——这通常直接指向那个跑飞的循环。
+                limitExceeded.locate(describeLocation(pcBefore, instr));
+                throw limitExceeded;
+            }
 
             if (debugMode) {
                 printDebugStep(pcBefore, instr);
             }
 
-            // 指令分派
-            switch (instr.getOpcode()) {
-                // ---- 数据移动 ----
-                case MOV:   executeMov(instr);   break;
-
-                // ---- 算术运算 ----
-                case ADD:   executeBinaryArith(instr, Opcode.ADD); break;
-                case SUB:   executeBinaryArith(instr, Opcode.SUB); break;
-                case MUL:   executeBinaryArith(instr, Opcode.MUL); break;
-                case DIV:   executeBinaryArith(instr, Opcode.DIV); break;
-                case MOD:   executeBinaryArith(instr, Opcode.MOD); break;
-                case NEG:   executeNeg(instr);   break;
-                case INC:   executeInc(instr);   break;
-                case DEC:   executeDec(instr);   break;
-                case I2F:   executeConvert(instr, Opcode.I2F); break;
-                case I2D:   executeConvert(instr, Opcode.I2D); break;
-                case F2D:   executeConvert(instr, Opcode.F2D); break;
-
-                // ---- 逻辑运算 ----
-                case NOT:   executeNot(instr);   break;
-
-                // ---- 条件跳转 ----
-                case JMP:   executeJmp(instr);   break;
-                case JE:    executeConditionalJump(instr, Opcode.JE);  break;
-                case JNE:   executeConditionalJump(instr, Opcode.JNE); break;
-                case JG:    executeConditionalJump(instr, Opcode.JG);  break;
-                case JL:    executeConditionalJump(instr, Opcode.JL);  break;
-                case JGE:   executeConditionalJump(instr, Opcode.JGE); break;
-                case JLE:   executeConditionalJump(instr, Opcode.JLE); break;
-
-                // ---- 栈操作与函数调用 ----
-                case PUSH:  executePush(instr);  break;
-                case POP:   executePop(instr);   break;
-                case CALL:  executeCall(instr);  break;
-                case RET:   executeRet();        break;
-
-                // ---- 数组操作 ----
-                case NEW_ARR: executeNewArr(instr); break;
-                case ARR_GET: executeArrGet(instr); break;
-                case ARR_SET: executeArrSet(instr); break;
-                case ARR_LEN: executeArrLen(instr); break;
-
-                // ---- I/O 与控制 ----
-                case PRINT:    executePrint(instr);   break;
-                case PRINT_NL: executePrintNL();      break;
-                case EXIT:     script.setRunning(false); break;
-
-                default:
-                    throw new VmException("未知的操作码: " + instr.getOpcode());
+            try {
+                dispatch(instr);
+            } catch (VmException e) {
+                e.locate(describeLocation(pcBefore, instr));
+                throw e;
             }
 
             // 如果指令没有修改 PC（不是跳转/调用/返回），则自动递增
@@ -159,6 +155,73 @@ public class LemonVm {
             }
         }
     }
+
+    /** 把"发生了什么"补成"在哪里发生的"。 */
+    private String describeLocation(int pc, Instruction instr) {
+        StringBuilder location = new StringBuilder();
+        if (instr.getSourceSpan().isKnown()) {
+            location.append("行 ").append(instr.getSourceSpan().getStartLine())
+                    .append(", 列 ").append(instr.getSourceSpan().getStartColumn());
+        } else {
+            location.append("PC=").append(pc);
+        }
+        location.append("（指令 ").append(instr.getOpcode().getMnemonic())
+                .append("，PC=").append(pc).append("）");
+        return location.toString();
+    }
+
+    private void dispatch(Instruction instr) {
+        // 指令分派
+        switch (instr.getOpcode()) {
+            // ---- 数据移动 ----
+            case MOV:   executeMov(instr);   break;
+
+            // ---- 算术运算 ----
+            case ADD:   executeBinaryArith(instr, Opcode.ADD); break;
+            case SUB:   executeBinaryArith(instr, Opcode.SUB); break;
+            case MUL:   executeBinaryArith(instr, Opcode.MUL); break;
+            case DIV:   executeBinaryArith(instr, Opcode.DIV); break;
+            case MOD:   executeBinaryArith(instr, Opcode.MOD); break;
+            case NEG:   executeNeg(instr);   break;
+            case INC:   executeInc(instr);   break;
+            case DEC:   executeDec(instr);   break;
+            case I2F:   executeConvert(instr, Opcode.I2F); break;
+            case I2D:   executeConvert(instr, Opcode.I2D); break;
+            case F2D:   executeConvert(instr, Opcode.F2D); break;
+
+            // ---- 逻辑运算 ----
+            case NOT:   executeNot(instr);   break;
+
+            // ---- 条件跳转 ----
+            case JMP:   executeJmp(instr);   break;
+            case JE:    executeConditionalJump(instr, Opcode.JE);  break;
+            case JNE:   executeConditionalJump(instr, Opcode.JNE); break;
+            case JG:    executeConditionalJump(instr, Opcode.JG);  break;
+            case JL:    executeConditionalJump(instr, Opcode.JL);  break;
+            case JGE:   executeConditionalJump(instr, Opcode.JGE); break;
+            case JLE:   executeConditionalJump(instr, Opcode.JLE); break;
+
+            // ---- 栈操作与函数调用 ----
+            case PUSH:  executePush(instr);  break;
+            case POP:   executePop(instr);   break;
+            case CALL:  executeCall(instr);  break;
+            case RET:   executeRet();        break;
+
+            // ---- 数组操作 ----
+            case NEW_ARR: executeNewArr(instr); break;
+            case ARR_GET: executeArrGet(instr); break;
+            case ARR_SET: executeArrSet(instr); break;
+            case ARR_LEN: executeArrLen(instr); break;
+
+            // ---- I/O 与控制 ----
+            case PRINT:    executePrint(instr);   break;
+            case PRINT_NL: executePrintNL();      break;
+            case EXIT:     script.setRunning(false); break;
+
+            default:
+                throw new VmException("未知的操作码: " + instr.getOpcode());
+        }
+}
 
     // ========================================
     // 操作数解析 — 参考 XVM 的 ResolveOpValue / ResolveOpPntr

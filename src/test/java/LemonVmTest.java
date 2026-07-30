@@ -83,6 +83,99 @@ public class LemonVmTest {
         assertEquals("ok", vm.run());
     }
 
+    // =====================================================================
+    // 资源上限
+    // =====================================================================
+
+    @Test
+    public void stackGrowsBeyondInitialCapacity() {
+        // 初始容量只影响首次扩容前的表现，不构成深度上限。
+        RuntimeStack stack = new RuntimeStack(4, 4096);
+        for (int i = 0; i < 1000; i++) {
+            stack.push(Value.ofInt(i));
+        }
+
+        assertTrue("容量应已增长到 1000 以上，实际 " + stack.getSize(), stack.getSize() >= 1000);
+        assertEquals(999, stack.getValue(999).intValue);
+        assertEquals(0, stack.getValue(0).intValue);
+    }
+
+    @Test
+    public void stackOverflowAtMaxCapacityIsActionable() {
+        RuntimeStack stack = new RuntimeStack(4, 16);
+        try {
+            for (int i = 0; i < 100; i++) {
+                stack.push(Value.ofInt(i));
+            }
+            fail("超过容量上限应抛 VmException");
+        } catch (VmException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("栈溢出"));
+            assertTrue("诊断应给出可操作的建议: " + e.getMessage(),
+                    e.getMessage().contains("--vm-stack-size"));
+        }
+    }
+
+    @Test
+    public void instructionLimitIsConfigurableAndCanBeDisabled() {
+        // 无穷循环。注意不能用"Jmp 跳到自身"：VM 的约定是"指令没改 PC 就自动递增"，
+        // 自跳转执行后 PC 与执行前相同，会被当成没跳而递增，反而跳出循环。
+        Instruction[] forever = {
+                instr(Opcode.MOV, sref(-1), imm(0)),
+                instr(Opcode.JMP, jmp(0))
+        };
+
+        Script script = new Script();
+        script.setInstrStream(forever);
+        script.setFuncTable(new VmFunction[]{new VmFunction("main", 0, 0, 1)});
+        script.setMainFuncName("main");
+
+        LemonVm limited = new LemonVm(script);
+        limited.setInstructionLimit(500);
+        try {
+            limited.run();
+            fail("应触发指令上限");
+        } catch (VmException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("超出指令执行上限 500"));
+            assertTrue("诊断应给出可操作的建议: " + e.getMessage(),
+                    e.getMessage().contains("--vm-instruction-limit"));
+            assertTrue("上限异常也应带位置", e.hasLocation());
+        }
+        assertEquals(501, limited.getInstructionCount());
+    }
+
+    @Test
+    public void defaultInstructionLimitLeavesRoomForLongRunningPrograms() {
+        // 旧上限是 1_000_000，一个合法的长循环会被它误杀。
+        assertTrue("默认上限应远高于百万级",
+                LemonVm.DEFAULT_INSTRUCTION_LIMIT > 10_000_000L);
+    }
+
+    @Test
+    public void outputProducedBeforeAFaultIsRetrievable() {
+        // JVM 后端直接写 stdout，出错前的输出天然可见；
+        // VM 后端攒在缓冲区里，必须能取回，否则两个后端表现不一致。
+        Instruction[] printThenDivideByZero = {
+                instr(Opcode.PRINT, imms("before")),
+                instr(Opcode.MOV, sref(-1), imm(10)),
+                instr(Opcode.DIV, sref(-1), imm(0)),
+                instr(Opcode.RET)
+        };
+
+        Script script = new Script();
+        script.setInstrStream(printThenDivideByZero);
+        script.setFuncTable(new VmFunction[]{new VmFunction("main", 0, 0, 1)});
+        script.setMainFuncName("main");
+
+        LemonVm vm = new LemonVm(script);
+        try {
+            vm.run();
+            fail("应抛除零错误");
+        } catch (VmException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("除零"));
+        }
+        assertEquals("before", vm.getOutput());
+    }
+
     @Test
     public void testFrameSlotsAreClearedWhenFrameIsReused() {
         RuntimeStack stack = new RuntimeStack(8);

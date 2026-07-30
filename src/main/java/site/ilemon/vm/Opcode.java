@@ -8,7 +8,7 @@ package site.ilemon.vm;
  * - 二地址格式（Dest = Dest op Source）
  * - 比较+跳转合一（Je/Jg/Jl 等将比较和跳转合为一条指令）
  *
- * 共 28 条指令。
+ * 共 31 条指令。
  */
 public enum Opcode {
 
@@ -16,7 +16,7 @@ public enum Opcode {
     /** Mov Dest, Source — 将 Source 的值复制到 Dest */
     MOV(0, "Mov", 2),
 
-    // ---- 算术运算 (7) ----
+    // ---- 算术运算 (8) ----
     /** Add Dest, Source — Dest = Dest + Source */
     ADD(1, "Add", 2),
     /** Sub Dest, Source — Dest = Dest - Source */
@@ -81,6 +81,8 @@ public enum Opcode {
     PRINT_NL(26, "PrintNL", 0),
     /** Exit — 终止 VM 执行 */
     EXIT(27, "Exit", 0),
+
+    // ---- 数值转换 (3) ----
     I2F(28, "I2f", 2),
     I2D(29, "I2d", 2),
     F2D(30, "F2d", 2);
