@@ -1,5 +1,12 @@
 # LemonC 编译器 — 编译原理多维度评分报告
 
+> [!CAUTION]
+> **历史快照，不代表当前实现。** 本文记录了 `LexerState` 仍存在、82 个示例等旧状态，
+> 原评分和链接不再作为现状依据。当前代码已完成 Source AST / Typed-AST 分离和
+> 系统化 `ErrorType` 和完整 SourceSpan；当前基线见
+> [`../docs/DOCUMENTATION_INDEX.md`](../docs/DOCUMENTATION_INDEX.md)。当前评审见
+> [`../docs/LEMONC_FULL_REVIEW.md`](../docs/LEMONC_FULL_REVIEW.md)。
+
 ## 总分：83 / 100
 
 ---

@@ -1,6 +1,36 @@
 # LemonIR 与 LemonVM 设计方案
 
-> 当前状态说明：本文是 LemonIR 与 LemonVM 的设计路线文档。当前源码已经实现了 typed LemonIR、IR verifier、JVM 后端 lowering、LemonVM bytecode lowering、LemonVM runtime 和双后端一致性测试。当前实现边界请以 `docs/ARCHITECTURE.md` 和源码为准。
+> [!IMPORTANT]
+> 本文是 LemonIR 与 LemonVM 在实现前形成的**历史设计方案**。第 1 节以后保留了当时的
+> “现有架构”和“后续计划”措辞，用于对照设计与落地结果，不应当作当前状态。
+> 当前实现边界以 [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) 和源码为准。
+
+## 当前落地状态（2026-07-28）
+
+```text
+source
+  -> Lexer -> Parser -> syntax-only Ast
+  -> SemanticVisitor -> SemanticResult + immutable TypedAst
+  -> AstOptimizer -> AstToIrTranslator -> typed LemonIR
+  -> IrVerifier
+  -> IrToJvmTranslator -> Jasmin -> .class
+  -> IrToVmTranslator -> Script -> LemonVm
+```
+
+| 设计项 | 当前状态 |
+|---|---|
+| Source AST / Typed-AST 分离 | 已完成 |
+| Token 到 LemonIR 的 end-exclusive SourceSpan | 已完成 |
+| 类型化三地址码与基本块 | 已完成 |
+| IR 结构、类型、CFG、可达性和定义验证 | 已完成 |
+| JVM/Jasmin lowering | 已完成 |
+| LemonVM 字节码、运行时栈、调用栈和数组堆 | 已完成 |
+| 双后端输出一致性测试 | 已完成 |
+| CLI 的 JVM、VM、pipeline 与 dump 模式 | 已完成 |
+| SSA 与通用 IR 优化 | 尚未实现 |
+
+当前 `Opcode` 枚举有 31 条 VM 指令。本文后续若出现不同的类型名、指令数或“计划新增”
+表述，均属于原始方案，不覆盖上述现状。
 
 ## 1. 设计目标
 

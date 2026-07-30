@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="260" viewBox="0 0 1120 260" role="img" aria-labelledby="title desc">
   <title id="title">LemonC compiler pipeline</title>
-  <desc id="desc">Lemon source flows through lexer, parser, semantic analysis, AST optimizer, JVM IR, Jasmin, class file, and JVM output.</desc>
+  <desc id="desc">Lemon source flows through lexer, parser, source AST, semantic Typed-AST construction, optimization, verified LemonIR, and JVM or LemonVM execution.</desc>
   <defs>
     <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
       <stop offset="0" stop-color="#f8fbff"/>
@@ -11,7 +11,7 @@
     </filter>
   </defs>
   <rect width="1120" height="260" rx="18" fill="url(#bg)"/>
-  <text x="40" y="52" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">LemonC: source code to real JVM execution</text>
+  <text x="40" y="52" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">LemonC: source code to dual-backend execution</text>
   <text x="40" y="82" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#526070">A compact teaching compiler with visible stages and end-to-end runtime checks.</text>
   <g font-family="Segoe UI, Arial, sans-serif" font-size="14" text-anchor="middle">
     <g filter="url(#shadow)">
@@ -27,27 +27,27 @@
     <g filter="url(#shadow)">
       <rect x="338" y="122" width="118" height="72" rx="10" fill="#ffffff" stroke="#d6e4f0"/>
       <text x="397" y="152" font-weight="700" fill="#172033">Parser</text>
-      <text x="397" y="174" fill="#607080">AST</text>
+      <text x="397" y="174" fill="#607080">source AST</text>
     </g>
     <g filter="url(#shadow)">
       <rect x="488" y="122" width="118" height="72" rx="10" fill="#ffffff" stroke="#d6e4f0"/>
       <text x="547" y="152" font-weight="700" fill="#172033">Semantic</text>
-      <text x="547" y="174" fill="#607080">types</text>
+      <text x="547" y="174" fill="#607080">Typed-AST</text>
     </g>
     <g filter="url(#shadow)">
       <rect x="638" y="122" width="118" height="72" rx="10" fill="#ffffff" stroke="#d6e4f0"/>
       <text x="697" y="152" font-weight="700" fill="#172033">Optimizer</text>
-      <text x="697" y="174" fill="#607080">folding</text>
+      <text x="697" y="174" fill="#607080">Typed-AST</text>
     </g>
     <g filter="url(#shadow)">
       <rect x="788" y="122" width="118" height="72" rx="10" fill="#ffffff" stroke="#d6e4f0"/>
-      <text x="847" y="152" font-weight="700" fill="#172033">JVM IR</text>
-      <text x="847" y="174" fill="#607080">backpatch</text>
+      <text x="847" y="152" font-weight="700" fill="#172033">LemonIR</text>
+      <text x="847" y="174" fill="#607080">verified TAC</text>
     </g>
     <g filter="url(#shadow)">
       <rect x="938" y="122" width="142" height="72" rx="10" fill="#172033" stroke="#172033"/>
-      <text x="1009" y="152" font-weight="700" fill="#ffffff">.class</text>
-      <text x="1009" y="174" fill="#cbd5e1">JVM output</text>
+      <text x="1009" y="152" font-weight="700" fill="#ffffff">JVM + VM</text>
+      <text x="1009" y="174" fill="#cbd5e1">dual backends</text>
     </g>
   </g>
   <g stroke="#9fb4c8" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -65,10 +65,10 @@
     <path d="M928 151l8 7-8 7"/>
   </g>
   <g font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#526070">
-    <text x="40" y="226">168 tests passing</text>
-    <text x="188" y="226">82 examples</text>
+    <text x="40" y="226">dual-backend regression</text>
+    <text x="188" y="226">golden outputs</text>
     <text x="310" y="226">Java 8+</text>
-    <text x="410" y="226">JVM bytecode target</text>
-    <text x="590" y="226">MIT License</text>
+    <text x="410" y="226">JVM + LemonVM</text>
+    <text x="590" y="226">Apache-2.0</text>
   </g>
 </svg>

@@ -1,6 +1,11 @@
 # LemonC 编译器评价报告
 
-> 当前状态说明：本文是历史评价材料，部分“不支持”列表已经落后于当前源码。当前 LemonC 已支持 `for`、`break`、`continue`、`%`、多行注释、下划线标识符、typed LemonIR、LemonVM 后端和双后端一致性测试。当前事实请以 `docs/ARCHITECTURE.md`、`docs/LEMONC_FEATURES.md` 和源码为准。
+> [!CAUTION]
+> **历史评价材料，不代表当前实现。** 本文包含旧 lexer、旧语义表、82 示例 /
+> 253 测试等已失效描述，保留它们只为记录演进。当前基线是 Source AST /
+> Typed-AST 分离、系统化 `ErrorType`、完整 SourceSpan、typed LemonIR 和双后端；
+> 当前基线见 [`../docs/DOCUMENTATION_INDEX.md`](../docs/DOCUMENTATION_INDEX.md)。请以 [`../docs/LEMONC_FULL_REVIEW.md`](../docs/LEMONC_FULL_REVIEW.md)、
+> [`../docs/LEMONC_FEATURES.md`](../docs/LEMONC_FEATURES.md) 和源码为准。
 
 ## 一、项目概述
 

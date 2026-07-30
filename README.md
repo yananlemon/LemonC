@@ -1,24 +1,26 @@
 # LemonC
 
+[![CI](https://github.com/yananlemon/LemonC/actions/workflows/ci.yml/badge.svg)](https://github.com/yananlemon/LemonC/actions/workflows/ci.yml)
+
 **LemonC is a teaching-oriented C-like compiler written in Java.**
 
-It compiles Lemon source code through lexical analysis, recursive descent parsing, semantic analysis, AST optimization, typed LemonIR, and dual backends for JVM bytecode and LemonVM execution.
+It compiles Lemon source code through lexical analysis, recursive descent parsing, Typed-AST construction and optimization, typed LemonIR, and dual backends for JVM bytecode and LemonVM execution.
 
 LemonC 是一个面向编译原理教学与实践的小型 C-like 编译器。它不是只停留在 AST 或三地址码展示层，而是把 `.lemon` 源程序降低到类型化 LemonIR，再分别生成 JVM 字节码或 LemonVM 字节码，并用双后端输出一致性做端到端回归验证。
 
 ```text
-Java 8+ | Maven | LemonIR | JVM + LemonVM | 281 tests passing | 82 examples | MIT License
+Java 8+ | Maven | LemonIR | JVM + LemonVM | 349 tests passing | 86 examples | Apache-2.0
 ```
 
 ## Why LemonC
 
 | What you get | Why it matters |
 |---|---|
-| Complete compiler pipeline | Lexer, parser, semantic analyzer, optimizer, LemonIR, JVM backend, LemonVM backend |
+| Complete compiler pipeline | Lexer, parser, semantic analyzer, Typed-AST optimizer, LemonIR, JVM backend, LemonVM backend |
 | Real backend execution | Examples compile to `.class` for JVM and to LemonVM bytecode for the custom VM |
-| Classic compiler theory | Recursive descent parsing, Visitor-based semantic analysis, backpatching, stack-machine codegen |
-| Teaching-friendly visibility | CLI can dump tokens, AST, LemonIR, and LemonVM bytecode |
-| Regression confidence | 82 example programs are checked against real JVM and LemonVM stdout |
+| Classic compiler theory | Recursive descent parsing, syntax-to-Typed-AST analysis, backpatching, stack-machine codegen |
+| Teaching-friendly visibility | CLI can dump tokens, Typed-AST, LemonIR, and LemonVM bytecode |
+| Regression confidence | 86 example programs are checked against real JVM and LemonVM stdout |
 | Small enough to read | A compact codebase for students who want to understand a whole compiler |
 
 ## At A Glance
@@ -58,7 +60,7 @@ mvn clean package
 java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar \
   examples/OptimizationTest.lemon --dump-tokens --dump-ast --dump-ir
 
-java OptimizationTest
+java -cp target/lemonc OptimizationTest
 ```
 
 Real JVM output:
@@ -74,8 +76,9 @@ The same example also demonstrates constant folding, algebraic simplification, b
 | Category | Features |
 |---|---|
 | Types | `int`, `float`, `double`, `bool`, `void` |
-| Arrays | `int[]`, `float[]`, `double[]`, indexed access, indexed assignment, `.length` |
+| Arrays | `int[]`, `float[]`, `double[]`, `bool[]`, array parameters, indexed access/assignment, `.length` |
 | Arithmetic | `+`, `-`, `*`, `/`, `%`, unary `-` |
+| Assignment | `=`, compound `+=`, `-=`, `*=`, `/=`, `%=`, postfix `++`, `--` (statement form) |
 | Numeric widening | `int -> float`, `int -> double`, `float -> double` |
 | Comparison | `>`, `<`, `>=`, `<=`, `==`, `!=` |
 | Boolean logic | `true`, `false`, `!`, `&&`, `||`, short-circuit control flow |
@@ -83,7 +86,7 @@ The same example also demonstrates constant folding, algebraic simplification, b
 | Methods | parameters, return values, `void` methods, recursive calls, expression calls |
 | Output | `printf`, `printLine`, `%d`, `%f`, `\n`, `\t` |
 | Optimization | constant folding, boolean folding, algebraic simplification, constant branch simplification |
-| Diagnostics | parse and semantic exceptions with source line context |
+| Diagnostics | end-exclusive source spans from tokens through LemonIR, plus structured compiler error types |
 
 For the complete feature list with source code and real outputs, read [docs/LEMONC_FEATURES.md](docs/LEMONC_FEATURES.md).
 
@@ -92,13 +95,15 @@ For the complete feature list with source code and real outputs, read [docs/LEMO
 ```mermaid
 flowchart TB
     subgraph Frontend
-        L["site.ilemon.lexer<br/>DFA lexer"]
+        L["site.ilemon.lexer<br/>hand-written scanner"]
         P["site.ilemon.parser<br/>recursive descent parser"]
+        A["site.ilemon.ast<br/>syntax-only source AST"]
         S["site.ilemon.semantic<br/>symbol table and type checking"]
+        T["site.ilemon.typedast<br/>immutable Typed-AST"]
     end
 
     subgraph MiddleEnd
-        O["site.ilemon.optimizer<br/>AST optimizer"]
+        O["site.ilemon.optimizer<br/>Typed-AST optimizer"]
         IR["site.ilemon.ir<br/>typed LemonIR + verifier"]
     end
 
@@ -110,7 +115,7 @@ flowchart TB
         VM["site.ilemon.vm<br/>LemonVM interpreter"]
     end
 
-    L --> P --> S --> O --> IR
+    L --> P --> A --> S --> T --> O --> IR
     IR --> JIR --> B --> J
     IR --> VIR --> VM
 ```
@@ -119,9 +124,10 @@ flowchart TB
 |---|---|---|
 | `site.ilemon.lexer` | `Lexer`, `Token`, `TokenKind` | Tokenize Lemon source code |
 | `site.ilemon.parser` | `Parser` | Build frontend AST with recursive descent parsing |
-| `site.ilemon.ast` | `Ast` | Define source-level expressions, statements, types, methods, and programs |
-| `site.ilemon.semantic` | `SemanticVisitor`, `MethodVarTable`, `Symbol` | Type checking, declaration checks, assignment checks, return checks |
-| `site.ilemon.optimizer` | `AstOptimizer` | Perform safe AST-level simplifications |
+| `site.ilemon.ast` | `Ast` | Define syntax-only source expressions, statements, declarations, and programs |
+| `site.ilemon.semantic` | `SemanticVisitor`, `SemanticResult` | Resolve symbols and types while transforming source AST into Typed-AST |
+| `site.ilemon.typedast` | `TypedAst` | Define immutable typed nodes, resolved symbols, and semantic `ErrorType` |
+| `site.ilemon.optimizer` | `AstOptimizer` | Perform safe Typed-AST simplifications |
 | `site.ilemon.ir` | `AstToIrTranslator`, `IrVerifier`, `IrToJvmTranslator`, `IrToVmTranslator` | Define typed LemonIR and lower it to JVM or LemonVM backends |
 | `site.ilemon.codegen` | `ByteCodeGenerator`, `TranslatorVisitor` | Write Jasmin assembly; `TranslatorVisitor` is the older direct AST-to-JVM path kept for tests/reference |
 | `site.ilemon.codegen.ast` | `Ast`, `Label` | Define backend JVM instruction-level IR |
@@ -129,6 +135,8 @@ flowchart TB
 | `site.ilemon.compiler` | `LemonC`, `AstPrinter`, `IrPrinter` | CLI entrypoint and teaching-friendly dumps |
 
 For the current implementation boundaries, read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The [documentation index](docs/DOCUMENTATION_INDEX.md) distinguishes current references from
+historical review snapshots and design proposals.
 
 ## Backpatching In Action
 
@@ -177,7 +185,7 @@ This makes the project useful for students studying syntax-directed translation 
 Every root example under [examples](examples) is compiled and executed by [AllExamplesJvmTest.java](src/test/java/AllExamplesJvmTest.java) and [AllExamplesVmTest.java](src/test/java/AllExamplesVmTest.java). Additional equivalence tests compare JVM and LemonVM output through the shared LemonIR pipeline.
 
 <p align="center">
-  <img src="./docs/assets/lemonc-test-loop.png" alt="LemonC end-to-end JVM regression loop" width="100%">
+  <img src="./docs/assets/lemonc-test-loop.svg" alt="LemonC dual-backend regression loop" width="100%">
 </p>
 
 Run the suite:
@@ -189,8 +197,8 @@ mvn clean test
 Current coverage:
 
 ```text
-Tests run: 281, Failures: 0, Errors: 0, Skipped: 0
-82 root examples verified by real JVM execution and LemonVM execution
+Tests run: 349, Failures: 0, Errors: 0, Skipped: 0
+86 root examples verified by real JVM execution and LemonVM execution
 ```
 
 ## More Real Examples
@@ -266,7 +274,7 @@ Compile and run a Lemon program:
 
 ```bash
 java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/Fib.lemon
-java Fib
+java -cp target/lemonc Fib
 ```
 
 Inspect compiler stages:
@@ -274,6 +282,24 @@ Inspect compiler stages:
 ```bash
 java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar \
   examples/ModTest.lemon --dump-tokens --dump-ast --dump-ir
+```
+
+### LemonVM resource limits
+
+LemonVM bounds runaway programs so they fail instead of hanging. Neither limit is part of
+the language semantics — the JVM backend has no counterpart — and both are adjustable:
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `--vm-instruction-limit N` | `100000000` (~2s); `0` disables | Turns an infinite loop into a fast, located failure |
+| `--vm-stack-size N` | `1048576` slots | Bounds runaway recursion; the stack grows on demand from 4096 slots |
+
+Strict backend equivalence on arbitrarily long programs requires `--vm-instruction-limit 0`.
+
+Runtime faults report the source location and preserve output produced before the fault:
+
+```text
+runtime error: 行 7, 列 24（指令 Div，PC=3）: 除零错误
 ```
 
 ## Lemon Language In One Page
@@ -314,30 +340,33 @@ class Demo {
 
 ```bnf
 <program>       ::= "class" <id> "{" <method>* "}"
-<method>        ::= <type> <id> "(" <params>? ")" "{" <varDecl>* <stmt>* "}"
-                  | "void" "main" "(" ")" "{" <varDecl>* <stmt>* "}"
-<params>        ::= <type> <id> ("," <type> <id>)*
-<varDecl>       ::= <type> <id> ";"
-                  | <type> <id> "[" <integer> "]" ";"
-<type>          ::= "int" | "float" | "double" | "bool" | "void"
+<method>        ::= <returnType> <name> "(" <params>? ")" "{" <blockItem>* "}"
+<returnType>    ::= <type> | "void"
+<params>        ::= <param> ("," <param>)*
+<param>         ::= <type> <id> ("[" "]")?
+<blockItem>     ::= <varDecl> | <stmt>
+<varDecl>       ::= <type> <id> ("=" <expr> | "[" <integer> "]")? ";"
+<type>          ::= "int" | "float" | "double" | "bool"
 <stmt>          ::= <id> "=" <expr> ";"
                   | <id> "[" <expr> "]" "=" <expr> ";"
                   | <id> "(" <args>? ")" ";"
                   | "if" "(" <expr> ")" <stmt> ("else" <stmt>)?
                   | "while" "(" <expr> ")" <stmt>
-                  | "for" "(" <forInit> ";" <expr> ";" <forUpdate> ")" <stmt>
+                  | "for" "(" <forClause>? ";" <expr>? ";" <forClause>? ")" <stmt>
                   | "break" ";"
                   | "continue" ";"
-                  | "{" <stmt>* "}"
-                  | "return" <expr> ";"
+                  | "{" <blockItem>* "}"
+                  | "return" <expr>? ";"
                   | "printf" "(" <string> ("," <expr>)* ")" ";"
+                  | "printLine" "(" ")" ";"
 <expr>          ::= <andExpr> ("||" <andExpr>)*
 <andExpr>       ::= <relExpr> ("&&" <relExpr>)*
 <relExpr>       ::= <addExpr> ((">" | "<" | ">=" | "<=" | "==" | "!=") <addExpr>)*
 <addExpr>       ::= <term> (("+" | "-") <term>)*
 <term>          ::= <factor> (("*" | "/" | "%") <factor>)*
-<forInit>       ::= <id> "=" <expr>
-<forUpdate>     ::= <id> "=" <expr>
+<forClause>     ::= <id> "=" <expr>
+                  | <id> "[" <expr> "]" "=" <expr>
+                  | <id> "(" <args>? ")"
 ```
 
 ## Test Suite
@@ -346,17 +375,18 @@ class Demo {
 |---|---:|---|
 | `AllExamplesJvmTest` | 1 | Compile every root example to `.class`, run JVM, compare stdout |
 | `AllExamplesVmTest` | 1 | Compile every root example to LemonVM bytecode, run LemonVM, compare stdout |
-| `AstOptimizerTest` | 6 | Verify AST optimization behavior |
-| `BackendEquivalenceTest` | 4 | Compare JVM and LemonVM outputs through the shared LemonIR path |
+| `AstOptimizerTest` | 10 | Verify Typed-AST optimization behavior |
+| `AstToIrTranslatorTest` | 1 | Reject unresolved symbols at the Typed-AST/IR boundary |
+| `BackendEquivalenceTest` | 6 | Compare JVM and LemonVM outputs through the shared LemonIR path |
 | `ByteCodeGeneratorTest` | 13 | Verify JVM bytecode and stack/local metadata |
 | `CompilerTest` | 72 | End-to-end compiler tests |
-| `DiagnosticTest` | 24 | Verify source diagnostics and CLI behavior |
+| `DiagnosticTest` | 33 | Verify source diagnostics and CLI behavior |
 | `DualBackendConsistencyTest` | 7 | Check selected examples on the LemonVM path |
 | `ErrorTest` | 48 | Negative parse and semantic tests |
 | `IrToVmTranslatorTest` | 2 | Verify IR-to-VM lowering |
-| `IrVerifierTest` | 5 | Verify LemonIR structural and type checks |
+| `IrVerifierTest` | 8 | Verify LemonIR structural and type checks |
 | `LemonVmCliTest` | 4 | Verify LemonVM CLI behavior |
-| `LemonVmTest` | 21 | Verify LemonVM runtime semantics |
+| `LemonVmTest` | 25 | Verify LemonVM runtime semantics |
 | `LexerRegressionTest` | 6 | Ensure robust fallback edge cases in Lexer |
 | `LexerTest` | 18 | Lexer tests |
 | `LocalDeclarationTest` | 5 | Variable scoping tests |
@@ -365,23 +395,27 @@ class Demo {
 | `ParserTest` | 18 | Parser tests |
 | `ReturnStatementTest` | 3 | Semantic return-path analysis |
 | `SemanticTest` | 1 | Semantic visitor smoke test |
-| `TranslatorVisitorTest` | 13 | Legacy direct JVM instruction translation tests |
+| `SourceSpanPropagationTest` | 3 | Verify token, Source AST, Typed-AST, optimizer, and LemonIR ranges |
+| `TranslatorVisitorTest` | 14 | Legacy direct JVM instruction translation tests |
+| `TypedAstSeparationTest` | 3 | Enforce source/typed tree separation and semantic ErrorType ownership |
 
 ## Repository Map
 
 ```text
 src/main/java/site/ilemon
-  ast/              source-level AST
+  ast/              syntax-only source AST
+  typedast/         immutable Typed-AST and resolved symbols
   lexer/            tokenization
   parser/           recursive descent parser
-  semantic/         symbol tables and type checking
-  optimizer/        AST optimization
+  semantic/         source-to-Typed-AST analysis and diagnostics
+  source/           immutable end-exclusive SourceSpan
+  optimizer/        Typed-AST optimization
   ir/               typed LemonIR, verifier, JVM/VM lowering
   codegen/          JVM instruction IR and Jasmin generation
   vm/               LemonVM runtime and bytecode parser
   compiler/         CLI, AST printer, IR printer
 
-examples/           82 Lemon programs and output manifest
+examples/           85 Lemon programs and output manifest
 docs/               architecture, feature guide, and review notes
 tools/              native backend experiment, kept outside main source
 src/test/java/      automated compiler tests
@@ -395,7 +429,9 @@ LemonC intentionally keeps the language small:
 |---|---|
 | Identifier `_` | Supported in identifiers and class names |
 | Multi-line comments | Supported with `/* ... */` |
-| Block scope | Blocks do not introduce independent local scopes |
+| Local declarations | Supported at any block-item position, with optional scalar initializer |
+| Block scope | Blocks introduce visibility scopes; redeclaring a name anywhere in the same method is rejected |
+| Empty return | `return;` is supported in `void` methods |
 | String variables | Strings are primarily `printf` literals |
 | Object model | Single-class teaching language, not full Java |
 
@@ -403,13 +439,13 @@ LemonC intentionally keeps the language small:
 
 The codebase now has enough substance for a serious teaching compiler. The next milestones are:
 
-1. Keep GitHub Actions green and show a real CI badge.
-2. Publish `v0.2.0` release with a ready-to-run jar.
+1. Keep the existing GitHub Actions build green.
+2. Publish `v0.2.0` with a ready-to-run jar.
 3. Add an English tutorial: "Build a JVM compiler from scratch with LemonC".
-4. Add visual snapshots of token, AST, and IR dumps.
+4. Add visual snapshots of token, Typed-AST, and IR dumps.
 5. Add CFG/data-flow optimization as the next advanced chapter.
 6. Add GitHub topics: `compiler`, `compiler-design`, `jvm`, `bytecode`, `parser`, `semantic-analysis`, `backpatching`, `teaching`.
 
 ## License
 
-LemonC is released under the [MIT License](LICENSE).
+LemonC is released under the [Apache License 2.0](LICENSE).

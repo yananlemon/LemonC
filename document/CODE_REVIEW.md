@@ -1,6 +1,12 @@
 # LemonC 编译器项目代码评估报告
 
-> 当前状态说明：本文是早期代码评估快照，主要基于 JVM 单后端时期的 `TranslatorVisitor` 路径。当前源码已经引入 typed LemonIR、LemonVM 后端和双后端一致性测试。当前实现请以 `docs/ARCHITECTURE.md`、`docs/LEMONC_FEATURES.md` 和源码为准。
+> [!CAUTION]
+> **历史快照，不代表当前实现。** 本文主要基于 JVM 单后端时期的
+> `TranslatorVisitor` 路径，早于 Source AST / Typed-AST 分离和系统化 `ErrorType`。
+> 当前实现已有 typed LemonIR、LemonVM 和完整 SourceSpan；当前基线见
+> [`../docs/DOCUMENTATION_INDEX.md`](../docs/DOCUMENTATION_INDEX.md)。
+> 请以 [`../docs/LEMONC_FULL_REVIEW.md`](../docs/LEMONC_FULL_REVIEW.md)、
+> [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) 和源码为准。
 
 这是一个结构严谨、逻辑清晰的教学/玩具级（也可能是在此基础上打磨的个人项目）编译器项目。从项目的命名（LemonC）和结构来看，它完成了一个从源代码（`.lemon` 或 `.ilemon`）到 JVM 字节码的完整编译流水线。
 

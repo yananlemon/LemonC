@@ -2,7 +2,9 @@
 
 本文只解释一个点：`site.ilemon.codegen.TranslatorVisitor` 中，旧 direct JVM translator 如何用拉链回填翻译 `if` 条件控制流。
 
-注意：当前 CLI 主编译链路已经走 `AST -> LemonIR -> JVM/LemonVM`。本文讲的是保留在源码中的旧 direct JVM translator，它仍然有测试和教学价值，但不是当前主路径。
+注意：当前 CLI 主编译链路已经走
+`source AST -> Typed-AST -> LemonIR -> JVM/LemonVM`。本文讲的是保留在源码中的旧
+direct JVM translator。它显式消费 `SemanticResult`，仍有测试和教学价值，但不是当前主路径。
 
 ## 源码位置
 
@@ -487,4 +489,3 @@ falseList = right.falseList
 整体 true 链 -> 回填到 then
 整体 false 链 -> 回填到 else
 ```
-

@@ -1,25 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="250" viewBox="0 0 1120 250" role="img" aria-labelledby="title desc">
-  <title id="title">LemonC end-to-end JVM regression loop</title>
-  <desc id="desc">Eighty-two examples are compiled, assembled, executed by JVM, and compared with an output manifest.</desc>
+  <title id="title">LemonC dual-backend regression loop</title>
+  <desc id="desc">Eighty-five examples are compiled, executed by JVM and LemonVM, and compared with an output manifest.</desc>
   <rect width="1120" height="250" rx="18" fill="#fbfcf8"/>
-  <text x="40" y="50" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#18201a">JVM output is tested, not assumed</text>
-  <text x="40" y="80" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#58645d">Every root example is compiled into a class file, executed on the JVM, and checked against the manifest.</text>
+  <text x="40" y="50" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#18201a">Both backend outputs are tested</text>
+  <text x="40" y="80" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#58645d">Every root example runs on the JVM and LemonVM and is checked against the same manifest.</text>
   <g font-family="Segoe UI, Arial, sans-serif" text-anchor="middle">
     <circle cx="150" cy="150" r="46" fill="#ffffff" stroke="#bad7c7" stroke-width="2"/>
-    <text x="150" y="144" font-size="19" font-weight="700" fill="#18201a">82</text>
+    <text x="150" y="144" font-size="19" font-weight="700" fill="#18201a">86</text>
     <text x="150" y="166" font-size="13" fill="#58645d">examples</text>
     <circle cx="350" cy="150" r="46" fill="#ffffff" stroke="#bad7c7" stroke-width="2"/>
     <text x="350" y="144" font-size="19" font-weight="700" fill="#18201a">compile</text>
-    <text x="350" y="166" font-size="13" fill="#58645d">LemonC</text>
+    <text x="350" y="166" font-size="13" fill="#58645d">LemonIR</text>
     <circle cx="550" cy="150" r="46" fill="#ffffff" stroke="#bad7c7" stroke-width="2"/>
-    <text x="550" y="144" font-size="19" font-weight="700" fill="#18201a">assemble</text>
-    <text x="550" y="166" font-size="13" fill="#58645d">Jasmin</text>
+    <text x="550" y="144" font-size="19" font-weight="700" fill="#18201a">run</text>
+    <text x="550" y="166" font-size="13" fill="#58645d">JVM</text>
     <circle cx="750" cy="150" r="46" fill="#ffffff" stroke="#bad7c7" stroke-width="2"/>
     <text x="750" y="144" font-size="19" font-weight="700" fill="#18201a">run</text>
-    <text x="750" y="166" font-size="13" fill="#58645d">JVM</text>
+    <text x="750" y="166" font-size="13" fill="#58645d">LemonVM</text>
     <circle cx="950" cy="150" r="46" fill="#18201a" stroke="#18201a" stroke-width="2"/>
     <text x="950" y="144" font-size="19" font-weight="700" fill="#ffffff">match</text>
-    <text x="950" y="166" font-size="13" fill="#d7e5dc">stdout</text>
+    <text x="950" y="166" font-size="13" fill="#d7e5dc">manifest</text>
   </g>
   <g stroke="#93ad9f" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
     <path d="M198 150h102"/>
@@ -31,5 +31,5 @@
     <path d="M798 150h102"/>
     <path d="M892 142l10 8-10 8"/>
   </g>
-  <text x="40" y="220" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#58645d">AllExamplesJvmTest: source .lemon -> .class -> JVM stdout -> examples/example-output-manifest.tsv</text>
+  <text x="40" y="220" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#58645d">AllExamplesJvmTest + AllExamplesVmTest: .lemon -> both runtimes -> example-output-manifest.tsv</text>
 </svg>

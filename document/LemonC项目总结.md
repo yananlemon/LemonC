@@ -1,289 +1,182 @@
 # LemonC 编译器项目总结
 
-> 当前状态说明：本文是早期项目总结，主要描述 JVM 字节码后端。当前源码已经发展为 shared LemonIR + JVM/LemonVM 双后端架构，测试规模和语言能力也已经扩展。当前实现请以 `docs/ARCHITECTURE.md`、`docs/LEMONC_FEATURES.md` 和源码为准。
+> 当前实现说明，更新于 2026-07-28。架构细节以
+> [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) 为准，语言能力以
+> [`../docs/LEMONC_FEATURES.md`](../docs/LEMONC_FEATURES.md) 为准。
 
-## 📋 项目概述
+## 项目概述
 
-LemonC 是一个基于 Java 实现的教学型 C-like 编译器，当前主线会将自定义 Lemon 语言降低到 typed LemonIR，再分别生成 JVM 字节码和 LemonVM 字节码，最终通过 JVM 与自研 LemonVM 双后端执行并比对输出。
+LemonC 是一个使用 Java 8 实现的教学型 C-like 编译器。它把 `.lemon` 源码解析为
+syntax-only source AST，再由语义分析构建不可变 Typed-AST。Typed-AST 经过安全的
+局部优化后生成类型化 LemonIR；验证通过的 IR 可以下降到 JVM/Jasmin 或 LemonVM。
 
-```
+```text
 .lemon
   -> Lexer
   -> Parser
-  -> SemanticVisitor
+  -> source Ast
+  -> SemanticVisitor -> SemanticResult + immutable TypedAst
   -> AstOptimizer
-  -> LemonIR + IrVerifier
-  -> JVM backend: IrToJvmTranslator -> ByteCodeGenerator -> Jasmin -> .class
-  -> VM backend: IrToVmTranslator -> LemonVM
+  -> AstToIrTranslator -> LemonIR
+  -> IrVerifier
+  -> JVM: IrToJvmTranslator -> ByteCodeGenerator -> Jasmin -> .class
+  -> VM:  IrToVmTranslator -> Script -> LemonVm
 ```
 
----
+CLI 默认生成 JVM `.class`；`--target vm` 生成 LemonVM 字节码，`--run-vm` 会在编译后
+直接执行 LemonVM。`--pipeline` 选择 VM 路径并打印 tokens、Typed-AST、IR 和 VM 字节码。
 
-## 🏗️ 项目架构
+## 当前代码结构
 
-```
+```text
 src/main/java/site/ilemon/
-├── compiler/          # 编译器主入口
-│   └── LemonC.java
-├── lexer/             # 词法分析器
-│   ├── Lexer.java     # DFA 状态机实现
-│   ├── LexerState.java
-│   ├── Token.java
-│   └── TokenKind.java
-├── parser/            # 语法分析器
-│   └── Parser.java    # 递归下降解析器
-├── ast/               # 抽象语法树
-│   └── Ast.java       # AST 节点定义
-├── semantic/          # 语义分析
-│   ├── SemanticVisitor.java
-│   └── MethodVarTable.java
-├── optimizer/         # AST 优化
-│   └── AstOptimizer.java
-├── ir/                # typed LemonIR、IR 校验、双后端 lowering
-│   ├── AstToIrTranslator.java
-│   ├── IrVerifier.java
-│   ├── IrToJvmTranslator.java
-│   └── IrToVmTranslator.java
-├── codegen/           # 代码生成
-│   ├── TranslatorVisitor.java  # 旧 AST → JVM 指令路径，保留作测试/参考
-│   ├── ByteCodeGenerator.java  # JVM 指令 IR → Jasmin
-│   ├── Visitor.java
-│   └── ast/           # JVM 指令 IR
-├── vm/                # LemonVM 运行时
-│   ├── LemonVm.java
-│   ├── VmBytecodeParser.java
-│   └── RuntimeStack.java
-└── visitor/           # Visitor 模式接口
-    ├── ISemanticVisitor.java
-    └── IElement.java
+  lexer/       手写 scanner、Token、TokenKind、IntegerLiterals
+  parser/      递归下降 Parser、ParseResult、ParseDiagnostic
+  source/      end-exclusive SourceSpan
+  ast/         syntax-only source AST
+  semantic/    source AST -> Typed-AST、诊断、作用域与控制流分析
+  typedast/    不可变 Typed-AST、Type、Symbol、MethodSymbol
+  optimizer/   Typed-AST 常量折叠与安全化简
+  ir/          LemonIR、Verifier、JVM/VM lowering
+  codegen/     JVM 指令模型、Jasmin 输出、legacy direct translator
+  vm/          LemonVM 字节码、运行栈、堆与解释器
+  compiler/    CLI、Typed-AST/IR 打印器
+  exception/   编译期、后端和 VM 异常层次
+  visitor/     legacy source-AST visitor 接口
+  list/        legacy translator 使用的双向链表
 ```
 
----
+当前 Maven 主源码有 50 个 Java 文件、15 个 package。`tools/native-experiment/` 是归档的
+Windows x86-64 实验，不属于 Maven 主构建。
 
-## 🔑 核心技术点
+## 前端
 
-### 1. 词法分析器 (Lexer) - DFA 状态机
+### Lexer
 
-```java
-// 状态转移函数 δ(state, char) -> newState
-private LexerState getNextState(LexerState state, char c) {
-    switch (state) {
-        case START:
-            if (Character.isLetter(c)) return LexerState.IN_ID;
-            if (Character.isDigit(c)) return LexerState.IN_NUM;
-            if (c == '"') return LexerState.IN_STRING;
-            // ...
-        case IN_STRING:
-            if (c == '"') return LexerState.DONE;
-            return LexerState.IN_STRING;
-        // ...
-    }
-}
+Lexer 是手写 scanner，使用 `peek()` / `advance()` 直接驱动字符流；当前源码中没有旧版
+`LexerState` 枚举状态机。它支持：
+
+- Java 字母、数字和下划线组成的标识符。
+- 十进制、八进制、十六进制整数及范围校验。
+- `float` / `double`、科学计数法和 `f/F/d/D` 后缀。
+- `\n`、`\t`、`\r`、`\"`、`\\` 字符串转义。
+- 单行、多行注释和 UTF-8 BOM。
+- end-exclusive 起止行列、源码行和 caret 指针诊断。
+
+### Parser
+
+Parser 是手写递归下降分析器，表达式优先级为：
+
+```text
+|| < && < comparison < +,- < *,/,% < unary
 ```
 
-**状态转移图：**
-```
-        letter          digit           "
-START ─────────▶ IN_ID    START ─────▶ IN_NUM    START ─────▶ IN_STRING
-  │                │                     │                       │
-  │   non-letter   │      non-digit      │          "            │
-  │◀───────────────┘◀─────────────────────┘◀──────────────────────┘
-  ▼                                                              ▼
-DONE                                                           DONE
-```
+它支持语句级和方法级错误恢复、局部标量初始化、任意 block-item 位置声明、数组形参、
+`for`、`break`、`continue` 和 `return;`。完整规则见
+[`LemonC文法规则.md`](LemonC文法规则.md)。
 
-### 2. 语法分析器 (Parser) - 递归下降
+### Source AST 与 Typed-AST
 
-采用 **LL(1) 递归下降**解析，每个非终结符对应一个解析方法：
+`site.ilemon.ast.Ast` 只保存语法结构和显式声明类型，不保存推导类型、解析后符号或
+`ErrorType`。`SemanticVisitor` 把 source AST 转换为独立的 `TypedAst.Program`：
 
-```java
-// Program → MainClass
-public Ast.Program.T parse() {
-    return parseProgram();
-}
+- 每个正常表达式都有非空、不可变的类型。
+- 标识符和调用绑定到 `Symbol` / `MethodSymbol`。
+- `TypedAst.Type.ERROR` 和 `ErrorExpr` 只存在于语义结果中，用于错误恢复。
+- optimizer 和 IR translator 的公开入口只接受 `TypedAst.Program`。
 
-// MainClass → class ID { MethodList }
-private Ast.MainClass.T parseMainClass() {
-    eat(TokenKind.Class);
-    String classId = currentToken.lexeme;
-    eat(TokenKind.Id);
-    eat(TokenKind.Lbrace);
-    ArrayList<Ast.Method.T> methods = parseMethodList();
-    eat(TokenKind.Rbrace);
-    return new Ast.MainClass.MainClassSingle(classId, null, methods);
-}
-```
+`SemanticResult` 还保存诊断和 source-node 到 typed-node 的 identity 映射，用于诊断与
+legacy translator 兼容，不会反向修改 parser AST。
 
-### 3. Visitor 模式 - 双重分派
+Token、source AST、Typed-AST 和优化结果共享不可变 `SourceSpan`；LemonIR 的每条生成
+指令也携带对应范围，verifier 报错时会输出该位置。
 
-**教科书式实现**：AST 节点实现 `accept` 方法，实现真正的双重分派：
+## 语义分析
 
-```java
-// AST 节点
-public static class Add extends T {
-    @Override
-    public void accept(ISemanticVisitor v) {
-        v.visit(this);  // 双重分派的关键
-    }
-}
+当前语义检查包括：
 
-// Visitor 中的分发
-@Override
-public void visit(Expr.T obj) {
-    obj.accept(this);  // 一行代码替代 20+ 行 instanceof 链
-}
-```
+- 唯一 `void main()` 入口。
+- 变量与方法声明、重复声明、声明前使用。
+- 块级可见域和离开块后不可见。
+- 同一方法内禁止同名局部变量遮蔽。
+- 使用前赋值与 `if/else` 分支状态合并。
+- 数值宽化 `int -> float -> double`。
+- 算术、比较、布尔、数组、调用和返回类型检查。
+- `break` / `continue` 循环深度检查。
+- 非 `void` 方法返回路径检查。
+- `printf` 占位符数量与类型检查。
+- collecting 模式下的多错误收集。
 
-**对比：**
-| 方式 | instanceof 链 | 双重分派 |
-|------|--------------|---------|
-| 新增节点 | 需改 Visitor | 只需在节点中实现 accept |
-| 编译检查 | 无 | 漏实现会报错 |
-| 代码量 | 大量 if-else | 简洁 |
+## 中端与后端
 
-### 4. 布尔表达式翻译 - 回填技术
+### Typed-AST 优化
 
-遵循龙书的 **SDT (语法制导翻译)** 规则。当前实现不再把 `trueList` / `falseList` 存在 AST 节点上，而是由 `translateCondition()` 返回局部的 `BoolCode`：
+`AstOptimizer` 是纯转换器，不修改输入节点。它实现算术、比较和布尔常量折叠、一元负号
+折叠、整数代数恒等式、常量分支化简和 `while(false)` 删除。求值效果分为 `PURE`、
+`MAY_TRAP`、`HAS_SIDE_EFFECT`，避免错误删除调用、数组访问或可能抛错的除法/取模。
 
-```java
-private static class BoolCode {
-    final List<Integer> trueList;
-    final List<Integer> falseList;
-}
+### LemonIR
 
-private BoolCode translateCondition(Expr.T expr) {
-    if (expr instanceof Expr.And) {
-        Expr.And and = (Expr.And) expr;
-        BoolCode left = translateCondition(and.getLeft());
-        Label rightBegin = new Label();
-        emit(new Ast.Stmt.LabelJ(rightBegin));
-        backpatch(left.trueList, rightBegin);
-        BoolCode right = translateCondition(and.getRight());
-        return new BoolCode(right.trueList, merge(left.falseList, right.falseList));
-    }
-    // comparisons, !, ||, true/false and value materialization omitted
-}
+LemonIR 是类型化三地址码：
+
+```text
+IrProgram -> IrFunction -> IrBlock -> IrInstruction
 ```
 
-**短路求值示例：**
-```
-if (a > 0 && b < 10) { ... }
+`IrVerifier` 检查签名、基本块终结、跳转目标、操作数、类型、数组、调用、返回、CFG
+可达性和虚拟寄存器定义先于使用。
 
-生成代码：
-    iload a
-    ldc 0
-    if_icmpgt L1    ; a > 0 则跳到 L1
-    goto L_false    ; 否则短路，直接跳到 false
-L1:
-    iload b
-    ldc 10
-    if_icmplt L_true
-    goto L_false
-L_true:
-    ; then 分支
-L_false:
-    ; else 分支
-```
+### 双后端
 
-### 5. 控制流翻译
+- JVM：LemonIR 下降为 JVM 指令模型，`ByteCodeGenerator` 写出 Jasmin，输出位于
+  `target/lemonc/`。
+- LemonVM：LemonIR 下降为 `Script`，由 `LemonVm` 解释执行。
+- `TranslatorVisitor` 是保留的 source AST -> JVM legacy 路径，只用于测试和教学，
+  构造时必须显式接收 `SemanticResult`。
 
-**If 语句：**
-```java
-/**
- * S -> if(E) S1 else S2
- * S.code := E.code || gen(E.true':') || S1.code 
- *        || gen('goto' S.next) || gen(E.false':') || S2.code
- */
-@Override
-public void visit(Stmt.If obj) {
-    Label trueLabel = new Label();
-    Label falseLabel = new Label();
-    Label nextLabel = new Label();
+## 语言能力
 
-    BoolCode condition = translateCondition(obj.getCondition());
-    backpatch(condition.trueList, trueLabel);
-    backpatch(condition.falseList, falseLabel);
+| 类别 | 当前支持 |
+|---|---|
+| 类型 | `int`、`float`、`double`、`bool`、`void` |
+| 数组 | 四种基本数组、固定长度局部数组、无长度数组形参、索引、赋值、`.length` |
+| 表达式 | 算术、取模、一元负号、比较、逻辑非、短路 `&&` / `||` |
+| 控制流 | `if/else`、`while`、`for`、`break`、`continue`、嵌套块 |
+| 方法 | 参数、返回值、`void`、递归、表达式调用、丢弃返回值 |
+| 输出 | `printf` 的 `%d` / `%f`、`printLine`、字符串转义 |
+| 诊断 | 词法/语法位置诊断、parser 恢复、语义多错误收集 |
 
-    emit(new Ast.Stmt.LabelJ(trueLabel)); // E.true:
-    this.visit(obj.getThenStmt());       // S1.code
-    emit(new Ast.Stmt.Goto(nextLabel));  // goto S.next
+字符串目前只作为字面量进入 `printf` 等内部路径，不支持 String 变量、参数或返回值。
 
-    emit(new Ast.Stmt.LabelJ(falseLabel)); // E.false:
-    if (obj.getElseStmt() != null) {
-        this.visit(obj.getElseStmt());   // S2.code
-    }
-    emit(new Ast.Stmt.LabelJ(nextLabel)); // S.next:
-}
-```
+## 构建与验证
 
----
-
-## 📊 支持的语言特性
-
-| 特性 | 支持情况 |
-|------|---------|
-| 数据类型 | int, float, double, bool, void；字符串主要作为 printf 字面量 |
-| 数组 | int[], float[], double[], bool[]，支持索引访问、赋值、`.length` |
-| 算术运算 | +, -, *, /, %, 一元 - |
-| 比较运算 | >, <, >=, <=, ==, != |
-| 逻辑运算 | &&, \|\|, ! (短路求值) |
-| 控制流 | if-else, while, for, break, continue |
-| 函数 | 定义、调用、递归、参数、返回值、void 方法 |
-| 输出 | printf, printLine |
-| 后端 | JVM 字节码、LemonVM 字节码与解释执行 |
-
----
-
-## 🎯 示例程序
-
-**九九乘法表 (MulTable.lemon)：**
-```c
-class MulTable {
-    void main() {
-        int i; int j;
-        i = 1;
-        while (i < 10) {
-            j = 1;
-            while (j < 10) {
-                printf("%d*%d=%d\t", i, j, i*j);
-                j = j + 1;
-            }
-                printLine();
-            i = i + 1;
-        }
-    }
-}
-```
-
-**编译运行：**
 ```bash
-java -jar LemonC-0.1-beta-jar-with-dependencies.jar MulTable.lemon
-java MulTable
+mvn clean package
+mvn clean test
+
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/MulTable.lemon
+java -cp target/lemonc MulTable
+
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar \
+  examples/ReliabilityCanary.lemon --pipeline
 ```
 
-**输出：**
+2026-07-28 基线：
+
+```text
+Tests run: 349, Failures: 0, Errors: 0, Skipped: 0
+85 root examples
+85 manifest rows
 ```
-1*1=1   1*2=2   1*3=3   ...
-2*1=2   2*2=4   2*3=6   ...
-...
-9*1=9   9*2=18  9*3=27  ... 9*9=81
-```
 
----
+`AllExamplesJvmTest`、`AllExamplesVmTest` 和 `BackendEquivalenceTest` 共同验证根示例的 JVM
+输出、LemonVM 输出与 manifest 基线。GitHub Actions 在 Temurin JDK 8 上执行
+`mvn -B clean test`。
 
-## 🔧 历史优化内容
+## 下一阶段
 
-1. **实现双重分派 Visitor 模式** - 为所有 AST 节点添加 `accept` 方法
-2. **补全比较运算符** - 实现 `==`, `!=`, `>=`, `<=`
-3. **修复 ByteCodeGenerator** - 类型判断 bug、重复代码、动态计算 stack/locals
-4. **修复 Lexer 字符串处理** - 正确去除首尾引号
-5. **更新 pom.xml** - 修复 assembly 插件配置
-6. **添加测试用例** - 当前干净测试规模为 253 个测试全部通过
-
----
-
-## 📚 参考资料
-
-- 《编译原理》(龙书) - 第 6 章 中间代码生成
-- JVM 规范 - 字节码指令集
-- Jasmin 汇编器文档
+1. 增加随机差分测试。
+2. 抽取可复用 CFG/data-flow 基础设施。
+3. 实现 IR 级常量传播、复制传播和死代码消除。
+4. 增加 JaCoCo 覆盖率报告与合理门禁。
+5. 增加 warning 层，例如不可达代码和未使用变量。

@@ -1,6 +1,12 @@
 # LemonC 编译器 代码评审报告
 
-> 当前状态说明：本文是 2026-05-27 的历史评审快照，保留当时的评分、问题清单和改进轨迹。当前源码已经继续演进，已实现 typed LemonIR、LemonVM 后端、双后端一致性测试，以及部分本文曾列为缺口的语言能力。当前事实请以 `docs/ARCHITECTURE.md`、`docs/LEMONC_FEATURES.md` 和源码为准。
+> [!CAUTION]
+> 本文是 2026-05-27 的历史评审快照，保留当时的评分、问题清单和改进轨迹。
+> 它早于 Source AST / Typed-AST 分离、系统化 `ErrorType` 和完整 SourceSpan；文中已删除的
+> 类名与“不支持”结论不得用于描述现状。当前基线见
+> [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md)。
+> 当前事实请以 [`LEMONC_FULL_REVIEW.md`](LEMONC_FULL_REVIEW.md)、
+> [`ARCHITECTURE.md`](ARCHITECTURE.md)、[`LEMONC_FEATURES.md`](LEMONC_FEATURES.md) 和源码为准。
 
 > **评审基准**：经典编译原理（Dragon Book / 虎书）  
 > **评审轮次**：共 3 轮，每轮均全量阅读源码  

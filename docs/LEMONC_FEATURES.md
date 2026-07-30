@@ -10,8 +10,8 @@ LemonC 的主链路是：
 Lemon source (.lemon)
   -> Lexer tokens
   -> Parser AST
-  -> Semantic analysis
-  -> AST optimization
+  -> Semantic analysis -> immutable Typed-AST
+  -> Typed-AST optimization
   -> LemonIR
   -> IrVerifier
   -> JVM backend: JVM instruction IR -> Jasmin assembly -> JVM .class -> JVM execution output
@@ -22,7 +22,7 @@ Lemon source (.lemon)
 
 ```bash
 java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/HelloWorld.lemon
-java HelloWorld
+java -cp target/lemonc HelloWorld
 ```
 
 运行 LemonVM 后端：
@@ -36,6 +36,7 @@ java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/HelloWorld.l
 ```bash
 java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/ModTest.lemon --dump-tokens --dump-ast --dump-ir
 java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/ModTest.lemon --target vm --dump-vm-bytecode
+java -jar target/LemonC-0.1-beta-jar-with-dependencies.jar examples/ModTest.lemon --pipeline
 ```
 
 ## 2. 类与 main 方法
@@ -135,15 +136,14 @@ arr=2
 
 ## 4. 变量声明与赋值
 
-局部变量在方法体前部声明，之后在语句区赋值和使用。
+局部变量可以出现在方法体或嵌套块的任意 block-item 位置，并支持标量声明初始化。变量从声明语句之后可见；离开块后，该块中的变量不可见。当前实现不允许在同一方法的嵌套块中用相同名称遮蔽已有变量。
 
 ```c
 int a;
-float f;
+float f = 1.5;
 double d;
 bool ok;
 a = 10;
-f = 1.5;
 d = 2.25;
 ok = true;
 ```
@@ -161,7 +161,12 @@ ok = true;
 | `*` | 乘法 |
 | `/` | 除法 |
 | `%` | 整数取模 |
-| 一元 `-` | 负号 |
+| 一元 `-` | 负号（降级为 LemonIR 的 `NEG`，保留 IEEE-754 负零符号） |
+| `+=` `-=` `*=` `/=` `%=` | 复合赋值，解析阶段脱糖为 `a = a op b` |
+| `i++` `i--` | 后缀自增自减，仅作为语句；脱糖为 `a = a ± 1` |
+
+复合赋值与自增作用于数组元素时下标会被求值两次，因此下标被限制为变量或整数字面量；
+详见 [document/LemonC文法规则.md](../document/LemonC文法规则.md)。
 
 示例：[examples/ModTest.lemon](../examples/ModTest.lemon)
 
@@ -271,7 +276,7 @@ false
 ||
 ```
 
-布尔表达式采用经典 backpatching 方式生成控制流，`&&` 与 `||` 保持短路语义。
+当前主链路在 `AstToIrTranslator` 中用显式 LemonIR 基本块与分支生成短路控制流；保留的 legacy `TranslatorVisitor` 使用经典 backpatching。两条路径都保持 `&&` 与 `||` 的短路语义。
 
 示例：[examples/BoolTest02.lemon](../examples/BoolTest02.lemon)
 
@@ -406,6 +411,7 @@ outer continue skip 2
 | 表达式中的方法调用 | `printf("%d", add(a, b));` |
 | 丢弃返回值 | `discardInt();` |
 | 递归调用 | `fib(n - 1) + fib(n - 2)` |
+| `void` 空返回 | `return;` |
 
 示例：[examples/VoidMethod.lemon](../examples/VoidMethod.lemon)
 
@@ -485,7 +491,7 @@ values=5,weights=3,total=8
 支持字符串字面量输出和格式化输出：
 
 ```text
-%d  int/bool 输出
+%d  int 输出
 %f  float/double 输出
 \n  换行
 \t  制表符
@@ -526,9 +532,9 @@ i=7, f=1.5, d=2.25
    block comment */
 ```
 
-## 17. AST 优化
+## 17. Typed-AST 优化
 
-LemonC 在语义分析之后、IR 生成之前执行 AST 优化。
+LemonC 在语义分析之后、IR 生成之前执行 Typed-AST 优化。优化器只接受 `TypedAst.Program`，不会修改 parser AST。
 
 当前优化包括：
 
@@ -585,9 +591,13 @@ source .lemon
 当前覆盖规模：
 
 ```text
-82 root examples
-253 automated tests
+85 root examples
+349 automated tests
 ```
+
+Token、Source AST、Typed-AST、优化结果和 LemonIR 指令共享不可变、end-exclusive 的
+`SourceSpan(startLine, startColumn, endLine, endColumn)`。跨行表达式的范围会保留到
+LemonIR，verifier 指令诊断会在位置已知时输出该范围。
 
 综合示例：[examples/ReliabilityCanary.lemon](../examples/ReliabilityCanary.lemon)
 
@@ -616,8 +626,9 @@ end
 |---|---|
 | 标识符 `_` | 当前支持下划线标识符 |
 | 多行注释 | 当前支持 `/* ... */`，未闭合注释会报词法错误 |
-| 局部变量声明位于方法体前部 | 不支持任意语句位置声明变量 |
-| 无块级作用域 | `{ ... }` 不引入独立变量作用域 |
+| 局部变量声明与初始化 | 可在任意 block-item 位置声明；标量支持可选初始化，数组不支持初始化表达式 |
+| 块级可见域 | `{ ... }` 引入可见域；块外不能访问块内变量，但同一方法内禁止同名遮蔽 |
+| `return;` | 仅允许用于 `void` 方法；非 `void` 方法必须返回表达式 |
 | 无字符串变量类型 | 字符串主要用于 `printf` 字面量 |
 | 单类模型 | 当前目标是教学用小型语言，不实现完整 Java 对象系统 |
 
@@ -631,5 +642,5 @@ end
 4. `NestedLoops.lemon`：循环、`break`、`continue`。
 5. `LanguageFeatureTest.lemon`：`for`、一元负号、数值提升、方法调用、数组。
 6. `NaNCompareTest.lemon`：浮点比较语义。
-7. `OptimizationTest.lemon`：AST 优化。
+7. `OptimizationTest.lemon`：Typed-AST 优化。
 8. `ReliabilityCanary.lemon`：综合端到端回归。

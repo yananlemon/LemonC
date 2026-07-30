@@ -1,4 +1,6 @@
-> 当前状态说明：本文是早期编译器说明，保留了 JVM 单后端时期的介绍。当前 LemonC 已经引入 typed LemonIR、LemonVM 后端、更多语言特性和双后端一致性测试。当前实现请以 `docs/ARCHITECTURE.md`、`docs/LEMONC_FEATURES.md` 和源码为准。
+> 状态：JVM 指令教学补充材料，已按 2026-07-28 主链路校正。完整架构与语言边界分别见
+> [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) 和
+> [`docs/LEMONC_FEATURES.md`](../docs/LEMONC_FEATURES.md)。
 
 LemonC 包括完整的编译器前端、typed LemonIR 中间层、JVM 后端和 LemonVM 后端。默认目标代码可以生成 Java 字节码运行在 JVM 之上，也可以通过 `--target vm` / `--run-vm` 走自研 LemonVM。
 [toc]
@@ -31,6 +33,7 @@ int|整型数字
 float|浮点型数字
 double|双精度浮点数字
 bool|
+String|保留关键字；当前不支持 String 变量、参数或返回值
 if|
 else|
 true|
@@ -90,7 +93,8 @@ ldc | ldc "hello" | 将字符串hello加载到操作数栈栈顶
 istore | istore index | 将操作数栈栈顶int类型的数字存储到局部变量表索引为index处
 iload | iload index | 加载局部变量表中索引为index的int变量到操作数栈
 
-与上述加载和存储指令类似，float类型的操作的指令是：fstore和fload。
+与上述加载和存储指令类似，float 使用 `fstore`/`fload`，double 使用
+`dstore`/`dload`，数组引用使用 `astore`/`aload`。
 
 
 ## 2.2 算术指令
@@ -102,6 +106,10 @@ iadd | 将栈顶两int型数值相加并将结果压入栈顶
 isub | 将栈顶两int型数值相减并将结果压入栈顶
 imul | 将栈顶两int型数值相乘并将结果压入栈顶
 idiv | 将栈顶两int型数值相除并将结果压入栈顶
+irem | 将栈顶两int型数值取模并将结果压入栈顶
+
+float 和 double 分别使用 `fadd/fsub/fmul/fdiv` 与
+`dadd/dsub/dmul/ddiv`；数值宽化使用 `i2f`、`i2d`、`f2d`。
 ## 2.3 转移指令
 转移指令用来控制程序执行流程，在LemonC中用到了如下指令：  
 
@@ -119,5 +127,9 @@ goto | 无条件跳转到指定标号处执行
 
 指令 |说明
 ---|---
-invokevirtual | 用于调用对象的实例方法，根据对象的实际类型进行分派（虚方法分派）
-return |
+invokestatic | Lemon 方法均编译为当前生成类上的静态方法调用
+ireturn | 返回 `int` 或 JVM 表示下的 `bool`
+freturn | 返回 `float`
+dreturn | 返回 `double`
+areturn | 返回数组引用
+return | 从 `void` 方法返回
