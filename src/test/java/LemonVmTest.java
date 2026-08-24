@@ -485,7 +485,7 @@ public class LemonVmTest {
         // print(arr[0]+arr[1]+arr[2]) → 60
         String output = runSimple(3,
                 // _L0=arr, _L1=temp, _L2=temp2
-                instr(Opcode.NEW_ARR, sref(-1), imm(3)),    // 0: arr = new[3]
+                instr(Opcode.NEW_ARR, sref(-1), imm(3), imms("INT_ARRAY")),  // 0: arr = new int[3]
                 instr(Opcode.ARR_SET, sref(-1), imm(0), imm(10)), // 1: arr[0]=10
                 instr(Opcode.ARR_SET, sref(-1), imm(1), imm(20)), // 2: arr[1]=20
                 instr(Opcode.ARR_SET, sref(-1), imm(2), imm(30)), // 3: arr[2]=30
@@ -505,7 +505,7 @@ public class LemonVmTest {
     public void testArrLen() {
         // arr = new int[5]; print(arr.length) → 5
         String output = runSimple(2,
-                instr(Opcode.NEW_ARR, sref(-1), imm(5)),
+                instr(Opcode.NEW_ARR, sref(-1), imm(5), imms("INT_ARRAY")),
                 instr(Opcode.ARR_LEN, sref(-2), sref(-1)),
                 instr(Opcode.PRINT, sref(-2)),
                 instr(Opcode.RET)

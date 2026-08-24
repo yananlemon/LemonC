@@ -23,6 +23,7 @@ import site.ilemon.typedast.TypedAst;
 import site.ilemon.vm.LemonVm;
 import site.ilemon.vm.RuntimeStack;
 import site.ilemon.vm.Script;
+import site.ilemon.vm.VmBytecodeWriter;
 import site.ilemon.vm.VmException;
 import site.ilemon.vm.VmFunction;
 
@@ -183,6 +184,13 @@ public class LemonC {
             out.print(formatVmBytecode(script));
         }
 
+        if (options.emitLbc) {
+            // 发射 .lbc 汇编而不执行：这一步的产物能被 VmBytecodeParser 读回，
+            // 因此 compile -> emit -> parse -> run 与直接 run 必须等价。
+            out.print(VmBytecodeWriter.write(script, irProgram.getClassName()));
+            return 0;
+        }
+
         if (options.pipeline) {
             out.println("== LemonVM Output ==");
         }
@@ -277,12 +285,13 @@ public class LemonC {
     private static void usage(PrintStream err) {
         err.println("usage: java -jar LemonC.jar <source.lemon> [--pipeline] [--target jvm|vm] [--run-vm]");
         err.println("       [--dump-tokens] [--dump-ast] [--dump-ir] [--dump-vm-bytecode] [--verbose]");
-        err.println("       [--vm-instruction-limit N] [--vm-stack-size N]");
+        err.println("       [--vm-instruction-limit N] [--vm-stack-size N] [--emit-lbc]");
         err.println();
         err.println("  --vm-instruction-limit N  LemonVM 指令执行上限，0 表示不限制（默认 "
                 + LemonVm.DEFAULT_INSTRUCTION_LIMIT + "）");
         err.println("  --vm-stack-size N         LemonVM 运行时栈容量上限（槽位数，默认 "
                 + RuntimeStack.DEFAULT_MAX_STACK_SIZE + "）");
+        err.println("  --emit-lbc                发射可被 VmBytecodeParser 读回的 .lbc 汇编，不执行程序");
     }
 
     private enum Target {
@@ -297,6 +306,7 @@ public class LemonC {
         private boolean dumpAst;
         private boolean dumpIr;
         private boolean dumpVmBytecode;
+        private boolean emitLbc;
         private boolean runVm;
         private boolean pipeline;
         private boolean verbose;
@@ -321,6 +331,9 @@ public class LemonC {
                     options.dumpIr = true;
                 } else if ("--dump-vm-bytecode".equals(args[i])) {
                     options.dumpVmBytecode = true;
+                } else if ("--emit-lbc".equals(args[i])) {
+                    options.emitLbc = true;
+                    options.target = Target.VM;
                 } else if ("--pipeline".equals(args[i])) {
                     options.pipeline = true;
                     options.target = Target.VM;
@@ -381,6 +394,10 @@ public class LemonC {
             }
             if (options.dumpVmBytecode && options.target != Target.VM) {
                 err.println("error: --dump-vm-bytecode requires --target vm or --run-vm");
+                return null;
+            }
+            if (options.emitLbc && options.target != Target.VM) {
+                err.println("error: --emit-lbc requires --target vm");
                 return null;
             }
             return options;

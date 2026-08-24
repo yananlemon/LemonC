@@ -66,7 +66,7 @@ public enum Opcode {
 
     // ---- 数组操作 (4) ----
     /** NewArr Dest, Size — 在堆上分配数组，引用存入 Dest */
-    NEW_ARR(21, "NewArr", 2),
+    NEW_ARR(21, "NewArr", 3),
     /** ArrGet Dest, ArrRef, Index — Dest = Array[Index] */
     ARR_GET(22, "ArrGet", 3),
     /** ArrSet ArrRef, Index, Source — Array[Index] = Source */

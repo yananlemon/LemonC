@@ -294,9 +294,9 @@ public class IrToVmTranslator {
                 Instruction newArr = new Instruction(Opcode.NEW_ARR);
                 newArr.getOperands().add(mapVReg(instr.getResult().getId()));
                 newArr.getOperands().add(mapConstOrVReg(instr.getOperands().get(0)));
-                if (instr.getType() != null) {
-                    newArr.getOperands().add(Value.ofString(instr.getType().name()));
-                }
+                // 无条件发射元素类型：IrVerifier 已保证 NEW_ARR 必带数组类型，
+                // 而固定元数是 .lbc 能表达这条指令的前提。
+                newArr.getOperands().add(Value.ofString(instr.getType().name()));
                 instrStream.add(newArr);
                 break;
             }

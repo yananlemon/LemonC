@@ -1,7 +1,6 @@
 package site.ilemon.ast;
 
 import site.ilemon.codegen.ast.Label;
-import site.ilemon.list.DoublyLinkedList;
 import site.ilemon.source.SourceSpan;
 import site.ilemon.visitor.ISemanticVisitor;
 

@@ -50,6 +50,12 @@ import static site.ilemon.lexer.TokenKind.Num;
  */
 public class Parser {
 	private static final int MAX_DIAGNOSTICS = 100;
+	/**
+	 * Bounds recursive grammar constructs before the Java call stack is exhausted.
+	 * A single parenthesized expression crosses several precedence methods, so this
+	 * limit is intentionally lower than a typical JVM stack-frame budget.
+	 */
+	private static final int MAX_RECURSION_DEPTH = 128;
 
 	private Lexer lexer; // 词法分析器
 
@@ -59,6 +65,7 @@ public class Parser {
 	private final ArrayList<ParseDiagnostic> diagnostics = new ArrayList<ParseDiagnostic>();
 
 	private boolean collectingErrors;
+	private int recursionDepth;
 
 	public Parser(Lexer lexer) {
 		this.lexer=lexer;
@@ -365,8 +372,12 @@ public class Parser {
 		else if(look.getKind() == TokenKind.Bool){
 			move();
 			type = new Ast.Type.Bool();
+		}
+		else if(look.getKind() == TokenKind.StringType){
+			move();
+			type = new Ast.Type.Str();
 		} else {
-			throw syntaxError("期望类型关键字 int、float、double、bool 或 void");
+			throw syntaxError("期望类型关键字 int、float、double、bool、String 或 void");
 		}
 		return located(type, token.getSourceSpan());
 	}
@@ -463,6 +474,15 @@ public class Parser {
 	}
 
 	private Ast.Stmt.Base parseStmt() {
+		enterRecursiveConstruct("语句");
+		try {
+			return parseStmtCore();
+		} finally {
+			exitRecursiveConstruct();
+		}
+	}
+
+	private Ast.Stmt.Base parseStmtCore() {
 		Token start = look;
 		Ast.Stmt.Base stmt = null;
 		
@@ -891,6 +911,15 @@ public class Parser {
 	//  		| id
 	//          | not(<expression>)
 	private Ast.Expr.Base parseFactor() {
+		enterRecursiveConstruct("表达式");
+		try {
+			return parseFactorCore();
+		} finally {
+			exitRecursiveConstruct();
+		}
+	}
+
+	private Ast.Expr.Base parseFactorCore() {
 		Ast.Expr.Base expr = null;
 		if(look.getKind()==TokenKind.Lparen){
 			Token start = match(TokenKind.Lparen);
@@ -990,6 +1019,18 @@ public class Parser {
 				"语法错误，期望标识符、表达式、数字或字符串，实际得到 '%s'",
 				look.getLexeme()));
 		}
+	}
+
+	private void enterRecursiveConstruct(String construct) {
+		if (recursionDepth >= MAX_RECURSION_DEPTH) {
+			throw syntaxError(construct + "嵌套过深，最大允许 "
+					+ MAX_RECURSION_DEPTH + " 层");
+		}
+		recursionDepth++;
+	}
+
+	private void exitRecursiveConstruct() {
+		recursionDepth--;
 	}
 
 

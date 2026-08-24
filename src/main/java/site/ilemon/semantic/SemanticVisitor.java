@@ -24,6 +24,8 @@ import java.util.Set;
  * every analysis operation returns a new typed node.</p>
  */
 public final class SemanticVisitor {
+    private static final int MAX_ANALYSIS_DEPTH = 256;
+
     private final boolean collectErrors;
     private final ArrayList<String> errors = new ArrayList<String>();
     private final ArrayList<Integer> errorLineNumbers = new ArrayList<Integer>();
@@ -43,6 +45,7 @@ public final class SemanticVisitor {
     private Set<TypedAst.Symbol> unassigned;
     private TypedAst.Type currentReturnType;
     private int loopDepth;
+    private int analysisDepth;
     private SemanticResult result;
 
     public SemanticVisitor() {
@@ -104,6 +107,7 @@ public final class SemanticVisitor {
         unassigned = null;
         currentReturnType = null;
         loopDepth = 0;
+        analysisDepth = 0;
         result = null;
     }
 
@@ -231,6 +235,20 @@ public final class SemanticVisitor {
             return new TypedAst.Block(
                     Collections.<TypedAst.Stmt>emptyList(), SourceSpan.UNKNOWN);
         }
+        if (!enterAnalysis(source, "语句")) {
+            TypedAst.Stmt fallback = new TypedAst.Block(
+                    Collections.<TypedAst.Stmt>emptyList(), source.getSourceSpan());
+            typedStatements.put(source, fallback);
+            return fallback;
+        }
+        try {
+            return analyzeStatementCore(source);
+        } finally {
+            exitAnalysis();
+        }
+    }
+
+    private TypedAst.Stmt analyzeStatementCore(Ast.Stmt.Base source) {
         TypedAst.Stmt typed;
         if (source instanceof Ast.Stmt.Assign) {
             Ast.Stmt.Assign node = (Ast.Stmt.Assign) source;
@@ -429,6 +447,19 @@ public final class SemanticVisitor {
         if (source == null) {
             return new TypedAst.ErrorExpr(SourceSpan.UNKNOWN);
         }
+        if (!enterAnalysis(source, "表达式")) {
+            TypedAst.Expr fallback = new TypedAst.ErrorExpr(source.getSourceSpan());
+            typedExpressions.put(source, fallback);
+            return fallback;
+        }
+        try {
+            return analyzeExpressionCore(source);
+        } finally {
+            exitAnalysis();
+        }
+    }
+
+    private TypedAst.Expr analyzeExpressionCore(Ast.Expr.Base source) {
         TypedAst.Expr typed;
         if (source instanceof Ast.Expr.IntLiteral) {
             Ast.Expr.IntLiteral node = (Ast.Expr.IntLiteral) source;
@@ -526,6 +557,20 @@ public final class SemanticVisitor {
         }
         typedExpressions.put(source, typed);
         return typed;
+    }
+
+    private boolean enterAnalysis(Ast.Node source, String construct) {
+        if (analysisDepth >= MAX_ANALYSIS_DEPTH) {
+            error(source.getLineNum(), construct + "嵌套过深，最大允许 "
+                    + MAX_ANALYSIS_DEPTH + " 层");
+            return false;
+        }
+        analysisDepth++;
+        return true;
+    }
+
+    private void exitAnalysis() {
+        analysisDepth--;
     }
 
     private TypedAst.Expr analyzeArithmetic(Ast.Expr.BinaryExpr source) {
